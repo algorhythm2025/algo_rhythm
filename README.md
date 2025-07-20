@@ -1,6 +1,34 @@
-# Getting Started with Create React App
+# Portra - 포트폴리오 자동제작 사이트
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+포트폴리오 자동제작 사이트입니다. 구글 로그인을 통해 사용자 인증을 하고, 구글 드라이브와 구글 시트를 연동하여 사용자의 이력 정보를 관리하고 포트폴리오를 제작할 수 있습니다.
+
+## 주요 기능
+
+- 구글 로그인을 통한 사용자 인증
+- 구글 드라이브 연동
+- 구글 시트를 통한 이력 정보 관리
+- 포트폴리오 PPT 자동 제작
+- 이력 추가, 수정, 삭제 기능
+
+## 구글 API 설정
+
+이 프로젝트를 실행하기 위해서는 구글 클라우드 콘솔에서 API를 설정해야 합니다:
+
+1. [Google Cloud Console](https://console.cloud.google.com/)에 접속
+2. 새 프로젝트 생성 또는 기존 프로젝트 선택
+3. Google Sheets API 활성화
+4. OAuth 2.0 클라이언트 ID 생성
+5. API 키 생성
+
+### 필요한 API
+- Google Sheets API
+- Google Drive API
+- Google Identity Services
+
+### 환경 변수 설정
+`src/services/googleSheetsService.js` 파일에서 다음 값들을 설정하세요:
+- `clientId`: OAuth 2.0 클라이언트 ID
+- `apiKey`: Google API 키
 
 ## Available Scripts
 
