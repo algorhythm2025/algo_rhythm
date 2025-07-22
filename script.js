@@ -1,18 +1,18 @@
 // 페이지 로드 시 이벤트 리스너 등록
 document.addEventListener('DOMContentLoaded', () => {
-    // 로그인 폼 제출 이벤트 처리
-    document.getElementById('loginForm').addEventListener('submit', (e) => {
-        e.preventDefault();
-        const email = document.getElementById('email').value;
-        const password = document.getElementById('password').value;
-        
-        // 임시 로그인 처리 (실제로는 서버 인증이 필요)
-        if (email && password) {
-            document.getElementById('loginPage').classList.add('d-none');
-            document.getElementById('mainPage').classList.remove('d-none');
-            showSection('main');
-        }
-    });
+    // // 로그인 폼 제출 이벤트 처리
+    // document.getElementById('loginForm').addEventListener('submit', (e) => {
+    //     e.preventDefault();
+    //     const email = document.getElementById('email').value;
+    //     const password = document.getElementById('password').value;
+    //
+    //     // 임시 로그인 처리 (실제로는 서버 인증이 필요)
+    //     if (email && password) {
+    //         document.getElementById('loginPage').classList.add('d-none');
+    //         document.getElementById('mainPage').classList.remove('d-none');
+    //         showSection('main');
+    //     }
+    // });
 
     const imageInput = document.getElementById('imageInput');
     const imageUploadContainer = document.querySelector('.image-upload-container');

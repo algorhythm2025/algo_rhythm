@@ -187,20 +187,32 @@ class GoogleDriveService {
     }
   }
 
-  // 파일 업로드
-  async uploadFile(name, content, mimeType = 'text/plain') {
+  // 파일 업로드 (이미지 등 바이너리 포함)
+  async uploadFile(name, file, mimeType = 'application/octet-stream') {
     try {
-      const response = await window.gapi.client.drive.files.create({
-        resource: {
-          name: name,
-        },
-        media: {
-          mimeType: mimeType,
-          body: content,
-        },
-        fields: 'id, name, mimeType',
-      });
-      return response.result;
+      const metadata = {
+        name: name,
+        mimeType: mimeType,
+      };
+
+      // gapi v3에서는 auth.getToken() 또는 client.getToken() 사용
+      const accessToken = (window.gapi.auth && window.gapi.auth.getToken && window.gapi.auth.getToken().access_token)
+        || (window.gapi.client && window.gapi.client.getToken && window.gapi.client.getToken().access_token);
+
+      const form = new FormData();
+      form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+      form.append('file', file);
+
+      const response = await fetch(
+        'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,mimeType',
+        {
+          method: 'POST',
+          headers: new Headers({ Authorization: 'Bearer ' + accessToken }),
+          body: form,
+        }
+      );
+      const result = await response.json();
+      return result;
     } catch (error) {
       console.error('파일 업로드 오류:', error);
       throw new Error('파일 업로드에 실패했습니다.');

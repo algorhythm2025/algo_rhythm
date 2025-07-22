@@ -155,7 +155,9 @@ function App() {
   // 드라이브 파일 목록 로드
   async function loadDriveFiles() {
     try {
+      console.log('드라이브 파일 불러오기 시작');
       const files = await driveService.current.listFiles(20);
+      console.log('드라이브 파일:', files);
       setDriveFiles(files);
     } catch (error) {
       console.error('드라이브 파일 로드 오류:', error);
@@ -352,6 +354,37 @@ function App() {
     }
   }
 
+  // 파일 업로드 핸들러
+  async function handleDriveFileUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    try {
+      setIsLoading(true);
+      await driveService.current.uploadFile(file.name, file, file.type);
+      await loadDriveFiles();
+      alert('파일이 업로드되었습니다!');
+    } catch (error) {
+      alert('파일 업로드 실패: ' + (error?.message || error));
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  // 파일 삭제 핸들러
+  async function handleDriveFileDelete(fileId) {
+    if (!window.confirm('정말로 이 파일을 삭제하시겠습니까?')) return;
+    try {
+      setIsLoading(true);
+      await driveService.current.deleteFile(fileId);
+      await loadDriveFiles();
+      alert('파일이 삭제되었습니다!');
+    } catch (error) {
+      alert('파일 삭제 실패: ' + (error?.message || error));
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   // 페이지 로드 시 로그인 상태 복원 및 초기화
   useEffect(() => {
     if (isLoggedIn && !isSheetsInitialized && !isDriveInitialized) {
@@ -479,17 +512,6 @@ function App() {
       {/* 메인 페이지 */}
       {isLoggedIn && (
         <div id="mainPage">
-          {/* 로딩 오버레이 */}
-          {isLoading && (
-            <div className="loading-overlay">
-              <div className="loading-spinner">
-                <div className="spinner-border text-primary" role="status">
-                  <span className="visually-hidden">로딩 중...</span>
-                </div>
-                <p className="mt-2">구글 시트와 연동 중...</p>
-              </div>
-            </div>
-          )}
           <div className="mac-titlebar">
             <div className="mac-title">Portra</div>
           </div>
@@ -614,15 +636,25 @@ function App() {
                           </div>
                         )}
                       </div>
-                      
                       {/* 파일 목록 */}
                       {isDriveInitialized && (
                         <div className="drive-files">
                           <div className="d-flex justify-content-between align-items-center mb-3">
                             <h4>내 파일</h4>
-                            <button className="btn btn-outline-primary btn-sm" onClick={loadDriveFiles}>
-                              <i className="fas fa-sync-alt"></i> 새로고침
-                            </button>
+                            <div>
+                              <label htmlFor="drive-upload-input" className="btn btn-outline-success btn-sm me-2">
+                                <i className="fas fa-upload"></i> 업로드
+                              </label>
+                              <input
+                                id="drive-upload-input"
+                                type="file"
+                                style={{ display: 'none' }}
+                                onChange={handleDriveFileUpload}
+                              />
+                              <button className="btn btn-outline-primary btn-sm" onClick={loadDriveFiles}>
+                                <i className="fas fa-sync-alt"></i> 새로고침
+                              </button>
+                            </div>
                           </div>
                           <div className="file-list">
                             {driveFiles.length === 0 ? (
@@ -641,10 +673,13 @@ function App() {
                                         {file.mimeType} • {new Date(file.createdTime).toLocaleDateString()}
                                       </small>
                                     </div>
-                                    <div className="file-actions">
-                                      <a href={`https://drive.google.com/file/d/${file.id}/view`} target="_blank" className="btn btn-sm btn-outline-primary">
+                                    <div className="file-actions d-flex align-items-center">
+                                      <a href={`https://drive.google.com/file/d/${file.id}/view`} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-outline-primary me-2">
                                         <i className="fas fa-external-link-alt"></i>
                                       </a>
+                                      <button className="btn btn-sm btn-outline-danger" onClick={() => handleDriveFileDelete(file.id)}>
+                                        <i className="fas fa-trash-alt"></i> 삭제
+                                      </button>
                                     </div>
                                   </div>
                                 </div>
