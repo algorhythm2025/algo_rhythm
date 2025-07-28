@@ -285,18 +285,31 @@ function App() {
         
         // 구글 시트에 저장
         if (spreadsheetId && isSheetsInitialized) {
+          console.log('구글 시트에 이력 저장 시작...');
           const sheetData = sheetsService.current.formatExperienceForSheet(newExperience);
           await sheetsService.current.appendData(spreadsheetId, 'A:D', [sheetData]);
+          console.log('구글 시트에 이력 저장 완료');
+          
+          // 성공 메시지 표시
+          alert('✅ 이력이 성공적으로 구글 시트에 저장되었습니다!');
+        } else {
+          console.warn('구글 시트가 초기화되지 않아 로컬에만 저장됩니다.');
+          alert('⚠️ 구글 시트 연동이 되지 않아 로컬에만 저장됩니다. 구글 로그인을 확인해주세요.');
         }
         
         closeModal();
       } catch (error) {
         console.error('이력 저장 오류:', error);
         const errorMessage = sheetsService.current.formatErrorMessage(error);
-        alert(errorMessage);
+        alert(`❌ 이력 저장에 실패했습니다: ${errorMessage}`);
+        
+        // 로컬 상태에서도 제거 (저장 실패 시)
+        setExperiences(experiences.filter((_, idx) => idx !== experiences.length - 1));
       } finally {
         setIsLoading(false);
       }
+    } else {
+      alert('모든 필드를 입력해주세요.');
     }
   }
 
@@ -525,15 +538,17 @@ function App() {
                     </div>
                     {spreadsheetId && (
                       <div className="spreadsheet-info">
-                        <small>스프레드시트 ID: {spreadsheetId}</small>
+                        <small>📊 스프레드시트 ID: {spreadsheetId}</small>
                         <br />
-                        <small>총 이력 수: {experiences.length}개</small>
+                        <small>📝 총 이력 수: {experiences.length}개</small>
+                        <br />
+                        <small>🔗 <a href={`https://docs.google.com/spreadsheets/d/${spreadsheetId}`} target="_blank" rel="noopener noreferrer">구글 시트에서 보기</a></small>
                       </div>
                     )}
                     {!isSheetsInitialized && (
                       <div className="sheets-help">
                         <small className="text-muted">
-                          구글 시트 연동이 필요합니다. 구글 계정으로 로그인해주세요.
+                          ⚠️ 구글 시트 연동이 필요합니다. 구글 계정으로 로그인해주세요.
                         </small>
                       </div>
                     )}
@@ -725,6 +740,19 @@ function App() {
               </div>
               <form onSubmit={saveExperience} ref={formRef}>
                 <div className="modal-body">
+                  {/* 구글 시트 연동 상태 표시 */}
+                  <div className="mb-3">
+                    <div className={`alert ${isSheetsInitialized ? 'alert-success' : 'alert-warning'} py-2`}>
+                      <small>
+                        <i className={`fas ${isSheetsInitialized ? 'fa-check-circle' : 'fa-exclamation-triangle'}`}></i>
+                        {isSheetsInitialized 
+                          ? '✅ 구글 시트에 자동 저장됩니다' 
+                          : '⚠️ 구글 시트 연동이 필요합니다'
+                        }
+                      </small>
+                    </div>
+                  </div>
+                  
                   <div className="mb-3">
                     <label className="form-label">제목</label>
                     <input type="text" className="form-control" required value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} />
@@ -740,7 +768,19 @@ function App() {
                 </div>
                 <div className="modal-footer">
                   <button type="button" className="btn btn-secondary" onClick={closeModal}>취소</button>
-                  <button type="submit" className="btn btn-primary">저장</button>
+                  <button type="submit" className={`btn ${isSheetsInitialized ? 'btn-primary' : 'btn-warning'}`} disabled={isLoading}>
+                    {isLoading ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                        저장 중...
+                      </>
+                    ) : (
+                      <>
+                        <i className={`fas ${isSheetsInitialized ? 'fa-save' : 'fa-exclamation-triangle'} me-2`}></i>
+                        {isSheetsInitialized ? '구글 시트에 저장' : '로컬에 저장'}
+                      </>
+                    )}
+                  </button>
                 </div>
               </form>
             </div>

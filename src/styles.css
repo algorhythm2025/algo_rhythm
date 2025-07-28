@@ -1021,3 +1021,198 @@ a.btn:hover,
     margin-bottom: 5px;
     font-size: 0.95rem;
 } 
+
+/* 구글 시트 연동 상태 스타일 */
+.sheets-status {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 20px;
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  margin-bottom: 10px;
+}
+
+.status-indicator.connected {
+  color: #28a745;
+}
+
+.status-indicator.disconnected {
+  color: #ffc107;
+}
+
+.spreadsheet-info {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 6px;
+  padding: 10px;
+  margin-top: 10px;
+}
+
+.spreadsheet-info small {
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1.4;
+}
+
+.spreadsheet-info a {
+  color: #007bff;
+  text-decoration: none;
+}
+
+.spreadsheet-info a:hover {
+  text-decoration: underline;
+}
+
+.sheets-help {
+  margin-top: 10px;
+}
+
+/* 이력 저장 관련 스타일 */
+.alert {
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+.alert-success {
+  background-color: rgba(40, 167, 69, 0.1);
+  color: #28a745;
+  border-left: 3px solid #28a745;
+}
+
+.alert-warning {
+  background-color: rgba(255, 193, 7, 0.1);
+  color: #ffc107;
+  border-left: 3px solid #ffc107;
+}
+
+/* 저장 버튼 상태 스타일 */
+.btn-warning {
+  background-color: #ffc107;
+  border-color: #ffc107;
+  color: #212529;
+}
+
+.btn-warning:hover {
+  background-color: #e0a800;
+  border-color: #d39e00;
+  color: #212529;
+}
+
+.btn-warning:disabled {
+  background-color: rgba(255, 193, 7, 0.5);
+  border-color: rgba(255, 193, 7, 0.5);
+  color: rgba(33, 37, 41, 0.5);
+}
+
+/* 로딩 스피너 스타일 */
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.loading-spinner {
+  text-align: center;
+  color: white;
+}
+
+.loading-spinner p {
+  margin-top: 15px;
+  font-size: 1.1rem;
+}
+
+/* 파일 목록 스타일 */
+.file-item {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  margin-bottom: 8px;
+  transition: all 0.2s ease;
+}
+
+.file-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.file-actions {
+  display: flex;
+  gap: 5px;
+}
+
+/* 드라이브 섹션 스타일 */
+.drive-status {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 20px;
+}
+
+.drive-help {
+  margin-top: 10px;
+}
+
+.drive-files {
+  margin-top: 20px;
+}
+
+.file-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+/* 모달 내부 스타일 개선 */
+.mac-modal .alert {
+  margin-bottom: 15px;
+}
+
+.mac-modal .form-label {
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 8px;
+}
+
+.mac-modal .form-control {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  transition: all 0.2s ease;
+}
+
+.mac-modal .form-control:focus {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 0 0 0.2rem rgba(255, 255, 255, 0.1);
+}
+
+.mac-modal .form-control::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* 성공/실패 메시지 스타일 */
+.success-message {
+  color: #28a745;
+  font-weight: 500;
+}
+
+.error-message {
+  color: #dc3545;
+  font-weight: 500;
+}
+
+.warning-message {
+  color: #ffc107;
+  font-weight: 500;
+} 
