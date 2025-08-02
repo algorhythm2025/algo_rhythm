@@ -385,6 +385,20 @@ function App() {
     }
   }
 
+  // 구글 시트 데이터 새로고침
+  async function refreshSheetsData() {
+    try {
+      setIsLoading(true);
+      await loadExperiencesFromSheets();
+      alert('구글 시트 데이터가 새로고침되었습니다!');
+    } catch (error) {
+      console.error('시트 데이터 새로고침 오류:', error);
+      alert('데이터 새로고침에 실패했습니다: ' + (error?.message || error));
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   // 페이지 로드 시 로그인 상태 복원 및 초기화
   useEffect(() => {
     if (isLoggedIn && !isSheetsInitialized && !isDriveInitialized) {
@@ -587,13 +601,21 @@ function App() {
                           <button className="btn btn-outline-dark me-2" onClick={() => selectAllExperiences(false)}>전체 해제</button>
                           <button className="btn btn-outline-danger" onClick={deleteSelectedExperiences} disabled={selected.length === 0}>선택 삭제</button>
                         </div>
-                        <button className="btn btn-dark" id="nextButton" disabled={selected.length === 0}>다음</button>
+                        <div>
+                          <button className="btn btn-outline-primary me-2" onClick={refreshSheetsData}>
+                            <i className="fas fa-sync-alt"></i> 시트 새로고침
+                          </button>
+                          <button className="btn btn-dark" id="nextButton" disabled={selected.length === 0}>다음</button>
+                        </div>
                       </div>
                       <div id="experienceList" className="mac-list">
                         {experiences.length === 0 ? (
                           <div className="empty-state">
                             <i className="fas fa-clipboard-list fa-3x mb-3"></i>
                             <p>등록된 이력이 없습니다.</p>
+                            <button className="btn btn-outline-primary" onClick={refreshSheetsData}>
+                              <i className="fas fa-sync-alt"></i> 구글 시트에서 불러오기
+                            </button>
                           </div>
                         ) : (
                           experiences.map((exp, idx) => (
@@ -675,7 +697,7 @@ function App() {
                                     </div>
                                     <div className="file-actions d-flex align-items-center">
                                       <a href={`https://drive.google.com/file/d/${file.id}/view`} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-outline-primary me-2">
-                                        <i className="fas fa-external-link-alt"></i>
+                                        다운로드
                                       </a>
                                       <button className="btn btn-sm btn-outline-danger" onClick={() => handleDriveFileDelete(file.id)}>
                                         <i className="fas fa-trash-alt"></i> 삭제
@@ -720,12 +742,20 @@ function App() {
                       </div>
                     </div>
                     <div className="mac-window">
-                      <h2>이력 관리</h2>
+                      <div className="d-flex justify-content-between align-items-center mb-3">
+                        <h2>이력 관리</h2>
+                        <button className="btn btn-outline-primary btn-sm" onClick={refreshSheetsData}>
+                          <i className="fas fa-sync-alt"></i> 시트 새로고침
+                        </button>
+                      </div>
                       <div id="experienceManagement" className="mac-list">
                         {experiences.length === 0 ? (
                           <div className="empty-state">
                             <i className="fas fa-clipboard-list fa-3x mb-3"></i>
                             <p>등록된 이력이 없습니다.</p>
+                            <button className="btn btn-outline-primary" onClick={refreshSheetsData}>
+                              <i className="fas fa-sync-alt"></i> 구글 시트에서 불러오기
+                            </button>
                           </div>
                         ) : (
                           experiences.map((exp, idx) => (
@@ -733,7 +763,11 @@ function App() {
                               <div className="d-flex align-items-center">
                                 <div className="flex-grow-1">
                                   <h6 className="mb-1">{exp.title}</h6>
-                                  <p className="mb-0"><small>{exp.period}</small></p>
+                                  <p className="mb-1"><small>{exp.period}</small></p>
+                                  <p className="mb-0">{exp.description}</p>
+                                </div>
+                                <div className="text-muted">
+                                  <small>구글 시트에서 로드됨</small>
                                 </div>
                               </div>
                             </div>

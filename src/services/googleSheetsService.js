@@ -191,17 +191,56 @@ class GoogleSheetsService {
     }
   }
 
-  // 시트에서 데이터 읽기
+  // 데이터 읽기
   async readData(spreadsheetId, range) {
     try {
+      console.log('시트 데이터 읽기 시작:', { spreadsheetId, range });
+      
+      // 토큰 상태 확인
+      const token = window.gapi.client.getToken();
+      console.log('시트 API 호출 전 토큰 상태:', token ? '설정됨' : '설정되지 않음');
+      
+      if (!token) {
+        throw new Error('토큰이 설정되지 않았습니다. 구글 로그인을 다시 시도해주세요.');
+      }
+      
+      // Sheets API가 로드되었는지 확인
+      if (!window.gapi.client.sheets) {
+        console.error('Sheets API가 로드되지 않았습니다.');
+        throw new Error('구글 시트 API가 로드되지 않았습니다. 페이지를 새로고침해주세요.');
+      }
+      
+      console.log('Sheets API 로드 확인됨, 데이터 읽기 시작...');
+      
       const response = await window.gapi.client.sheets.spreadsheets.values.get({
         spreadsheetId: spreadsheetId,
-        range: range
+        range: range,
       });
-      return response.result.values || [];
+      
+      console.log('시트 API 응답:', response);
+      
+      if (!response.result.values) {
+        console.log('시트에 데이터가 없습니다.');
+        return [];
+      }
+      
+      console.log('읽어온 데이터:', response.result.values);
+      return response.result.values;
     } catch (error) {
-      console.error('데이터 읽기 오류:', error);
-      throw new Error('데이터 로드에 실패했습니다. 스프레드시트 접근 권한을 확인해주세요.');
+      console.error('데이터 읽기 오류 상세:', error);
+      console.error('오류 메시지:', error.message);
+      console.error('오류 코드:', error.code);
+      console.error('오류 상태:', error.status);
+      
+      if (error.status === 403) {
+        throw new Error('구글 시트 접근 권한이 없습니다. 스프레드시트 권한을 확인해주세요.');
+      } else if (error.status === 404) {
+        throw new Error('스프레드시트를 찾을 수 없습니다. 스프레드시트 ID를 확인해주세요.');
+      } else if (error.message.includes('권한') || error.message.includes('permission')) {
+        throw new Error('구글 시트 접근 권한이 없습니다. 구글 계정을 다시 로그인해주세요.');
+      } else {
+        throw new Error('데이터 로드에 실패했습니다. 스프레드시트 접근 권한을 확인해주세요.');
+      }
     }
   }
 
