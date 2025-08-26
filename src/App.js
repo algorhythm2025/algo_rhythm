@@ -3,6 +3,9 @@ import GoogleSheetsService from './services/googleSheetsService';
 import GoogleDriveService from './services/googleDriveService';
 import GoogleAuthService from './services/googleAuthService';
 
+let tokenClient = null;
+const SCOPES = 'https://www.googleapis.com/auth/presentations https://www.googleapis.com/auth/drive.file';
+
 const SECTION_LIST = [
   'main', 'drive', 'portal', 'pptMaker', 'myPage'
 ];
@@ -31,6 +34,11 @@ function App() {
   const authService = useRef(new GoogleAuthService());
   const sheetsService = useRef(new GoogleSheetsService());
   const driveService = useRef(new GoogleDriveService());
+  const [accessToken, setAccessToken] = useState('');
+  const [slides, setSlides] = useState([]);
+  const [presentationId, setPresentationId] = useState(null);
+  const [selectedTemplate, setSelectedTemplate] = useState('');
+  const [selectedExperiences, setSelectedExperiences] = useState([]);
 
   // 섹션 전환
   function showSection(section) {
@@ -399,6 +407,219 @@ function App() {
     }
   }, [isLoggedIn, isSheetsInitialized, isDriveInitialized]);
 
+  // 프레젠테이션 생성
+  async function createPresentation(title, token) {
+    const res = await fetch('https://slides.googleapis.com/v1/presentations', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ title })
+    });
+
+    const data = await res.json();
+    console.log('Created presentation ID:', data.presentationId);
+    return data.presentationId;
+  }
+
+  // 슬라이드 추가 (TITLE_AND_BODY)
+  async function addSlide(presentationId, token) {
+    await fetch(`https://slides.googleapis.com/v1/presentations/${presentationId}:batchUpdate`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        requests: [
+          {
+            createSlide: {
+              slideLayoutReference: {
+                predefinedLayout: 'TITLE_AND_BODY'
+              }
+            }
+          }
+        ]
+      })
+    });
+  }
+
+  // 첫 슬라이드를 TITLE_AND_BODY로 변환
+  async function makeTitleAndBody(presId, slideId, token) {
+    await fetch(`https://slides.googleapis.com/v1/presentations/${presId}:batchUpdate`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        requests: [
+          {
+            updatePageProperties: {
+              objectId: slideId,
+              pageProperties: { layoutProperties: { name: 'TITLE_AND_BODY' } },
+              fields: 'pageProperties.layoutProperties'
+            }
+          }
+        ]
+      })
+    });
+  }
+
+  // 템플릿 선택 → 프레젠테이션 생성 + 이력 반영
+  async function handleTemplateSelect(templateName) {
+    const title = prompt('슬라이드 제목을 입력하세요:', '나의 포트폴리오');
+    if (!title) {
+      alert('제목이 없습니다.');
+      return;
+    }
+
+    // 토큰 확보 보장
+    if (!accessToken) {
+      await new Promise(resolve => {
+        tokenClient.callback = (res) => {
+          console.log('토큰 새로 발급됨:', res.access_token);
+          setAccessToken(res.access_token);
+          resolve();
+        };
+        tokenClient.requestAccessToken();
+      });
+    }
+
+    setSelectedTemplate(templateName);
+
+    // 1) 프레젠테이션 생성
+    const presId = await createPresentation(title, accessToken);
+    setPresentationId(presId);
+
+    // 2) 첫 슬라이드 레이아웃 보정
+    let data = await getPresentationData(presId, accessToken);
+    if (data.slides?.length > 0) {
+      await makeTitleAndBody(presId, data.slides[0].objectId, accessToken);
+    }
+
+    // 3) 템플릿별 슬라이드 추가
+    if (templateName === 'basic') {
+      for (let i = 0; i < selectedExperiences.length; i++) {
+        await addSlide(presId, accessToken);
+      }
+    } else if (templateName === 'timeline') {
+      await addSlide(presId, accessToken);
+      await addSlide(presId, accessToken);
+      for (let i = 0; i < selectedExperiences.length; i++) {
+        await addSlide(presId, accessToken);
+      }
+    } else if (templateName === 'grid') {
+      await addSlide(presId, accessToken);
+      await addSlide(presId, accessToken);
+    }
+
+    // 4) 최신 데이터 가져오기
+    data = await getPresentationData(presId, accessToken);
+    const slidesArr = data.slides || [];
+
+    // 5) 텍스트 채우기
+    if (slidesArr[0]) {
+      const s0 = slidesArr[0];
+      const titleShapeId = findFirstPlaceholder(s0.pageElements, 'TITLE');
+      const bodyShapeId  = findFirstPlaceholder(s0.pageElements, 'BODY');
+
+      if (titleShapeId) await updateElementText(presId, titleShapeId, title, accessToken);
+      if (bodyShapeId) {
+        const firstTwo = selectedExperiences
+            .slice(0, 2)
+            .map(e => `• ${e.title} (${e.period})`)
+            .join('\n');
+        await updateElementText(presId, bodyShapeId, firstTwo || '포트폴리오', accessToken);
+      }
+    }
+
+    let idx = 1;
+    for (const exp of selectedExperiences) {
+      if (!slidesArr[idx]) break;
+      const s = slidesArr[idx];
+      const titleShapeId = findFirstPlaceholder(s.pageElements, 'TITLE');
+      const bodyShapeId  = findFirstPlaceholder(s.pageElements, 'BODY');
+
+      if (titleShapeId) await updateElementText(presId, titleShapeId, exp.title, accessToken);
+      if (bodyShapeId)  await updateElementText(presId, bodyShapeId, `${exp.period}\n\n${exp.description}`, accessToken);
+      idx++;
+    }
+
+    // 6) 최종 상태 반영
+    const refreshed = await getPresentationData(presId, accessToken);
+    setSlides(refreshed.slides || []);
+    alert('PPT가 생성되었습니다.');
+    setActiveSection('editor');
+  }
+
+
+
+  async function getPresentationData(presentationId, token) {
+    const res = await fetch(`https://slides.googleapis.com/v1/presentations/${presentationId}`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+
+    const data = await res.json();
+    console.log('Slides data:', data);
+    return data;
+  }
+
+  async function updateElementText(presentationId, elementId, newText, token) {
+    const res = await fetch(`https://slides.googleapis.com/v1/presentations/${presentationId}:batchUpdate`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        requests: [
+          {
+            deleteText: {
+              objectId: elementId,
+              textRange: { type: 'ALL' }
+            }
+          },
+          {
+            insertText: {
+              objectId: elementId,
+              text: newText
+            }
+          }
+        ]
+      })
+    });
+
+    const data = await res.json();
+    console.log('Text updated:', data);
+  }
+
+  function findFirstPlaceholder(shapeList, type /* 'TITLE' | 'BODY' */) {
+    for (const el of shapeList) {
+      if (el.shape && el.shape.placeholder && el.shape.placeholder.type === type) {
+        return el.objectId;
+      }
+    }
+    return null;
+  }
+
+  function getTextFromElement(el) {
+    if (
+        el.shape &&
+        el.shape.text &&
+        el.shape.text.textElements
+    ) {
+      return el.shape.text.textElements
+          .map(te => te.textRun?.content || '')
+          .join('');
+    }
+    return '';
+  }
+
   // 구글 로그인 버튼 렌더링 (GSI 위젯)
   useEffect(() => {
     if (!isLoggedIn) {
@@ -424,6 +645,16 @@ function App() {
             document.getElementById('googleSignInDiv'),
             { theme: 'outline', size: 'large', width: 300 }
           );
+          //토큰 클라이언트 초기화
+          tokenClient = window.google.accounts.oauth2.initTokenClient({
+            client_id: '158941918402-insbhffbmi221j6s3v4hghlle67t6rt2.apps.googleusercontent.com',
+            scope: SCOPES,
+            callback: (tokenResponse) => {
+              console.log('Access Token:', tokenResponse.access_token);
+              setAccessToken(tokenResponse.access_token); // 상태로 저장
+            },
+          });
+          tokenClient.requestAccessToken();
         }
       };
       return () => {
@@ -565,7 +796,20 @@ function App() {
                           <button className="btn btn-outline-dark me-2" onClick={() => selectAllExperiences(false)}>전체 해제</button>
                           <button className="btn btn-outline-danger" onClick={deleteSelectedExperiences} disabled={selected.length === 0}>선택 삭제</button>
                         </div>
-                        <button className="btn btn-dark" id="nextButton" disabled={selected.length === 0}>다음</button>
+                        <button
+                            className="btn btn-dark"
+                            id="nextButton"
+                            disabled={selected.length === 0}
+                            onClick={() => {
+                              const picked = selected
+                                  .sort((a,b)=>a-b)
+                                  .map(i => experiences[i]);
+                              setSelectedExperiences(picked);
+                              setActiveSection('templateSelection'); // 템플릿 선택 탭으로 전환
+                            }}
+                        >
+                          다음
+                        </button>
                       </div>
                       <div id="experienceList" className="mac-list">
                         {experiences.length === 0 ? (
@@ -594,6 +838,80 @@ function App() {
                   </div>
                 </div>
               )}
+
+              {activeSection === 'templateSelection' && (
+                  <div id="templateSelection" className="mac-content">
+                    <h2>템플릿을 선택하세요</h2>
+                    <div className="template-grid">
+                      <div className="mac-card" onClick={() => handleTemplateSelect('basic')}>
+                        <h3>기본 템플릿</h3>
+                        <p>깔끔하고 전문적인 레이아웃</p>
+                      </div>
+                      <div className="mac-card" onClick={() => handleTemplateSelect('timeline')}>
+                        <h3>타임라인 템플릿</h3>
+                        <p>시간 흐름에 따른 구성</p>
+                      </div>
+                      <div className="mac-card" onClick={() => handleTemplateSelect('grid')}>
+                        <h3>그리드 템플릿</h3>
+                        <p>균형 잡힌 구성</p>
+                      </div>
+                    </div>
+                  </div>
+              )}
+
+              {activeSection === 'editor' && (
+                  <div className="content-section">
+                    <div className="mac-window">
+                      <h2>PPT 슬라이드 편집기</h2>
+                      <div className="mac-window-content">
+                        <div className="slide-editor">
+                          {slides.map((slide, idx) => (
+                              <div key={slide.objectId} className="slide-item">
+                                <h4>슬라이드 {idx + 1}</h4>
+                                <div className="elements">
+                                  {slide.pageElements
+                                      .filter(el => el.shape && el.shape.text) // 텍스트 있는 것만
+                                      .map(el => {
+                                        const currentText = getTextFromElement(el); // 이미 있는 함수
+                                        return (
+                                            <div key={el.objectId} className="text-box">
+                                              <input
+                                                  value={currentText}
+                                                  onChange={async (e) => {
+                                                    const newText = e.target.value;
+                                                    await updateElementText(presentationId, el.objectId, newText, accessToken);
+                                                    // 로컬 상태도 동기 반영
+                                                    setSlides(prev => prev.map(sl =>
+                                                        sl.objectId !== slide.objectId ? sl : {
+                                                          ...sl,
+                                                          pageElements: sl.pageElements.map(pe =>
+                                                              pe.objectId !== el.objectId ? pe : {
+                                                                ...pe,
+                                                                shape: {
+                                                                  ...pe.shape,
+                                                                  text: {
+                                                                    ...pe.shape.text,
+                                                                    textElements: [{ textRun: { content: newText } }]
+                                                                  }
+                                                                }
+                                                              }
+                                                          )
+                                                        }
+                                                    ));
+                                                  }}
+                                              />
+                                            </div>
+                                        );
+                                      })}
+                                </div>
+                              </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+              )}
+
               {/* 구글 드라이브 섹션 */}
               {activeSection === 'drive' && (
                 <div id="driveSection" className="content-section">
