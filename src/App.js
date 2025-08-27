@@ -1,3 +1,4 @@
+import "./App.css";
 import React, { useState, useRef, useEffect } from 'react';
 
 const SECTION_LIST = [
@@ -13,8 +14,19 @@ function App() {
   const [form, setForm] = useState({ title: '', period: '', description: '' });
   const [selected, setSelected] = useState([]);
   const formRef = useRef();
+    // 추가: 테마/팔레트 상태
+    const [theme, setTheme] = useState('dark');      // 'dark' | 'light'
+    const [palette, setPalette] = useState('aurora'); // 'aurora' | 'plum' | 'sunset'
 
-  // 섹션 전환
+// 루트 html에 data-속성으로 반영
+    useEffect(() => {
+        const root = document.documentElement;
+        root.setAttribute('data-theme', theme);
+        root.setAttribute('data-palette', palette);
+    }, [theme, palette]);
+
+
+    // 섹션 전환
   function showSection(section) {
     setActiveSection(section);
   }
@@ -100,42 +112,49 @@ function App() {
   return (
     <div>
       {/* 로그인 페이지 */}
-      {!isLoggedIn && (
-        <div id="loginPage" className="vh-100" style={{ backgroundColor: 'lightblue' }}>
-          <div className="row h-100 g-0">
-            <div className="col-8 intro-section">
-              <div className="d-flex flex-column justify-content-center h-100 p-5">
-                <h1 className="display-1 fw-bold mb-2">Portra</h1>
-                <h2 className="h3 mb-4 text-white-50">포트폴리오 메이커</h2>
-                <div className="features">
-                  <div className="feature-item mb-3">
-                    <i className="fas fa-check-circle me-2"></i>
-                    간편한 이력 관리
-                  </div>
-                  <div className="feature-item mb-3">
-                    <i className="fas fa-check-circle me-2"></i>
-                    전문적인 PPT 템플릿
-                  </div>
-                  <div className="feature-item mb-3">
-                    <i className="fas fa-check-circle me-2"></i>
-                    구글 드라이브 연동
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="col-4 login-section">
-              <div className="d-flex flex-column justify-content-center align-items-center h-100">
-                <div className="login-box text-center">
-                  <h2 className="mb-4">시작하기</h2>
-                  <div id="googleSignInDiv"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+        {!isLoggedIn && (
+            <main className="landing">
+                {/* 왼쪽 */}
+                <section className="hero">
+                    <div className="hero__wrap">
+                        <h1 className="hero__logo">Portra</h1>
+                        <p className="hero__lead">3분 만에 완성하는 AI 포트폴리오</p>
+                        <ul className="hero__features">
+                            <li>간편한 이력 관리</li>
+                            <li>전문적인 PPT 템플릿</li>
+                            <li>구글 드라이브 연동</li>
+                        </ul>
+                    </div>
+                </section>
 
-      {/* 메인 페이지 */}
+                {/* 오른쪽 */}
+                <section className="auth">
+                    <div className="auth__card auth__card--elev">
+                        <header className="auth__head">
+                            <h2 className="auth__title">시작하기</h2>
+                            <p className="auth__sub">Google로 로그인하여 Portra를 바로 사용해 보세요</p>
+                        </header>
+
+                        <div className="auth__actions">
+                            <div id="googleSignInDiv" className="auth__google"></div>
+                        </div>
+
+                        <div className="auth__divider"><span>또는</span></div>
+
+                        <ul className="auth__benefits">
+                            <li>회원가입 없이 10초만에 시작</li>
+                            <li>언제든지 로그아웃 및 데이터 삭제 가능</li>
+                        </ul>
+
+                        <p className="auth__meta">
+                            계속 진행하면 <a href="#">서비스 약관</a> 및 <a href="#">개인정보 처리방침</a>에 동의하게 됩니다.
+                        </p>
+                    </div>
+                </section>
+            </main>
+        )}
+
+        {/* 메인 페이지 */}
       {isLoggedIn && (
         <div id="mainPage">
           <div className="mac-titlebar">
@@ -156,7 +175,33 @@ function App() {
                   {section === 'myPage' && (<><i className="fas fa-user"></i> <span>마이페이지</span></>)}
                 </div>
               ))}
-              <div className="sidebar-item mt-auto" onClick={logout}>
+                {/* 스타일 스위처 (개발용) */}
+                {/* 스타일 스위처 (개발용) */}
+                <div className="style-switcher">
+                    <button className="sw-btn" onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}>
+                        {theme === 'dark' ? '🌙' : '☀︎'}
+                    </button>
+
+                    <div className="sw-pals">
+                        <button
+                            className={`sw-dot sw-dot--aurora ${palette==='aurora' ? 'is-active' : ''}`}
+                            title="Aurora"
+                            onClick={() => setPalette('aurora')}
+                        />
+                        <button
+                            className={`sw-dot sw-dot--plum ${palette==='plum' ? 'is-active' : ''}`}
+                            title="Plum"
+                            onClick={() => setPalette('plum')}
+                        />
+                        <button
+                            className={`sw-dot sw-dot--sunset ${palette==='sunset' ? 'is-active' : ''}`}
+                            title="Sunset"
+                            onClick={() => setPalette('sunset')}
+                        />
+                    </div>
+                </div>
+
+                <div className="sidebar-item mt-auto" onClick={logout}>
                 <i className="fas fa-sign-out-alt"></i>
                 <span>로그아웃</span>
               </div>

@@ -1,38 +1,596 @@
-.App {
-  text-align: center;
+/* =========================
+   Base / Reset
+========================= */
+:root{
+    /* Aurora Blue 팔레트 */
+    --brand-1: oklch(0.70 0.12 270);
+    --brand-2: oklch(0.64 0.18 320);
+    --brand-3: oklch(0.58 0.17 230);
+    --brand-spot: oklch(0.85 0.03 250 / .18);
+
+    --glass-bg: rgba(255,255,255,.08);
+    --glass-bd: rgba(255,255,255,.18);
+    --glass-bg-hover: rgba(255,255,255,.14);
+    --text-weak: #a9acb3;
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
+html, body, #root { height: 100%; margin: 0; }
+body {
+    font-family: "SUIT", system-ui, -apple-system, "Segoe UI", Malgun Gothic, sans-serif;
+    background: #0e0f12; /* 오른쪽 영역 */
+    color: #fff;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
+/* =========================
+   Split Layout (50:50)
+========================= */
+.landing {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    height: 100vh;
 }
 
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
+/* =========================
+   Left: Hero (모던 그라데이션 + 파동 애니메이션)
+========================= */
+.hero{
+    position: relative;
+    overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+    padding: clamp(40px, 7vw, 84px);
+    background:
+            radial-gradient(90% 60% at 25% 10%, var(--brand-spot) 0%, transparent 70%),
+            conic-gradient(from 200deg at 20% 20%, var(--brand-1), var(--brand-2), var(--brand-3));
 }
 
-.App-link {
-  color: #61dafb;
+/* subtle animated hue waves */
+.hero::after{
+    content:"";
+    position:absolute; inset:-20%;
+    background:
+            radial-gradient(40% 30% at 70% 80%, #ffffff33 0%, transparent 60%),
+            conic-gradient(from 90deg, transparent 0 40%, #ffffff0d 40% 50%, transparent 50% 100%);
+    animation: heroWave 22s ease-in-out infinite;
+    mix-blend-mode: soft-light;
+    pointer-events:none;
+}
+@keyframes heroWave{
+    0%   { transform: translate3d(0,0,0) scale(1);   filter: blur(0px); }
+    50%  { transform: translate3d(-2%, -2%, 0) scale(1.03); filter: blur(1px); }
+    100% { transform: translate3d(0,0,0) scale(1);   filter: blur(0px); }
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.hero__wrap{ max-width: 560px; width: 100%; }
+
+.hero__logo{
+    margin: 0 0 10px;
+    font-size: clamp(56px, 8vw, 88px);
+    font-weight: 800;
+    letter-spacing: -.6px;
+    line-height: 1.02;
+    background: linear-gradient(90deg,#fff, #ffe2ff 30%, #c9d7ff 70%);
+    -webkit-background-clip:text; background-clip:text; color: transparent;
+    text-shadow: 0 7px 26px rgba(0,0,0,.25);
+    position: relative; display:inline-block;
 }
+/* 로고 하이라이트 바 */
+.hero__logo::after{
+    content:"";
+    position:absolute; left:2px; right:18px; bottom:-12px; height:8px;
+    border-radius:999px;
+    background: linear-gradient(90deg, oklch(0.80 0.18 300), oklch(0.78 0.12 230));
+    box-shadow: 0 8px 24px rgba(123,97,255,.55);
+    opacity:.85;
+}
+
+.hero__lead{
+    margin: 18px 0 44px;
+    font-size: clamp(18px, 2.2vw, 20px);
+    opacity: .9;
+    letter-spacing: .2px;
+}
+
+/* =========================
+   Feature Chips (글래스 + 미니 배지)
+========================= */
+.hero__features{
+    list-style:none; margin:0; padding:0;
+    display:grid; gap:16px; max-width:520px;
+}
+.hero__features li{
+    display:flex; align-items:center; gap:12px;
+    padding:14px 18px;
+    border-radius:14px;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-bd);
+    backdrop-filter: blur(8px);
+    font-size:15px; font-weight:600; letter-spacing:.15px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.12);
+    transition: transform .18s ease, background .18s ease, border-color .18s ease;
+}
+.hero__features li:hover{
+    transform: translateY(-2px);
+    background: var(--glass-bg-hover);
+    border-color: rgba(255,255,255,.26);
+}
+/* 배지형 체크 아이콘 */
+.hero__features li::before{
+    content:"";
+    flex:0 0 22px; height:22px; border-radius:50%;
+    background:
+            radial-gradient(circle at 30% 30%, #fff, #ffe6ff 55%, #c7d8ff),
+            url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><path fill='%230e0f12' d='M6.2 10.3 3.6 7.7l-1 1 3.6 3.6L13.4 4.1l-1-1z'/></svg>") center/12px 12px no-repeat;
+    box-shadow: 0 2px 6px rgba(0,0,0,.25);
+}
+
+/* =========================
+   Right: Auth (단단·프리미엄)
+========================= */
+.auth{
+    background:#0e0f12;
+    display:flex; align-items:center; justify-content:center;
+}
+
+/* 카드 */
+.auth__card{
+    position:relative;
+    width: 460px;
+    padding: 28px 26px 22px;
+    border-radius: 16px;
+    background: #111318;
+    border: 1px solid #ffffff1a;
+    box-shadow: 0 22px 60px rgba(0,0,0,.45);
+    overflow: hidden;
+}
+.auth__card::before{
+    content:""; position:absolute; inset:-1px; border-radius:18px;
+    background: linear-gradient(135deg, #9b87ff55, #7dd3fc55);
+    filter: blur(14px); opacity:.45; z-index:-1;
+}
+.auth__card::after{
+    content:""; position:absolute; inset:0; pointer-events:none;
+    background: radial-gradient(120% 70% at 50% 0%, #ffffff0a, transparent 60%);
+}
+
+/* 헤더 */
+.auth__head{ margin: 4px 6px 14px; }
+.auth__title{ margin:0; font-size: 28px; font-weight: 800; letter-spacing: -.2px; }
+.auth__sub{ margin: 8px 0 0; font-size: 14px; color: #aeb2bd; }
+
+/* 액션 영역 */
+.auth__actions{ margin: 14px 0 10px; }
+#googleSignInDiv > div{
+    width:100% !important;
+    box-shadow: 0 2px 0 rgba(255,255,255,.06) inset, 0 1px 12px rgba(0,0,0,.25);
+    border-radius: 10px !important;
+}
+
+/* 구분선 */
+.auth__divider{
+    display:flex; align-items:center; gap:10px;
+    margin: 12px 4px 6px;
+    color: #8f949d; font-size: 12px;
+}
+.auth__divider::before,
+.auth__divider::after{
+    content:""; flex:1; height:1px; background: linear-gradient(90deg, transparent, #ffffff22, transparent);
+}
+
+/* 베네핏(신뢰) */
+.auth__benefits{
+    list-style:none; padding:0; margin: 10px 6px 2px; color:#c7cad1;
+    display:grid; gap:6px; font-size:13px;
+}
+.auth__benefits li{ display:flex; gap:8px; align-items:center; }
+.auth__benefits li::before{
+    content:""; width:6px; height:6px; border-radius:50%;
+    background: linear-gradient(135deg,#9b87ff,#7dd3fc);
+    box-shadow:0 0 0 3px rgba(255,255,255,.06);
+}
+
+/* 하단 메타 / 힌트 */
+.auth__meta{
+    margin: 14px 6px 2px;
+    font-size: 12px; color:#8e929c; line-height:1.5;
+}
+.auth__meta a{ color:#cfd6ff; text-decoration: underline dotted; text-underline-offset: 2px; }
+.auth__hint{ margin-top:14px; font-size:13px; color: var(--text-weak); text-align:center; }
+
+/* Hover & subtle motion */
+@media (prefers-reduced-motion: no-preference){
+    .auth__card{ transition: transform .18s ease, box-shadow .18s ease; }
+    .auth__card:hover{
+        transform: translateY(-2px);
+        box-shadow: 0 28px 70px rgba(0,0,0,.55);
+    }
+    .hero__features li{ will-change: transform; }
+}
+
+/* =========================
+   Responsive
+========================= */
+@media (max-width: 960px){
+    .landing{ grid-template-columns: 1fr; }
+    .hero{ min-height: 44vh; }
+    .auth__card{ width: min(440px, 92%); }
+}
+/* ========== Palette presets ========== */
+/* 기본은 aurora로 잡혀 있으니, data-palette로 덮어쓰기 */
+html[data-palette="aurora"]{
+    --brand-1: oklch(0.70 0.12 270);
+    --brand-2: oklch(0.64 0.18 320);
+    --brand-3: oklch(0.58 0.17 230);
+    --brand-spot: oklch(0.85 0.03 250 / .18);
+}
+html[data-palette="plum"]{
+    --brand-1: oklch(0.63 0.16 330);
+    --brand-2: oklch(0.55 0.12 290);
+    --brand-3: oklch(0.47 0.10 260);
+    --brand-spot: oklch(0.92 0.01 260 / .14);
+}
+html[data-palette="sunset"]{
+    --brand-1: oklch(0.74 0.17 35);   /* warm orange */
+    --brand-2: oklch(0.62 0.16 330);  /* magenta */
+    --brand-3: oklch(0.56 0.15 250);  /* indigo */
+    --brand-spot: oklch(0.92 0.02 80 / .18);
+}
+
+/* ========== Theme overrides ========== */
+/* 기본은 dark. light일 때만 덮어쓰기 */
+html[data-theme="light"] body{
+    background: #f6f8ff;
+    color: #0e1220;
+}
+html[data-theme="light"] .auth{
+    background:#f6f8ff;
+}
+html[data-theme="light"] .auth__card{
+    background:#ffffff;
+    border:1px solid #e9edf4;
+    box-shadow: 0 16px 40px rgba(12,25,60,.10);
+}
+html[data-theme="light"] .auth__sub{ color:#5c6270; }
+html[data-theme="light"] .auth__divider{ color:#7c8394; }
+html[data-theme="light"] .auth__meta{ color:#667085; }
+html[data-theme="light"] .auth__meta a{ color:#3b5bd6; }
+
+html[data-theme="light"] #googleSignInDiv > div{
+    box-shadow: 0 1px 0 rgba(0,0,0,.03) inset, 0 3px 14px rgba(10,22,40,.08);
+}
+
+/* 히어로 텍스트는 항상 밝게 보이도록 고정 */
+.hero{ color:#fff; }
+
+/* Style switcher (base) */
+.style-switcher{
+    position:fixed; left:16px; bottom:16px; z-index:40;
+    display:flex; align-items:center; gap:10px;
+    background:#0f1218cc; border:1px solid #ffffff22; color:#fff;
+    border-radius:12px; padding:8px 10px; backdrop-filter:blur(6px);
+}
+html[data-theme="light"] .style-switcher{
+    background:#ffffffcc; border-color:#e7eaf2; color:#0e1220;
+}
+.sw-btn{
+    font-size:16px; line-height:1; padding:6px 10px; border-radius:8px;
+    border:1px solid #ffffff22; background:#151922; color:inherit; cursor:pointer;
+}
+html[data-theme="light"] .sw-btn{ background:#f2f5ff; border-color:#e7eaf2; }
+.sw-pals{ display:flex; gap:8px; }
+.sw-dot{
+    width:20px; height:20px; border-radius:50%;
+    border:1px solid #ffffff33; cursor:pointer; display:inline-block;
+    box-shadow:0 2px 6px rgba(0,0,0,.25);
+}
+html[data-theme="light"] .sw-dot{ border-color:#d7dbe9; }
+.sw-dot.is-active{ outline:2px solid #fff8; }
+html[data-theme="light"] .sw-dot.is-active{ outline-color:#4b5bd6; }
+
+/* 팔레트별 색상 (클래스만 사용: 인라인 변수 X) */
+.sw-dot--aurora{
+    background: radial-gradient(circle at 30% 30%, #7aa0ff, #b087ff);
+}
+.sw-dot--plum{
+    background: radial-gradient(circle at 30% 30%, #b07bd6, #6a5acd);
+}
+.sw-dot--sunset{
+    background: radial-gradient(circle at 30% 30%, #ffb37a, #ff6a88);
+}
+/* =========================================
+   RIGHT PANEL → Flat Light Gray (no gradient)
+   붙여넣기: App.css 맨 아래
+========================================= */
+
+/* 원하는 회색 한 번에 조절 */
+:root{
+    --right-gray:       #d3d3d3; /* ← 이미지 느낌의 밝은 회색 */
+    --right-gray-card:  #e9e9e9; /* 카드 배경 회색 */
+    --right-gray-border:#cfcfcf; /* 카드 보더 회색 */
+}
+
+/* 오른쪽 영역 배경을 평평한 회색으로 고정 */
+.auth{
+    background: var(--right-gray);
+    position: relative;
+    display: flex; align-items: center; justify-content: center;
+}
+
+/* 이전에 넣은 비네트/그레인/글로우 제거 */
+.auth::before,
+.auth::after{ content:none !important; }
+
+/* 카드도 그레이 톤으로 정렬 */
+.auth__card{
+    background: var(--right-gray-card);
+    border: 1px solid var(--right-gray-border);
+    box-shadow: 0 8px 24px rgba(0,0,0,.10); /* 너무 세지 않게 */
+}
+/* 카드 네온/글로우 제거 */
+.auth__card::before,
+.auth__card::after{ content:none !important; }
+
+/* 텍스트 색상: 밝은 회색 배경에 맞춰 어두운 톤으로 */
+.auth__title{ color:#1f2430; }
+.auth__sub{ color:#3f4550; }
+.auth__divider{ color:#5a616c; }
+.auth__benefits{ color:#2f333a; }
+.auth__benefits li::before{
+    background:#7a7a7a;
+    box-shadow:0 0 0 3px rgba(0,0,0,.04);
+}
+.auth__meta{ color:#525a66; }
+.auth__meta a{ color:#2b4acb; } /* 링크는 살짝만 강조 */
+
+/* GSI 버튼 컨테이너 톤만 맞춤(버튼 자체 스타일은 구글 정책상 제한) */
+#googleSignInDiv > div{
+    width:100% !important;
+    border-radius:10px !important;
+    box-shadow: 0 1px 0 rgba(0,0,0,.04) inset, 0 2px 8px rgba(0,0,0,.08);
+}
+
+/* 라이트/다크 테마 상관없이 이 회색 무드가 우선 적용되게 함 */
+html[data-theme="light"] .auth{ background: var(--right-gray) !important; }
+html[data-theme="dark"]  .auth{ background: var(--right-gray) !important; }
+/* =========================================================
+   RIGHT PANEL — Modern Light-Gray Polish
+   (Paste at the VERY END of App.css)
+========================================================= */
+
+/* 오른쪽 섹션: 평면 회색 대신 얕은 그라데이션 + 비네트로 질감 */
+.auth{
+    position: relative;
+    display: flex; align-items: center; justify-content: center;
+    background:
+            radial-gradient(1200px 600px at 60% -10%, #ffffffb3 0%, transparent 60%), /* 상단 은은한 광택 */
+            linear-gradient(180deg, #e5e7ec 0%, #dfe2e7 50%, #dadde3 100%);          /* 라이트 그레이 그라데이션 */
+}
+
+/* 카드: 얇은 보더 + 이너 하이라이트 + 저강도 레이어드 그림자 */
+.auth__card{
+    background: linear-gradient(180deg, #f9fafb 0%, #f5f6f8 100%);
+    border: 1px solid #e5e8f0;
+    border-radius: 20px;
+    padding: 28px 28px 22px;
+    box-shadow:
+            0 0 0 1px rgba(255,255,255,.6) inset,      /* 이너 하이라이트 */
+            0 8px 16px rgba(15,23,42,.06),             /* 1차 그림자 */
+            0 32px 72px rgba(15,23,42,.12);            /* 2차 그림자 */
+}
+
+/* 카드 뒤쪽에 아주 약한 헤일로(상단 하이라이트) */
+.auth__card::before{
+    content:"";
+    position:absolute; inset:-8px -10px -10px -10px; border-radius:24px;
+    background: radial-gradient(120% 120% at 50% -20%, #ffffff88 0%, transparent 60%);
+    z-index:-1;
+}
+
+/* 과했던 네온/노이즈/글로우는 끄기 */
+.auth::before,
+.auth::after,
+.auth__card::after{ content:none !important; }
+
+/* 텍스트 톤 보정: 라이트 그레이 배경에 맞춘 중립 컬러 */
+.auth__title   { color:#262a33; font-weight:800; }
+.auth__sub     { color:#5a616c; }
+.auth__divider { color:#7b8391; }
+.auth__benefits{ color:#3d434c; }
+.auth__meta    { color:#6b7280; }
+.auth__meta a  { color:#3b5bd6; }
+
+/* GSI 컨테이너: 그림자 과하지 않게, 모서리 더 부드럽게 */
+#googleSignInDiv > div{
+    width:100% !important;
+    border: 1px solid #e6e9f2 !important;
+    border-radius: 12px !important;
+    box-shadow: 0 1px 2px rgba(15,23,42,.05), 0 2px 8px rgba(15,23,42,.06);
+}
+/* =========================
+   READABILITY FIX (최종 덮어쓰기)
+   붙여넣기 위치: App.css 맨 아래
+========================= */
+
+/* 카드 위 오버레이 전부 OFF: 텍스트 씻김 방지 */
+.auth::before,
+.auth::after,
+.auth__card::before,
+.auth__card::after{
+    content: none !important;
+    display: none !important;
+}
+
+/* 카드 배경/보더를 단정하게 고정 */
+.auth__card{
+    background: #f7f8fa !important;
+    border: 1px solid #e6e9f2 !important;
+    box-shadow:
+            0 1px 0 rgba(255,255,255,.7) inset,
+            0 8px 16px rgba(15,23,42,.06),
+            0 28px 60px rgba(15,23,42,.10) !important;
+}
+
+/* 텍스트 대비 강화 + 어떤 낮은 opacity도 무력화 */
+.auth__head,
+.auth__title,
+.auth__sub,
+.auth__divider,
+.auth__benefits,
+.auth__benefits li,
+.auth__meta,
+.auth__meta a{
+    opacity: 1 !important;
+}
+
+/* 명확한 색상 지정 (라이트 그레이 배경 기준) */
+.auth__title   { color:#1f2430 !important; }   /* 진한 제목 */
+.auth__sub     { color:#48505b !important; }   /* 보조 문장 */
+.auth__divider { color:#6e7682 !important; }   /* '또는' 라인 */
+.auth__benefits{ color:#2f343b !important; }   /* 불릿 목록 */
+.auth__meta    { color:#5a6270 !important; }   /* 하단 약관 */
+.auth__meta a  { color:#2b4acb !important; text-decoration: underline; }
+
+/* 불릿 점도 흐릿해 보이지 않게 */
+.auth__benefits li::before{
+    background:#6e7682 !important;
+    box-shadow: 0 0 0 3px rgba(0,0,0,.04) !important;
+}
+
+/* GSI 버튼 컨테이너: 테두리/그림자 가볍게, 대비 유지 */
+#googleSignInDiv > div{
+    width:100% !important;
+    border:1px solid #e6e9f2 !important;
+    border-radius:12px !important;
+    box-shadow: 0 1px 2px rgba(15,23,42,.05), 0 2px 8px rgba(15,23,42,.06) !important;
+}
+/* =========================================
+   GSI 버튼 리셋 (늘어짐/알약 현상 해결)
+   붙여넣기: App.css 맨 마지막
+========================================= */
+
+/* 컨테이너는 가운데 정렬만 담당 */
+.auth__actions{
+    display: flex;
+    justify-content: center;  /* 왼쪽 정렬 원하면 flex-start */
+}
+
+/* GSI가 자체 크기만 쓰도록 강제하고, 꾸밈 제거 */
+#googleSignInDiv > div{
+    width: auto !important;          /* ← 100% 강제 해제 */
+    min-width: 0 !important;
+    display: inline-block !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 4px !important;   /* 버튼 가장자리만 살짝(원한다면 제거 가능) */
+    padding: 0 !important;           /* 혹시 남은 여백 제거 */
+    overflow: visible !important;
+}
+/* 컨테이너와 양쪽 섹션에 포지션 부여 */
+.landing{ position: relative; }
+.hero{ position: relative; }
+.auth{ position: relative; }
+
+/* 데스크톱에서만 경계에 4~7vw 정도 겹쳐 보이게 */
+@media (min-width: 981px){
+    .auth__card{ margin-left: clamp(-44px, -5vw, -72px); }
+}
+.auth__title::after{
+    content:""; display:block; width:72px; height:4px;
+    margin:12px 0 0; border-radius:999px;
+    background: linear-gradient(90deg, var(--brand-2), var(--brand-1));
+    opacity:.85;
+}
+/* 중앙에 아주 얇은 페더만 얹어서 좌/우 연결감 주기 */
+.landing{ position: relative; }
+.hero, .auth{ position: relative; z-index: 1; }
+
+/* 가운데 얇은 그라데이션 — 색은 중립(흰색 알파)로만 사용 */
+.landing::after{
+    content:"";
+    position:absolute; top:0; left:50%; transform:translateX(-50%);
+    width:clamp(28px, 5.5vw, 72px);
+    height:100%;
+    background: linear-gradient(
+            90deg,
+            rgba(255,255,255,0) 0%,
+            rgba(255,255,255,.18) 50%,
+            rgba(255,255,255,0) 100%
+    );
+    pointer-events:none;
+    z-index:0;
+    mix-blend-mode: soft-light; /* 너무 밝으면 이 줄 삭제 */
+}
+
+/* 카드가 경계 쪽으로 약~간 겹치도록 (자연스러운 연결) */
+@media (min-width: 981px){
+    .auth__card{ margin-left: clamp(-18px, -3vw, -36px); }
+}
+/* 1) 중앙 페더를 더 얇고 연하게 — 경계감 최소화 */
+.landing{ position: relative; }
+.hero, .auth{ position: relative; z-index: 1; }
+
+.landing::after{
+    content:"";
+    position:absolute; top:0; left:50%; transform:translateX(-50%);
+    width:clamp(18px, 4.2vw, 50px);      /* 필요시 14~60px 사이로 조절 */
+    height:100%;
+    background: linear-gradient(
+            90deg,
+            rgba(255,255,255,0) 0%,
+            rgba(255,255,255,.12) 50%,          /* 필요시 .08~.16 사이로 조절 */
+            rgba(255,255,255,0) 100%
+    );
+    pointer-events:none;
+    z-index:0;
+    mix-blend-mode: soft-light;          /* 너무 밝으면 이 줄 제거 */
+}
+
+/* 2) 오른쪽 배경에 아주 미세한 결(텍스처) + 그레이 그라데이션 */
+.auth{
+    background:
+            radial-gradient(60% 40% at 70% 15%, rgba(255,255,255,.16), transparent 60%),
+            repeating-linear-gradient(0deg, rgba(255,255,255,.018) 0 2px, transparent 2px 4px),
+            linear-gradient(180deg, #d9dadb, #d3d4d6);
+}
+/* 단색 그레이가 더 좋으면 위 background를 지우고 아래 한 줄만 사용:
+.auth{ background:#d7d7d7; } */
+
+/* 3) 로그인 카드 톤&그림자 뉴트럴하게 */
+.auth__card{
+    background:#f7f8fa;
+    border:1px solid rgba(0,0,0,.06);
+    box-shadow:
+            0 10px 30px rgba(0,0,0,.10),
+            0 2px 8px rgba(0,0,0,.06);
+}
+.auth__card::before{ display:none; } /* 네온 글로우 제거 */
+.auth__card::after{
+    background: radial-gradient(120% 70% at 50% 0%, rgba(255,255,255,.6), transparent 65%);
+}
+
+/* 4) 제목 밑줄도 뉴트럴 그레이로 톤 다운 */
+.auth__title::after{
+    content:"";
+    display:block; margin-top:12px;
+    width:64px; height:3px; border-radius:999px;
+    background: linear-gradient(90deg, #c9cfda, #e0e6f3);
+    opacity:.9;
+}
+
+/* 5) Google 버튼 컨테이너만 살짝 톤 맞추기 (버튼 자체는 건드리지 않음) */
+#googleSignInDiv{
+    padding:2px; border-radius:12px;
+    background: rgba(0,0,0,.04);
+}
+#googleSignInDiv > div{
+    border-radius:10px !important;
+    box-shadow:none;                 /* 외곽 그림자 제거로 더 평평하게 */
+}
+
+/* 6) 모바일에서는 중앙 페더 제거 + 카드 위치 보정 */
+@media (max-width: 980px){
+    .landing::after{ display:none; }
+    .auth__card{ margin-left: 0; }
+}
+
+
