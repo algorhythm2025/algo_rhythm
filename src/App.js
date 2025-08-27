@@ -27,86 +27,122 @@ function App() {
   const [isDriveInitialized, setIsDriveInitialized] = useState(false);
   const [driveFiles, setDriveFiles] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [authStatus, setAuthStatus] = useState('disconnected');
   const formRef = useRef();
+  
+  // 통합 인증 서비스 인스턴스
   const authService = useRef(new GoogleAuthService());
-  const sheetsService = useRef(new GoogleSheetsService());
-  const driveService = useRef(new GoogleDriveService());
+  const sheetsService = useRef(null);
+  const driveService = useRef(null);
 
   // 섹션 전환
   function showSection(section) {
     setActiveSection(section);
   }
 
-  // 공통 구글 인증 초기화
+  // 통합 인증 시스템 초기화
   async function initializeGoogleAuth() {
+    
     try {
-      console.log('공통 구글 인증 초기화 시작...');
+      console.log('통합 인증 시스템 초기화 시작...');
       
-      await authService.current.initializeGapi();
-      console.log('공통 GAPI 초기화 완료');
+      // 인증 상태 변경 리스너 등록
+      authService.current.addAuthStateListener((isAuthenticated) => {
+        setAuthStatus(isAuthenticated ? 'connected' : 'disconnected');
+        console.log('인증 상태 변경:', isAuthenticated);
+      });
+
+      // 에러 리스너 등록
+      authService.current.addErrorListener((error) => {
+        console.error('인증 에러 발생:', error);
+        setAuthStatus('error');
+      });
+
+      // 통합 인증 초기화
+      await authService.current.initialize();
+      console.log('통합 인증 시스템 초기화 완료');
       
-      await authService.current.initializeGis();
-      console.log('공통 GIS 초기화 완료');
-      
-      await authService.current.requestToken();
-      console.log('공통 토큰 요청 완료');
-      
-      console.log('공통 인증 초기화 완료');
+      // 인증 완료 후 서비스들 초기화
+      await initializeServices();
       
     } catch (error) {
-      console.error('공통 구글 인증 초기화 오류:', error);
-      console.error('오류 상세:', error.message, error.stack);
+      console.error('통합 인증 시스템 초기화 오류:', error);
+      setAuthStatus('error');
       throw error;
     }
   }
 
-  // 구글 시트 초기화
-  async function initializeGoogleSheets() {
+  // 서비스들 초기화
+  async function initializeServices() {
     try {
-      console.log('구글 시트 초기화 시작...');
+      console.log('서비스들 초기화 시작...');
       
-      // 공통 인증이 완료되었는지 확인
+      // 인증 상태 확인
       if (!authService.current.isAuthenticated()) {
-        console.log('공통 인증이 필요합니다.');
+        console.log('인증이 완료되지 않았습니다.');
         return;
       }
       
-      console.log('인증 상태 확인 완료');
+      // 서비스 인스턴스 생성 (의존성 주입)
+      sheetsService.current = new GoogleSheetsService(authService.current);
+      driveService.current = new GoogleDriveService(authService.current);
       
-      // GAPI 클라이언트에 토큰이 설정되어 있는지 확인
-      if (window.gapi && window.gapi.client) {
-        const token = window.gapi.client.getToken();
-        console.log('GAPI 토큰 상태:', token ? '설정됨' : '설정되지 않음');
-      }
-      
-      setIsSheetsInitialized(true);
-      console.log('시트 초기화 완료');
+      console.log('서비스 인스턴스 생성 완료');
       
       // 기존 스프레드시트가 있는지 확인하고 없으면 생성
       if (!spreadsheetId) {
-        console.log('새 스프레드시트 생성 중...');
-        const spreadsheet = await sheetsService.current.createSpreadsheet('포트폴리오 이력');
-        saveLoginState(true, spreadsheet.spreadsheetId);
-        await sheetsService.current.setupHeaders(spreadsheet.spreadsheetId);
-        console.log('스프레드시트 생성 완료:', spreadsheet.spreadsheetId);
+        console.log('기존 포트폴리오 시트 파일 확인 중...');
+        
+        try {
+          // 기존 포트폴리오 시트 파일 검색
+          const existingFiles = await driveService.current.listFiles(50);
+          const portfolioFile = existingFiles.find(file => 
+            file.name === '포트폴리오 이력' && 
+            file.mimeType === 'application/vnd.google-apps.spreadsheet'
+          );
+          
+          if (portfolioFile) {
+            console.log('기존 포트폴리오 시트 파일 발견:', portfolioFile.id);
+            // 기존 파일 ID 저장
+            saveLoginState(true, portfolioFile.id);
+          } else {
+            console.log('기존 파일이 없어서 새로 생성합니다...');
+            const spreadsheet = await sheetsService.current.createSpreadsheet('포트폴리오 이력');
+            saveLoginState(true, spreadsheet.spreadsheetId);
+            await sheetsService.current.setupHeaders(spreadsheet.spreadsheetId);
+            console.log('새 스프레드시트 생성 완료:', spreadsheet.spreadsheetId);
+          }
+        } catch (error) {
+          console.error('기존 파일 확인 중 오류, 새로 생성합니다:', error);
+          const spreadsheet = await sheetsService.current.createSpreadsheet('포트폴리오 이력');
+          saveLoginState(true, spreadsheet.spreadsheetId);
+          await sheetsService.current.setupHeaders(spreadsheet.spreadsheetId);
+          console.log('새 스프레드시트 생성 완료:', spreadsheet.spreadsheetId);
+        }
       }
+      
+      // 서비스 초기화 상태 설정
+      setIsSheetsInitialized(true);
+      setIsDriveInitialized(true);
       
       // 기존 데이터 로드
       await loadExperiencesFromSheets();
-      console.log('데이터 로드 완료');
+      await loadDriveFiles();
+      
+      console.log('모든 서비스 초기화 완료');
       
     } catch (error) {
-      console.error('구글 시트 초기화 오류:', error);
-      console.error('오류 상세:', error.message, error.stack);
-      const errorMessage = sheetsService.current.formatErrorMessage(error);
+      console.error('서비스 초기화 오류:', error);
+      const errorMessage = error?.message || '서비스 초기화에 실패했습니다.';
       alert(errorMessage);
       setIsSheetsInitialized(false);
+      setIsDriveInitialized(false);
     }
   }
 
   // 시트에서 이력 데이터 로드
   async function loadExperiencesFromSheets() {
-    if (!spreadsheetId) return;
+    if (!spreadsheetId || !sheetsService.current) return;
     
     try {
       const sheetData = await sheetsService.current.readData(spreadsheetId, 'A:D');
@@ -117,43 +153,10 @@ function App() {
     }
   }
 
-  // 구글 드라이브 초기화
-  async function initializeGoogleDrive() {
-    try {
-      console.log('구글 드라이브 초기화 시작...');
-      
-      // 공통 인증이 완료되었는지 확인
-      if (!authService.current.isAuthenticated()) {
-        console.log('공통 인증이 필요합니다.');
-        return;
-      }
-      
-      console.log('드라이브 인증 상태 확인 완료');
-      
-      // GAPI 클라이언트에 토큰이 설정되어 있는지 확인
-      if (window.gapi && window.gapi.client) {
-        const token = window.gapi.client.getToken();
-        console.log('드라이브 GAPI 토큰 상태:', token ? '설정됨' : '설정되지 않음');
-      }
-      
-      setIsDriveInitialized(true);
-      console.log('드라이브 초기화 완료');
-      
-      // 파일 목록 로드
-      await loadDriveFiles();
-      console.log('드라이브 파일 로드 완료');
-      
-    } catch (error) {
-      console.error('구글 드라이브 초기화 오류:', error);
-      console.error('오류 상세:', error.message, error.stack);
-      const errorMessage = driveService.current.formatErrorMessage(error);
-      alert(errorMessage);
-      setIsDriveInitialized(false);
-    }
-  }
-
   // 드라이브 파일 목록 로드
   async function loadDriveFiles() {
+    if (!driveService.current) return;
+    
     try {
       console.log('드라이브 파일 불러오기 시작');
       const files = await driveService.current.listFiles(20);
@@ -175,91 +178,55 @@ function App() {
     }
   }
 
-  // 로그인 (구글 로그인 콜백 시 호출)
-  async function handleCredentialResponse(response) {
+  // GIS 기반 로그인 (단일 팝업에서 로그인+권한 처리)
+  async function handleGISLogin() {
     try {
       setIsLoading(true);
-      console.log('로그인 응답 받음:', response);
+      console.log('GIS 기반 로그인 시작...');
+      
+      // 통합 인증 시스템 초기화
+      await authService.current.initialize();
+      console.log('인증 시스템 초기화 완료');
+      
+      // 단일 팝업에서 로그인과 권한 요청
+      await authService.current.requestToken();
+      console.log('GIS 로그인 및 권한 요청 완료');
       
       // 로그인 상태 저장
       saveLoginState(true);
       
-      // 메인 페이지로 먼저 이동
+      // 메인 페이지로 이동
       setActiveSection('main');
       
-      // 공통 인증 서비스 초기화
-      await authService.current.initializeGapi();
-      console.log('로그인 후 GAPI 초기화 완료');
-      
-      await authService.current.initializeGis();
-      console.log('로그인 후 GIS 초기화 완료');
-      
-      // 토큰 요청
-      await authService.current.requestToken();
-      console.log('로그인 후 토큰 요청 완료');
-      
-      // 인증 상태 확인
-      const isAuth = authService.current.isAuthenticated();
-      console.log('로그인 후 인증 상태:', isAuth);
-      
-      if (isAuth) {
-        // 시트와 드라이브 초기화
-        await initializeGoogleSheets();
-        await initializeGoogleDrive();
-      } else {
-        console.error('인증이 완료되지 않았습니다.');
-        // 인증 실패해도 메인 페이지는 유지
-        console.log('인증 실패했지만 메인 페이지 유지');
-      }
+      // 인증 완료 후 서비스들 초기화
+      await initializeServices();
       
     } catch (error) {
-      console.error('로그인 후 초기화 오류:', error);
-      const errorMessage = error?.message || '로그인 후 초기화에 실패했습니다.';
-      console.log('오류 발생했지만 메인 페이지 유지:', errorMessage);
-      // 오류가 발생해도 메인 페이지는 유지
+      console.error('GIS 로그인 오류:', error);
+      const errorMessage = error?.message || '로그인에 실패했습니다.';
+      alert(errorMessage);
     } finally {
       setIsLoading(false);
-    }
-  }
-
-  // 로그인 후 서비스 초기화
-  async function initializeServicesAfterLogin() {
-    try {
-      // GAPI 초기화
-      await authService.current.initializeGapi();
-      console.log('GAPI 초기화 완료');
-      
-      // GIS 초기화 (토큰 자동 설정)
-      await authService.current.initializeGis();
-      console.log('GIS 초기화 완료');
-      
-      // 토큰 요청 (자동으로)
-      await authService.current.requestToken();
-      console.log('토큰 요청 완료');
-      
-      // 토큰이 없으면 다시 요청
-      if (!authService.current.getAccessToken()) {
-        console.log('토큰이 없어서 다시 요청합니다...');
-        await authService.current.requestToken();
-      }
-      
-      console.log('최종 인증 상태:', authService.current.isAuthenticated());
-      
-      // 시트와 드라이브 초기화
-      await initializeGoogleSheets();
-      await initializeGoogleDrive();
-      
-    } catch (error) {
-      console.error('서비스 초기화 오류:', error);
-      throw error;
     }
   }
 
   // 로그아웃
   function logout() {
     if (window.confirm('로그아웃 하시겠습니까?')) {
+      // 통합 인증 서비스에서 로그아웃
+      authService.current.logout();
+      
+      // 로컬 상태 정리
       saveLoginState(false);
       setActiveSection('main');
+      setIsSheetsInitialized(false);
+      setIsDriveInitialized(false);
+      setAuthStatus('disconnected');
+      
+      // 서비스 인스턴스 정리
+      sheetsService.current = null;
+      driveService.current = null;
+      
       // localStorage에서 스프레드시트 ID도 제거
       localStorage.removeItem('spreadsheetId');
     }
@@ -286,7 +253,7 @@ function App() {
         setExperiences([...experiences, newExperience]);
         
         // 구글 시트에 저장
-        if (spreadsheetId && isSheetsInitialized) {
+        if (spreadsheetId && sheetsService.current) {
           const sheetData = sheetsService.current.formatExperienceForSheet(newExperience);
           await sheetsService.current.appendData(spreadsheetId, 'A:D', [sheetData]);
         }
@@ -294,7 +261,7 @@ function App() {
         closeModal();
       } catch (error) {
         console.error('이력 저장 오류:', error);
-        const errorMessage = sheetsService.current.formatErrorMessage(error);
+        const errorMessage = sheetsService.current?.formatErrorMessage(error) || '이력 저장에 실패했습니다.';
         alert(errorMessage);
       } finally {
         setIsLoading(false);
@@ -321,7 +288,7 @@ function App() {
 
   // 선택된 이력 삭제
   async function deleteSelectedExperiences() {
-    if (selected.length === 0) return;
+    if (selected.length === 0 || !sheetsService.current) return;
     
     if (!window.confirm('선택된 이력을 삭제하시겠습니까?')) return;
     
@@ -347,7 +314,7 @@ function App() {
       
     } catch (error) {
       console.error('이력 삭제 오류:', error);
-      const errorMessage = sheetsService.current.formatErrorMessage(error);
+      const errorMessage = sheetsService.current?.formatErrorMessage(error) || '이력 삭제에 실패했습니다.';
       alert(errorMessage);
     } finally {
       setIsLoading(false);
@@ -357,14 +324,16 @@ function App() {
   // 파일 업로드 핸들러
   async function handleDriveFileUpload(event) {
     const file = event.target.files[0];
-    if (!file) return;
+    if (!file || !driveService.current) return;
+    
     try {
       setIsLoading(true);
       await driveService.current.uploadFile(file.name, file, file.type);
       await loadDriveFiles();
       alert('파일이 업로드되었습니다!');
     } catch (error) {
-      alert('파일 업로드 실패: ' + (error?.message || error));
+      const errorMessage = driveService.current?.formatErrorMessage(error) || '파일 업로드에 실패했습니다.';
+      alert(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -372,14 +341,16 @@ function App() {
 
   // 파일 삭제 핸들러
   async function handleDriveFileDelete(fileId) {
-    if (!window.confirm('정말로 이 파일을 삭제하시겠습니까?')) return;
+    if (!window.confirm('정말로 이 파일을 삭제하시겠습니까?') || !driveService.current) return;
+    
     try {
       setIsLoading(true);
       await driveService.current.deleteFile(fileId);
       await loadDriveFiles();
       alert('파일이 삭제되었습니다!');
     } catch (error) {
-      alert('파일 삭제 실패: ' + (error?.message || error));
+      const errorMessage = driveService.current?.formatErrorMessage(error) || '파일 삭제에 실패했습니다.';
+      alert(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -408,30 +379,8 @@ function App() {
           setIsLoading(true);
           console.log('페이지 로드 시 서비스 초기화 시작...');
           
-          // 공통 인증 서비스 초기화
-          await authService.current.initializeGapi();
-          console.log('페이지 로드 후 GAPI 초기화 완료');
-          
-          await authService.current.initializeGis();
-          console.log('페이지 로드 후 GIS 초기화 완료');
-          
-          // 토큰 요청
-          await authService.current.requestToken();
-          console.log('페이지 로드 후 토큰 요청 완료');
-          
-          // 인증 상태 확인
-          const isAuth = authService.current.isAuthenticated();
-          console.log('페이지 로드 후 인증 상태:', isAuth);
-          
-          if (isAuth) {
-            // 시트와 드라이브 초기화
-            await initializeGoogleSheets();
-            await initializeGoogleDrive();
-          } else {
-            console.error('페이지 로드 후 인증이 완료되지 않았습니다.');
-            saveLoginState(false);
-            localStorage.removeItem('spreadsheetId');
-          }
+          // 통합 인증 시스템 초기화
+          await initializeGoogleAuth();
           
         } catch (error) {
           console.error('서비스 초기화 오류:', error);
@@ -446,43 +395,50 @@ function App() {
     }
   }, [isLoggedIn, isSheetsInitialized, isDriveInitialized]);
 
-  // 구글 로그인 버튼 렌더링 (GSI 위젯)
+  // GIS 기반 로그인 버튼 렌더링
   useEffect(() => {
     if (!isLoggedIn) {
-      // 기존 GSI 위젯 제거
-      if (window.google && window.google.accounts && window.google.accounts.id) {
-        window.google.accounts.id.cancel();
+      // GIS 기반 로그인 버튼 렌더링
+      const googleSignInDiv = document.getElementById('googleSignInDiv');
+      if (googleSignInDiv) {
+        googleSignInDiv.innerHTML = `
+          <button 
+            id="gisLoginBtn"
+            style="
+              background: #4285f4; 
+              color: white; 
+              border: none; 
+              padding: 12px 24px; 
+              border-radius: 4px; 
+              font-size: 16px; 
+              cursor: pointer;
+              width: 300px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              gap: 8px;
+            "
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24">
+              <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+              <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+              <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+              <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+            </svg>
+            구글로 로그인
+          </button>
+        `;
+        
+        // 버튼에 이벤트 리스너 추가
+        const loginBtn = document.getElementById('gisLoginBtn');
+        if (loginBtn) {
+          loginBtn.addEventListener('click', handleGISLogin);
+        }
       }
-      
-      // GSI 스크립트 동적 로드
-      const script = document.createElement('script');
-      script.src = 'https://accounts.google.com/gsi/client';
-      script.async = true;
-      script.defer = true;
-      document.body.appendChild(script);
-      script.onload = () => {
-        if (window.google && window.google.accounts && window.google.accounts.id) {
-          window.google.accounts.id.initialize({
-            client_id: '158941918402-insbhffbmi221j6s3v4hghlle67t6rt2.apps.googleusercontent.com',
-            callback: handleCredentialResponse,
-            auto_select: false,
-          });
-          window.google.accounts.id.renderButton(
-            document.getElementById('googleSignInDiv'),
-            { theme: 'outline', size: 'large', width: 300 }
-          );
-        }
-      };
-      return () => {
-        if (window.google && window.google.accounts && window.google.accounts.id) {
-          window.google.accounts.id.cancel();
-        }
-        if (script.parentNode) {
-          document.body.removeChild(script);
-        }
-      };
     }
   }, [isLoggedIn]);
+
+  // OAuth 권한 부여는 GSI에서 처리되므로 제거됨
 
   // 실제 화면 렌더링
   return (
@@ -516,6 +472,14 @@ function App() {
                 <div className="login-box text-center">
                   <h2 className="mb-4">시작하기</h2>
                   <div id="googleSignInDiv"></div>
+                  {isLoading && (
+                    <div className="mt-3">
+                      <div className="spinner-border text-primary" role="status">
+                        <span className="visually-hidden">로그인 중...</span>
+                      </div>
+                      <p className="mt-2 text-muted">로그인 중...</p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -553,11 +517,15 @@ function App() {
               {/* 메인 섹션 */}
               {activeSection === 'main' && (
                 <div id="mainSection" className="content-section">
-                  {/* 구글 시트 연동 상태 */}
-                  <div className="sheets-status mb-4">
-                    <div className={`status-indicator ${isSheetsInitialized ? 'connected' : 'disconnected'}`}>
-                      <i className={`fas ${isSheetsInitialized ? 'fa-check-circle' : 'fa-exclamation-circle'}`}></i>
-                      <span>{isSheetsInitialized ? '구글 시트 연동됨' : '구글 시트 연동 중...'}</span>
+                  {/* 통합 인증 상태 */}
+                  <div className="auth-status mb-4">
+                    <div className={`status-indicator ${authStatus === 'connected' ? 'connected' : authStatus === 'error' ? 'error' : 'disconnected'}`}>
+                      <i className={`fas ${authStatus === 'connected' ? 'fa-check-circle' : authStatus === 'error' ? 'fa-exclamation-triangle' : 'fa-exclamation-circle'}`}></i>
+                      <span>
+                        {authStatus === 'connected' ? '구글 서비스 연동됨' : 
+                         authStatus === 'error' ? '구글 서비스 연동 오류' : 
+                         '구글 서비스 연동 중...'}
+                      </span>
                     </div>
                     {spreadsheetId && (
                       <div className="spreadsheet-info">
@@ -566,10 +534,10 @@ function App() {
                         <small>총 이력 수: {experiences.length}개</small>
                       </div>
                     )}
-                    {!isSheetsInitialized && (
-                      <div className="sheets-help">
+                    {authStatus === 'disconnected' && (
+                      <div className="auth-help">
                         <small className="text-muted">
-                          구글 시트 연동이 필요합니다. 구글 계정으로 로그인해주세요.
+                          구글 서비스 연동이 필요합니다. 구글 계정으로 로그인해주세요.
                         </small>
                       </div>
                     )}

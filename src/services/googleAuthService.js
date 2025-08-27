@@ -1,4 +1,4 @@
-// 구글 인증 공통 서비스
+// GIS 기반 구글 인증 서비스 (단일 팝업에서 로그인+권한 처리)
 class GoogleAuthService {
   constructor() {
     this.clientId = '158941918402-insbhffbmi221j6s3v4hghlle67t6rt2.apps.googleusercontent.com';
@@ -7,155 +7,205 @@ class GoogleAuthService {
     this.gapiInited = false;
     this.gisInited = false;
     this.accessToken = null;
+    this.isInitializing = false;
+    this.initializationPromise = null;
+    
+    // 이벤트 리스너들을 저장
+    this.authStateListeners = [];
+    this.errorListeners = [];
+  }
+
+  // 인증 상태 변경 이벤트 리스너 등록
+  addAuthStateListener(listener) {
+    this.authStateListeners.push(listener);
+  }
+
+  // 에러 이벤트 리스너 등록
+  addErrorListener(listener) {
+    this.errorListeners.push(listener);
+  }
+
+  // 이벤트 발생
+  emitAuthStateChange(isAuthenticated) {
+    this.authStateListeners.forEach(listener => listener(isAuthenticated));
+  }
+
+  emitError(error) {
+    this.errorListeners.forEach(listener => listener(error));
+  }
+
+  // 전체 인증 시스템 초기화
+  async initialize() {
+    // 이미 초기화 중이면 기존 Promise 반환
+    if (this.isInitializing) {
+      return this.initializationPromise;
+    }
+
+    // 이미 초기화 완료되었으면 즉시 반환
+    if (this.gapiInited && this.gisInited) {
+      return Promise.resolve();
+    }
+
+    this.isInitializing = true;
+    this.initializationPromise = this._performInitialization();
+    
+    try {
+      await this.initializationPromise;
+    } finally {
+      this.isInitializing = false;
+    }
+
+    return this.initializationPromise;
+  }
+
+  // 실제 초기화 수행
+  async _performInitialization() {
+    try {
+      console.log('GIS 기반 인증 시스템 초기화 시작...');
+      
+      // 1. GAPI 초기화
+      await this._initializeGapi();
+      console.log('GAPI 초기화 완료');
+      
+      // 2. GIS 초기화
+      await this._initializeGis();
+      console.log('GIS 초기화 완료');
+      
+      console.log('GIS 기반 인증 시스템 초기화 완료');
+      this.emitAuthStateChange(this.isAuthenticated());
+      
+    } catch (error) {
+      console.error('GIS 기반 인증 시스템 초기화 오류:', error);
+      this.emitError(error);
+      throw error;
+    }
   }
 
   // GAPI 초기화
-  async initializeGapi() {
+  async _initializeGapi() {
+    if (this.gapiInited) {
+      return;
+    }
+
     return new Promise((resolve, reject) => {
-      if (this.gapiInited) {
-        resolve();
-        return;
-      }
-
-      console.log('공통 GAPI 초기화 시작, API 키:', this.apiKey ? '설정됨' : '설정되지 않음');
-
       // 이미 스크립트가 로드되어 있는지 확인
       if (window.gapi) {
-        console.log('기존 공통 GAPI 스크립트 사용');
-        window.gapi.load('client', async () => {
-          try {
-            console.log('공통 GAPI 클라이언트 초기화 중...');
-            await window.gapi.client.init({
-              apiKey: this.apiKey,
-            });
-            
-            // Google Sheets와 Drive API 로드
-            await window.gapi.client.load('sheets', 'v4');
-            await window.gapi.client.load('drive', 'v3');
-            console.log('공통 GAPI 클라이언트 초기화 완료 (Sheets, Drive API 로드됨)');
-            this.gapiInited = true;
-            resolve();
-          } catch (error) {
-            console.error('공통 GAPI 클라이언트 초기화 오류:', error);
-            reject(error);
-          }
-        });
+        console.log('기존 GAPI 스크립트 사용');
+        this._setupGapi(resolve, reject);
         return;
       }
 
-      console.log('새 공통 GAPI 스크립트 로드 중...');
+      console.log('새 GAPI 스크립트 로드 중...');
       const script = document.createElement('script');
       script.src = 'https://apis.google.com/js/api.js';
       script.onload = () => {
-        console.log('공통 GAPI 스크립트 로드 완료');
-        window.gapi.load('client', async () => {
-          try {
-            console.log('공통 GAPI 클라이언트 초기화 중...');
-            await window.gapi.client.init({
-              apiKey: this.apiKey,
-            });
-            
-            // Google Sheets와 Drive API 로드
-            await window.gapi.client.load('sheets', 'v4');
-            await window.gapi.client.load('drive', 'v3');
-            console.log('공통 GAPI 클라이언트 초기화 완료 (Sheets, Drive API 로드됨)');
-            this.gapiInited = true;
-            resolve();
-          } catch (error) {
-            console.error('공통 GAPI 클라이언트 초기화 오류:', error);
-            reject(error);
-          }
-        });
+        console.log('GAPI 스크립트 로드 완료');
+        this._setupGapi(resolve, reject);
       };
       script.onerror = (error) => {
-        console.error('공통 GAPI 스크립트 로드 오류:', error);
-        reject(error);
+        console.error('GAPI 스크립트 로드 오류:', error);
+        reject(new Error('GAPI 스크립트 로드 실패'));
       };
       document.head.appendChild(script);
     });
+  }
+
+  // GAPI 설정
+  async _setupGapi(resolve, reject) {
+    try {
+      window.gapi.load('client', async () => {
+        try {
+          console.log('GAPI 클라이언트 초기화 중...');
+          await window.gapi.client.init({
+            apiKey: this.apiKey,
+          });
+          
+          // Google Sheets, Drive, Slides API 로드
+          await window.gapi.client.load('sheets', 'v4');
+          await window.gapi.client.load('drive', 'v3');
+          await window.gapi.client.load('slides', 'v1');
+          
+          console.log('GAPI 클라이언트 초기화 완료 (Sheets, Drive, Slides API 로드됨)');
+          this.gapiInited = true;
+          resolve();
+        } catch (error) {
+          console.error('GAPI 클라이언트 초기화 오류:', error);
+          reject(error);
+        }
+      });
+    } catch (error) {
+      reject(error);
+    }
   }
 
   // GIS 초기화
-  async initializeGis() {
-    return new Promise((resolve, reject) => {
-      if (this.gisInited) {
-        resolve();
-        return;
-      }
+  async _initializeGis() {
+    if (this.gisInited) {
+      return;
+    }
 
+    return new Promise((resolve, reject) => {
       // 이미 스크립트가 로드되어 있는지 확인
       if (window.google && window.google.accounts) {
-        this.tokenClient = window.google.accounts.oauth2.initTokenClient({
-          client_id: this.clientId,
-          scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive',
-          callback: (tokenResponse) => {
-            if (tokenResponse && tokenResponse.access_token) {
-              this.accessToken = tokenResponse.access_token;
-              // GAPI 클라이언트에 토큰 설정
-              this.setTokenToGapi(tokenResponse);
-              this.gisInited = true;
-              console.log('공통 토큰 획득 및 설정 완료');
-              resolve();
-            } else {
-              // 토큰이 없어도 초기화는 완료
-              this.gisInited = true;
-              console.log('토큰 없이 초기화 완료');
-              resolve();
-            }
-          },
-        });
-        this.gisInited = true;
-        resolve();
+        console.log('기존 GIS 스크립트 사용');
+        this._setupGis(resolve, reject);
         return;
       }
 
+      console.log('새 GIS 스크립트 로드 중...');
       const script = document.createElement('script');
       script.src = 'https://accounts.google.com/gsi/client';
       script.onload = () => {
-        this.tokenClient = window.google.accounts.oauth2.initTokenClient({
-          client_id: this.clientId,
-          scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive',
-          callback: (tokenResponse) => {
-            if (tokenResponse && tokenResponse.access_token) {
-              this.accessToken = tokenResponse.access_token;
-              // GAPI 클라이언트에 토큰 설정
-              this.setTokenToGapi(tokenResponse);
-              this.gisInited = true;
-              console.log('공통 토큰 획득 및 설정 완료');
-              resolve();
-            } else {
-              // 토큰이 없어도 초기화는 완료
-              this.gisInited = true;
-              console.log('토큰 없이 초기화 완료');
-              resolve();
-            }
-          },
-        });
-        this.gisInited = true;
-        resolve();
+        console.log('GIS 스크립트 로드 완료');
+        this._setupGis(resolve, reject);
       };
-      script.onerror = reject;
+      script.onerror = (error) => {
+        console.error('GIS 스크립트 로드 오류:', error);
+        reject(new Error('GIS 스크립트 로드 실패'));
+      };
       document.head.appendChild(script);
     });
   }
 
-  // 인증 토큰 요청
-  async requestToken() {
-    return new Promise((resolve, reject) => {
-      if (!this.tokenClient) {
-        reject(new Error('토큰 클라이언트가 초기화되지 않았습니다.'));
-        return;
-      }
-
-      try {
-        // 이미 토큰이 있으면 새로 요청하지 않음
-        if (this.accessToken) {
-          console.log('이미 토큰이 있습니다.');
+  // GIS 설정
+  _setupGis(resolve, reject) {
+    try {
+      this.tokenClient = window.google.accounts.oauth2.initTokenClient({
+        client_id: this.clientId,
+        scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/presentations',
+        callback: (tokenResponse) => {
+          if (tokenResponse && tokenResponse.access_token) {
+            this.accessToken = tokenResponse.access_token;
+            this._setTokenToGapi(tokenResponse);
+            console.log('토큰 획득 및 설정 완료');
+            this.emitAuthStateChange(true);
+          }
+          this.gisInited = true;
           resolve();
-          return;
-        }
+        },
+      });
+      this.gisInited = true;
+      resolve();
+    } catch (error) {
+      reject(error);
+    }
+  }
 
-        console.log('토큰 요청 시작...');
+  // 단일 팝업에서 로그인과 권한 요청
+  async requestToken() {
+    if (!this.tokenClient) {
+      throw new Error('토큰 클라이언트가 초기화되지 않았습니다.');
+    }
+
+    // 이미 토큰이 있으면 새로 요청하지 않음
+    if (this.accessToken) {
+      console.log('이미 토큰이 있습니다.');
+      return;
+    }
+
+    return new Promise((resolve, reject) => {
+      try {
+        console.log('단일 팝업에서 로그인과 권한 요청 시작...');
         
         // 토큰 요청 콜백을 직접 처리
         const originalCallback = this.tokenClient.callback;
@@ -163,54 +213,52 @@ class GoogleAuthService {
           console.log('토큰 응답 받음:', tokenResponse);
           if (tokenResponse && tokenResponse.access_token) {
             this.accessToken = tokenResponse.access_token;
-            this.setTokenToGapi(tokenResponse);
+            this._setTokenToGapi(tokenResponse);
             console.log('토큰 설정 완료');
+            this.emitAuthStateChange(true);
+            resolve();
           } else {
             console.log('토큰 응답에 액세스 토큰이 없음');
+            reject(new Error('토큰 획득 실패'));
           }
+          
           // 원래 콜백도 호출
           if (originalCallback) {
             originalCallback(tokenResponse);
           }
         };
         
-        // 자동으로 토큰 요청 (팝업 없이)
-        this.tokenClient.requestAccessToken({ prompt: 'none' });
+        // 단일 팝업에서 로그인과 권한 요청
+        console.log('단일 팝업에서 로그인과 권한 요청합니다...');
+        this.tokenClient.requestAccessToken({ prompt: 'consent' });
         
-        // 토큰 설정을 기다림
-        setTimeout(() => {
-          console.log('토큰 요청 후 상태:', {
-            hasAccessToken: !!this.accessToken,
-            gapiHasToken: !!(window.gapi && window.gapi.client && window.gapi.client.getToken())
-          });
-          
-          // 토큰이 없으면 다시 시도 (팝업으로)
-          if (!this.accessToken) {
-            console.log('토큰이 없어서 팝업으로 다시 시도합니다...');
-            this.tokenClient.requestAccessToken({ prompt: 'consent' });
-          }
-          
-          resolve();
-        }, 3000);
       } catch (error) {
         reject(error);
       }
     });
   }
 
-  // 토큰 가져오기
-  getAccessToken() {
-    return this.accessToken;
-  }
-
   // 토큰을 GAPI 클라이언트에 설정
-  setTokenToGapi(tokenResponse) {
+  _setTokenToGapi(tokenResponse) {
     if (window.gapi && window.gapi.client && tokenResponse) {
       window.gapi.client.setToken(tokenResponse);
       console.log('GAPI 클라이언트에 토큰 설정 완료');
       return true;
     }
     return false;
+  }
+
+  // 인증된 GAPI 클라이언트 반환
+  getAuthenticatedGapiClient() {
+    if (!this.gapiInited || !this.isAuthenticated()) {
+      throw new Error('인증이 완료되지 않았습니다. initialize()를 먼저 호출하세요.');
+    }
+    return window.gapi.client;
+  }
+
+  // 인증된 토큰 반환
+  getAccessToken() {
+    return this.accessToken;
   }
 
   // 인증 상태 확인
@@ -220,12 +268,77 @@ class GoogleAuthService {
     
     console.log('인증 상태 확인:', {
       gisInited: this.gisInited,
+      gapiInited: this.gapiInited,
       hasAccessToken: hasToken,
       gapiHasToken: !!gapiHasToken
     });
     
-    return this.gisInited && (hasToken || gapiHasToken);
+    return this.gisInited && this.gapiInited && (hasToken || gapiHasToken);
+  }
+
+  // 로그아웃
+  logout() {
+    console.log('GIS 로그아웃 시작...');
+    
+    // 로컬 상태 정리
+    this.accessToken = null;
+    
+    // GAPI 클라이언트 토큰 제거
+    if (window.gapi && window.gapi.client) {
+      window.gapi.client.setToken(null);
+    }
+    
+    // GIS 토큰 클라이언트 리셋
+    this.tokenClient = null;
+    this.gisInited = false;
+    this.gapiInited = false;
+    
+    this.emitAuthStateChange(false);
+    console.log('GIS 로그아웃 완료');
+  }
+
+  // 인증 상태 검증 및 복구
+  async validateAndRepairAuth() {
+    if (!this.isAuthenticated()) {
+      console.log('인증 상태가 유효하지 않습니다. 복구를 시도합니다...');
+      
+      try {
+        // 토큰 갱신 시도
+        await this.requestToken();
+        return true;
+      } catch (error) {
+        console.error('인증 복구 실패:', error);
+        // 전체 재초기화 시도
+        try {
+          this.gapiInited = false;
+          this.gisInited = false;
+          await this.initialize();
+          return true;
+        } catch (reinitError) {
+          console.error('재초기화 실패:', reinitError);
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  // 서비스별 인증 상태 확인
+  isServiceAuthenticated(serviceName) {
+    const isAuth = this.isAuthenticated();
+    console.log(`${serviceName} 서비스 인증 상태:`, isAuth);
+    return isAuth;
+  }
+
+  // 초기화 상태 확인
+  getInitializationStatus() {
+    return {
+      gapiInited: this.gapiInited,
+      gisInited: this.gisInited,
+      isAuthenticated: this.isAuthenticated(),
+      isInitializing: this.isInitializing
+    };
   }
 }
 
-export default GoogleAuthService; 
+export default GoogleAuthService;

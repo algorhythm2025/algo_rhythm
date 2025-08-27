@@ -1,32 +1,53 @@
 import React, { useEffect, useState } from 'react';
 import GoogleDriveService from './services/googleDriveService';
-
-const driveService = new GoogleDriveService();
+import GoogleAuthService from './services/googleAuthService';
 
 function GoogleDriveTab() {
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [authService] = useState(new GoogleAuthService());
+  const [driveService, setDriveService] = useState(null);
 
-  const fetchFiles = async () => {
+  // 인증 및 서비스 초기화
+  useEffect(() => {
+    const initializeServices = async () => {
+      try {
+        setLoading(true);
+        
+        // 통합 인증 시스템 초기화
+        await authService.initialize();
+        
+        // 드라이브 서비스 인스턴스 생성
+        const newDriveService = new GoogleDriveService(authService);
+        setDriveService(newDriveService);
+        
+        // 파일 목록 로드
+        await fetchFiles(newDriveService);
+        
+      } catch (err) {
+        setError('인증 초기화에 실패했습니다: ' + (err?.message || err));
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initializeServices();
+  }, [authService]);
+
+  const fetchFiles = async (service = driveService) => {
+    if (!service) return;
+    
     setLoading(true);
     setError('');
     try {
-      await driveService.initializeGapi();
-      await driveService.initializeGis();
-      await driveService.requestToken();
-      const fileList = await driveService.listFiles(20);
+      const fileList = await service.listFiles(20);
       setFiles(fileList);
     } catch (err) {
-      setError(driveService.formatErrorMessage(err));
+      setError(service.formatErrorMessage(err));
     }
     setLoading(false);
   };
-
-  useEffect(() => {
-    fetchFiles();
-    // eslint-disable-next-line
-  }, []);
 
   return (
     <div style={{ padding: '20px' }}>

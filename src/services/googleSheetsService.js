@@ -1,163 +1,34 @@
-// 구글 시트 API 서비스
+// 구글 시트 API 서비스 (통합 인증 사용)
 class GoogleSheetsService {
-  constructor() {
-    this.clientId = '158941918402-insbhffbmi221j6s3v4hghlle67t6rt2.apps.googleusercontent.com';
-    this.apiKey = 'AIzaSyCxMEd8FTlgZoYc4zu_E2nk6gA446iCGGA';
-    this.discoveryDocs = ['https://sheets.googleapis.com/$discovery/rest?version=v4'];
-    this.scopes = 'https://www.googleapis.com/auth/spreadsheets';
-    this.tokenClient = null;
-    this.gapiInited = false;
-    this.gisInited = false;
+  constructor(authService) {
+    if (!authService) {
+      throw new Error('GoogleAuthService 인스턴스가 필요합니다.');
+    }
+    this.authService = authService;
   }
 
-  // GAPI 초기화
-  async initializeGapi() {
-    return new Promise((resolve, reject) => {
-      if (this.gapiInited) {
-        resolve();
-        return;
-      }
-
-      console.log('GAPI 초기화 시작, API 키:', this.apiKey ? '설정됨' : '설정되지 않음');
-
-      // 이미 스크립트가 로드되어 있는지 확인
-      if (window.gapi) {
-        console.log('기존 GAPI 스크립트 사용');
-        window.gapi.load('client', async () => {
-          try {
-            console.log('GAPI 클라이언트 초기화 중...');
-            await window.gapi.client.init({
-              apiKey: this.apiKey,
-              discoveryDocs: this.discoveryDocs,
-            });
-            console.log('GAPI 클라이언트 초기화 완료');
-            this.gapiInited = true;
-            resolve();
-          } catch (error) {
-            console.error('GAPI 클라이언트 초기화 오류:', error);
-            reject(error);
-          }
-        });
-        return;
-      }
-
-      console.log('새 GAPI 스크립트 로드 중...');
-      const script = document.createElement('script');
-      script.src = 'https://apis.google.com/js/api.js';
-      script.onload = () => {
-        console.log('GAPI 스크립트 로드 완료');
-        window.gapi.load('client', async () => {
-          try {
-            console.log('GAPI 클라이언트 초기화 중...');
-            await window.gapi.client.init({
-              apiKey: this.apiKey,
-              discoveryDocs: this.discoveryDocs,
-            });
-            console.log('GAPI 클라이언트 초기화 완료');
-            this.gapiInited = true;
-            resolve();
-          } catch (error) {
-            console.error('GAPI 클라이언트 초기화 오류:', error);
-            reject(error);
-          }
-        });
-      };
-      script.onerror = (error) => {
-        console.error('GAPI 스크립트 로드 오류:', error);
-        reject(error);
-      };
-      document.head.appendChild(script);
-    });
-  }
-
-  // GIS 초기화
-  async initializeGis() {
-    return new Promise((resolve, reject) => {
-      if (this.gisInited) {
-        resolve();
-        return;
-      }
-
-      // 이미 스크립트가 로드되어 있는지 확인
-      if (window.google && window.google.accounts) {
-        this.tokenClient = window.google.accounts.oauth2.initTokenClient({
-          client_id: this.clientId,
-          scope: this.scopes,
-          callback: (tokenResponse) => {
-            if (tokenResponse && tokenResponse.access_token) {
-              this.gisInited = true;
-              resolve();
-            } else {
-              reject(new Error('토큰 응답이 없습니다.'));
-            }
-          },
-        });
-        this.gisInited = true;
-        resolve();
-        return;
-      }
-
-      const script = document.createElement('script');
-      script.src = 'https://accounts.google.com/gsi/client';
-      script.onload = () => {
-        this.tokenClient = window.google.accounts.oauth2.initTokenClient({
-          client_id: this.clientId,
-          scope: this.scopes,
-          callback: (tokenResponse) => {
-            if (tokenResponse && tokenResponse.access_token) {
-              this.gisInited = true;
-              resolve();
-            } else {
-              reject(new Error('토큰 응답이 없습니다.'));
-            }
-          },
-        });
-        this.gisInited = true;
-        resolve();
-      };
-      script.onerror = reject;
-      document.head.appendChild(script);
-    });
-  }
-
-  // 인증 토큰 요청
-  async requestToken() {
-    return new Promise((resolve, reject) => {
-      if (!this.tokenClient) {
-        reject(new Error('토큰 클라이언트가 초기화되지 않았습니다.'));
-        return;
-      }
-
-      try {
-        this.tokenClient.requestAccessToken({ prompt: '' });
-        // 토큰 요청이 성공적으로 시작되면 resolve
-        setTimeout(() => resolve(), 100);
-      } catch (error) {
-        reject(error);
-      }
-    });
+  // 인증 상태 확인
+  async ensureAuthenticated() {
+    if (!this.authService.isServiceAuthenticated('Sheets')) {
+      throw new Error('구글 시트 서비스를 사용하기 위해 인증이 필요합니다.');
+    }
   }
 
   // 스프레드시트 생성
   async createSpreadsheet(title) {
     try {
-      // 토큰 상태 확인
-      const token = window.gapi.client.getToken();
-      console.log('시트 API 호출 전 토큰 상태:', token ? '설정됨' : '설정되지 않음');
+      await this.ensureAuthenticated();
       
-      if (!token) {
-        throw new Error('토큰이 설정되지 않았습니다. 구글 로그인을 다시 시도해주세요.');
-      }
+      const gapiClient = this.authService.getAuthenticatedGapiClient();
       
       // Sheets API가 로드되었는지 확인
-      if (!window.gapi.client.sheets) {
-        console.error('Sheets API가 로드되지 않았습니다.');
+      if (!gapiClient.sheets) {
         throw new Error('구글 시트 API가 로드되지 않았습니다. 페이지를 새로고침해주세요.');
       }
       
       console.log('Sheets API 로드 확인됨, 스프레드시트 생성 시작...');
       
-      const response = await window.gapi.client.sheets.spreadsheets.create({
+      const response = await gapiClient.sheets.spreadsheets.create({
         properties: {
           title: title || '포트폴리오 이력'
         }
@@ -175,7 +46,11 @@ class GoogleSheetsService {
   // 시트에 데이터 추가
   async appendData(spreadsheetId, range, values) {
     try {
-      const response = await window.gapi.client.sheets.spreadsheets.values.append({
+      await this.ensureAuthenticated();
+      
+      const gapiClient = this.authService.getAuthenticatedGapiClient();
+      
+      const response = await gapiClient.sheets.spreadsheets.values.append({
         spreadsheetId: spreadsheetId,
         range: range,
         valueInputOption: 'RAW',
@@ -196,23 +71,18 @@ class GoogleSheetsService {
     try {
       console.log('시트 데이터 읽기 시작:', { spreadsheetId, range });
       
-      // 토큰 상태 확인
-      const token = window.gapi.client.getToken();
-      console.log('시트 API 호출 전 토큰 상태:', token ? '설정됨' : '설정되지 않음');
+      await this.ensureAuthenticated();
       
-      if (!token) {
-        throw new Error('토큰이 설정되지 않았습니다. 구글 로그인을 다시 시도해주세요.');
-      }
+      const gapiClient = this.authService.getAuthenticatedGapiClient();
       
       // Sheets API가 로드되었는지 확인
-      if (!window.gapi.client.sheets) {
-        console.error('Sheets API가 로드되지 않았습니다.');
+      if (!gapiClient.sheets) {
         throw new Error('구글 시트 API가 로드되지 않았습니다. 페이지를 새로고침해주세요.');
       }
       
       console.log('Sheets API 로드 확인됨, 데이터 읽기 시작...');
       
-      const response = await window.gapi.client.sheets.spreadsheets.values.get({
+      const response = await gapiClient.sheets.spreadsheets.values.get({
         spreadsheetId: spreadsheetId,
         range: range,
       });
@@ -238,6 +108,8 @@ class GoogleSheetsService {
         throw new Error('스프레드시트를 찾을 수 없습니다. 스프레드시트 ID를 확인해주세요.');
       } else if (error.message.includes('권한') || error.message.includes('permission')) {
         throw new Error('구글 시트 접근 권한이 없습니다. 구글 계정을 다시 로그인해주세요.');
+      } else if (error.message.includes('인증이 필요합니다')) {
+        throw new Error('구글 시트를 사용하기 위해 로그인이 필요합니다.');
       } else {
         throw new Error('데이터 로드에 실패했습니다. 스프레드시트 접근 권한을 확인해주세요.');
       }
@@ -247,7 +119,11 @@ class GoogleSheetsService {
   // 시트 데이터 업데이트
   async updateData(spreadsheetId, range, values) {
     try {
-      const response = await window.gapi.client.sheets.spreadsheets.values.update({
+      await this.ensureAuthenticated();
+      
+      const gapiClient = this.authService.getAuthenticatedGapiClient();
+      
+      const response = await gapiClient.sheets.spreadsheets.values.update({
         spreadsheetId: spreadsheetId,
         range: range,
         valueInputOption: 'RAW',
@@ -265,7 +141,11 @@ class GoogleSheetsService {
   // 시트 데이터 삭제
   async deleteData(spreadsheetId, range) {
     try {
-      const response = await window.gapi.client.sheets.spreadsheets.values.clear({
+      await this.ensureAuthenticated();
+      
+      const gapiClient = this.authService.getAuthenticatedGapiClient();
+      
+      const response = await gapiClient.sheets.spreadsheets.values.clear({
         spreadsheetId: spreadsheetId,
         range: range
       });
@@ -340,6 +220,8 @@ class GoogleSheetsService {
       return '구글 API 설정에 문제가 있습니다. API 키와 권한을 확인해주세요.';
     } else if (errorMessage.includes('quota') || errorMessage.includes('limit')) {
       return 'API 사용량 한도를 초과했습니다. 잠시 후 다시 시도해주세요.';
+    } else if (errorMessage.includes('인증이 필요합니다')) {
+      return '구글 시트를 사용하기 위해 로그인이 필요합니다.';
     } else {
       return `오류가 발생했습니다: ${errorMessage}`;
     }
