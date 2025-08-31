@@ -190,9 +190,25 @@ class GoogleSheetsService {
   // 스프레드시트 존재 여부 확인
   async checkSpreadsheetExists(spreadsheetId) {
     try {
-      await this.readData(spreadsheetId, 'A1:A1');
-      return true;
+      await this.ensureAuthenticated();
+      
+      const gapiClient = this.authService.getAuthenticatedGapiClient();
+      
+      // Sheets API가 로드되었는지 확인
+      if (!gapiClient.sheets) {
+        throw new Error('구글 시트 API가 로드되지 않았습니다.');
+      }
+      
+      // 스프레드시트 메타데이터만 가져와서 존재 여부 확인
+      const response = await gapiClient.sheets.spreadsheets.get({
+        spreadsheetId: spreadsheetId,
+        ranges: [],
+        includeGridData: false
+      });
+      
+      return response.result && response.result.spreadsheetId === spreadsheetId;
     } catch (error) {
+      console.log('스프레드시트 존재 여부 확인 실패:', error.message);
       return false;
     }
   }

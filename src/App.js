@@ -62,6 +62,22 @@ function App() {
       await authService.current.initialize();
       console.log('통합 인증 시스템 초기화 완료');
       
+      // 인증 상태 확인 및 토큰 갱신 시도
+      if (!authService.current.isAuthenticated()) {
+        console.log('인증 상태가 유효하지 않습니다. 토큰 갱신을 시도합니다...');
+        try {
+          // 토큰 갱신 시도
+          await authService.current.requestToken();
+          console.log('토큰 갱신 완료');
+        } catch (tokenError) {
+          console.log('토큰 갱신 실패, 인증 상태는 유지하되 서비스 초기화는 건너뜁니다:', tokenError);
+          // 토큰 갱신 실패 시에도 로그인 상태는 유지
+          setAuthStatus('disconnected');
+          // 서비스 초기화는 건너뛰고 로그인 상태만 유지
+          return;
+        }
+      }
+      
       // 인증 완료 후 서비스들 초기화
       await initializeServices();
       
@@ -90,8 +106,28 @@ function App() {
       console.log('서비스 인스턴스 생성 완료');
       
       // 기존 스프레드시트가 있는지 확인하고 없으면 생성
-      if (!spreadsheetId) {
-        console.log('기존 포트폴리오 시트 파일 확인 중...');
+      let currentSpreadsheetId = spreadsheetId;
+      
+      if (currentSpreadsheetId) {
+        console.log('기존 스프레드시트 ID 확인 중:', currentSpreadsheetId);
+        
+        try {
+          // 기존 시트가 실제로 존재하는지 확인
+          const exists = await sheetsService.current.checkSpreadsheetExists(currentSpreadsheetId);
+          if (!exists) {
+            console.log('기존 스프레드시트가 존재하지 않습니다. 새로 생성합니다...');
+            currentSpreadsheetId = null;
+          } else {
+            console.log('기존 스프레드시트가 유효합니다.');
+          }
+        } catch (error) {
+          console.log('기존 스프레드시트 확인 중 오류, 새로 생성합니다:', error);
+          currentSpreadsheetId = null;
+        }
+      }
+      
+      if (!currentSpreadsheetId) {
+        console.log('새 포트폴리오 시트 파일 생성 중...');
         
         try {
           // 기존 포트폴리오 시트 파일 검색
@@ -104,20 +140,23 @@ function App() {
           if (portfolioFile) {
             console.log('기존 포트폴리오 시트 파일 발견:', portfolioFile.id);
             // 기존 파일 ID 저장
-            saveLoginState(true, portfolioFile.id);
+            currentSpreadsheetId = portfolioFile.id;
+            saveLoginState(true, currentSpreadsheetId);
           } else {
             console.log('기존 파일이 없어서 새로 생성합니다...');
             const spreadsheet = await sheetsService.current.createSpreadsheet('포트폴리오 이력');
-            saveLoginState(true, spreadsheet.spreadsheetId);
-            await sheetsService.current.setupHeaders(spreadsheet.spreadsheetId);
-            console.log('새 스프레드시트 생성 완료:', spreadsheet.spreadsheetId);
+            currentSpreadsheetId = spreadsheet.spreadsheetId;
+            saveLoginState(true, currentSpreadsheetId);
+            await sheetsService.current.setupHeaders(currentSpreadsheetId);
+            console.log('새 스프레드시트 생성 완료:', currentSpreadsheetId);
           }
         } catch (error) {
           console.error('기존 파일 확인 중 오류, 새로 생성합니다:', error);
           const spreadsheet = await sheetsService.current.createSpreadsheet('포트폴리오 이력');
-          saveLoginState(true, spreadsheet.spreadsheetId);
-          await sheetsService.current.setupHeaders(spreadsheet.spreadsheetId);
-          console.log('새 스프레드시트 생성 완료:', spreadsheet.spreadsheetId);
+          currentSpreadsheetId = spreadsheet.spreadsheetId;
+          saveLoginState(true, currentSpreadsheetId);
+          await sheetsService.current.setupHeaders(currentSpreadsheetId);
+          console.log('새 스프레드시트 생성 완료:', currentSpreadsheetId);
         }
       }
       
@@ -125,9 +164,15 @@ function App() {
       setIsSheetsInitialized(true);
       setIsDriveInitialized(true);
       
-      // 기존 데이터 로드
-      await loadExperiencesFromSheets();
-      await loadDriveFiles();
+      // 기존 데이터 로드 (시트 생성 후에만 실행)
+      if (currentSpreadsheetId) {
+        // 시트 ID 상태를 먼저 업데이트
+        setSpreadsheetId(currentSpreadsheetId);
+        
+        // 새로 생성된 시트에서 데이터 로드
+        await loadExperiencesFromSheets(currentSpreadsheetId);
+        await loadDriveFiles();
+      }
       
       console.log('모든 서비스 초기화 완료');
       
@@ -141,15 +186,23 @@ function App() {
   }
 
   // 시트에서 이력 데이터 로드
-  async function loadExperiencesFromSheets() {
-    if (!spreadsheetId || !sheetsService.current) return;
+  async function loadExperiencesFromSheets(spreadsheetIdToUse = null) {
+    const targetSpreadsheetId = spreadsheetIdToUse || spreadsheetId;
+    
+    if (!targetSpreadsheetId || !sheetsService.current) return;
     
     try {
-      const sheetData = await sheetsService.current.readData(spreadsheetId, 'A:D');
+      const sheetData = await sheetsService.current.readData(targetSpreadsheetId, 'A:D');
       const experiences = sheetsService.current.formatSheetToExperience(sheetData);
       setExperiences(experiences);
     } catch (error) {
       console.error('이력 데이터 로드 오류:', error);
+      // 시트가 존재하지 않는 경우 로그만 출력하고 새로 생성하지 않음
+      if (error.message.includes('찾을 수 없습니다') || error.status === 404) {
+        console.log('시트가 존재하지 않습니다. 시트를 다시 생성해주세요.');
+        // 사용자에게 알림
+        alert('포트폴리오 시트가 삭제되었습니다. 로그아웃 후 다시 로그인해주세요.');
+      }
     }
   }
 
@@ -371,29 +424,58 @@ function App() {
   }
 
   // 페이지 로드 시 로그인 상태 복원 및 초기화
-  useEffect(() => {
-    if (isLoggedIn && !isSheetsInitialized && !isDriveInitialized) {
-      // 이미 로그인된 상태라면 서비스 초기화
-      const initializeServices = async () => {
-        try {
-          setIsLoading(true);
-          console.log('페이지 로드 시 서비스 초기화 시작...');
-          
-          // 통합 인증 시스템 초기화
-          await initializeGoogleAuth();
-          
-        } catch (error) {
-          console.error('서비스 초기화 오류:', error);
-          // 초기화 실패 시 로그아웃
-          saveLoginState(false);
-          localStorage.removeItem('spreadsheetId');
-        } finally {
-          setIsLoading(false);
-        }
+    // 페이지 로드 시 로그인 상태 복원 및 초기화
+    useEffect(() => {
+      // 페이지 로드 시 토큰 초기화
+      const clearTokens = () => {
+        // 구글 토큰 관련 쿠키 및 로컬 스토리지 정리
+        document.cookie.split(";").forEach(function(c) { 
+          document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+        });
+        
+        // 구글 관련 로컬 스토리지 정리
+        Object.keys(localStorage).forEach(key => {
+          if (key.includes('google') || key.includes('gapi') || key.includes('token')) {
+            localStorage.removeItem(key);
+          }
+        });
+        
+        // 로그인 상태를 false로 설정
+        setIsLoggedIn(false);
+        localStorage.setItem('isLoggedIn', 'false');
+        
+        console.log('토큰 초기화 완료');
       };
-      initializeServices();
-    }
-  }, [isLoggedIn, isSheetsInitialized, isDriveInitialized]);
+      
+      // 페이지 로드 시 토큰 초기화 실행
+      clearTokens();
+      
+    }, []);
+  // useEffect(() => {
+  //   if (isLoggedIn && !isSheetsInitialized && !isDriveInitialized) {
+  //     // 이미 로그인된 상태라면 서비스 초기화
+  //     const initializeServices = async () => {
+  //       try {
+  //         setIsLoading(true);
+  //         console.log('페이지 로드 시 서비스 초기화 시작...');
+
+  //         // 통합 인증 시스템 초기화
+  //         await initializeGoogleAuth();
+
+  //       } catch (error) {
+  //         console.error('서비스 초기화 오류:', error);
+  //         // 초기화 실패 시에도 로그아웃하지 않고 에러 상태만 표시
+  //         setAuthStatus('error');
+  //         setIsSheetsInitialized(false);
+  //         setIsDriveInitialized(false);
+  //       } finally {
+  //         setIsLoading(false);
+  //       }
+  //     };
+  //     initializeServices();
+  //   }
+  // }, [isLoggedIn, isSheetsInitialized, isDriveInitialized]);
+
 
   // GIS 기반 로그인 버튼 렌더링
   useEffect(() => {
@@ -521,26 +603,26 @@ function App() {
                   <div className="auth-status mb-4">
                     <div className={`status-indicator ${authStatus === 'connected' ? 'connected' : authStatus === 'error' ? 'error' : 'disconnected'}`}>
                       <i className={`fas ${authStatus === 'connected' ? 'fa-check-circle' : authStatus === 'error' ? 'fa-exclamation-triangle' : 'fa-exclamation-circle'}`}></i>
-                      <span>
-                        {authStatus === 'connected' ? '구글 서비스 연동됨' : 
-                         authStatus === 'error' ? '구글 서비스 연동 오류' : 
-                         '구글 서비스 연동 중...'}
-                      </span>
+                      {/*<span>*/}
+                      {/*  {authStatus === 'connected' ? '구글 서비스 연동됨' : */}
+                      {/*   authStatus === 'error' ? '구글 서비스 연동 오류' : */}
+                      {/*   '구글 서비스 연동 중...'}*/}
+                      {/*</span>*/}
                     </div>
-                    {spreadsheetId && (
-                      <div className="spreadsheet-info">
-                        <small>스프레드시트 ID: {spreadsheetId}</small>
-                        <br />
-                        <small>총 이력 수: {experiences.length}개</small>
-                      </div>
-                    )}
-                    {authStatus === 'disconnected' && (
-                      <div className="auth-help">
-                        <small className="text-muted">
-                          구글 서비스 연동이 필요합니다. 구글 계정으로 로그인해주세요.
-                        </small>
-                      </div>
-                    )}
+                    {/*{spreadsheetId && (*/}
+                    {/*  <div className="spreadsheet-info">*/}
+                    {/*    <small>스프레드시트 ID: {spreadsheetId}</small>*/}
+                    {/*    <br />*/}
+                    {/*    <small>총 이력 수: {experiences.length}개</small>*/}
+                    {/*  </div>*/}
+                    {/*)}*/}
+                    {/*{authStatus === 'disconnected' && (*/}
+                    {/*  <div className="auth-help">*/}
+                    {/*    <small className="text-muted">*/}
+                    {/*      구글 서비스 연동이 필요합니다. 구글 계정으로 로그인해주세요.*/}
+                    {/*    </small>*/}
+                    {/*  </div>*/}
+                    {/*)}*/}
                   </div>
                   
                   <div className="mac-grid">
