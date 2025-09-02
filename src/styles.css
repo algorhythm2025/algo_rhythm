@@ -969,6 +969,7 @@ a.btn:hover,
     display: none;
 }
 
+
 /* 이미지 업로드 에러 메시지 */
 .modal .upload-error {
     color: #ff4444;

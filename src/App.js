@@ -1,4 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
+import GoogleSheetsService from './services/googleSheetsService';
+import GoogleDriveService from './services/googleDriveService';
+import GoogleAuthService from './services/googleAuthService';
 
 const SECTION_LIST = [
   'main', 'drive', 'portal', 'pptMaker', 'myPage'
@@ -6,30 +9,279 @@ const SECTION_LIST = [
 
 function App() {
   // 상태 관리
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    // localStorage에서 로그인 상태 복원
+    const savedLoginState = localStorage.getItem('isLoggedIn');
+    return savedLoginState === 'true';
+  });
   const [activeSection, setActiveSection] = useState('main');
   const [showModal, setShowModal] = useState(false);
   const [experiences, setExperiences] = useState([]);
   const [form, setForm] = useState({ title: '', period: '', description: '' });
   const [selected, setSelected] = useState([]);
+  const [spreadsheetId, setSpreadsheetId] = useState(() => {
+    // localStorage에서 스프레드시트 ID 복원
+    return localStorage.getItem('spreadsheetId') || null;
+  });
+  const [isSheetsInitialized, setIsSheetsInitialized] = useState(false);
+  const [isDriveInitialized, setIsDriveInitialized] = useState(false);
+  const [driveFiles, setDriveFiles] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [authStatus, setAuthStatus] = useState('disconnected');
   const formRef = useRef();
+  
+  // 통합 인증 서비스 인스턴스
+  const authService = useRef(new GoogleAuthService());
+  const sheetsService = useRef(null);
+  const driveService = useRef(null);
 
   // 섹션 전환
   function showSection(section) {
     setActiveSection(section);
   }
 
-  // 로그인 (구글 로그인 콜백 시 호출)
-  function handleCredentialResponse(response) {
-    setIsLoggedIn(true);
-    setActiveSection('main');
+  // 통합 인증 시스템 초기화
+  async function initializeGoogleAuth() {
+    
+    try {
+      console.log('통합 인증 시스템 초기화 시작...');
+      
+      // 인증 상태 변경 리스너 등록
+      authService.current.addAuthStateListener((isAuthenticated) => {
+        setAuthStatus(isAuthenticated ? 'connected' : 'disconnected');
+        console.log('인증 상태 변경:', isAuthenticated);
+      });
+
+      // 에러 리스너 등록
+      authService.current.addErrorListener((error) => {
+        console.error('인증 에러 발생:', error);
+        setAuthStatus('error');
+      });
+
+      // 통합 인증 초기화
+      await authService.current.initialize();
+      console.log('통합 인증 시스템 초기화 완료');
+      
+      // 인증 상태 확인 및 토큰 갱신 시도
+      if (!authService.current.isAuthenticated()) {
+        console.log('인증 상태가 유효하지 않습니다. 토큰 갱신을 시도합니다...');
+        try {
+          // 토큰 갱신 시도
+          await authService.current.requestToken();
+          console.log('토큰 갱신 완료');
+        } catch (tokenError) {
+          console.log('토큰 갱신 실패, 인증 상태는 유지하되 서비스 초기화는 건너뜁니다:', tokenError);
+          // 토큰 갱신 실패 시에도 로그인 상태는 유지
+          setAuthStatus('disconnected');
+          // 서비스 초기화는 건너뛰고 로그인 상태만 유지
+          return;
+        }
+      }
+      
+      // 인증 완료 후 서비스들 초기화
+      await initializeServices();
+      
+    } catch (error) {
+      console.error('통합 인증 시스템 초기화 오류:', error);
+      setAuthStatus('error');
+      throw error;
+    }
+  }
+
+  // 서비스들 초기화
+  async function initializeServices() {
+    try {
+      console.log('서비스들 초기화 시작...');
+      
+      // 인증 상태 확인
+      if (!authService.current.isAuthenticated()) {
+        console.log('인증이 완료되지 않았습니다.');
+        return;
+      }
+      
+      // 서비스 인스턴스 생성 (의존성 주입)
+      sheetsService.current = new GoogleSheetsService(authService.current);
+      driveService.current = new GoogleDriveService(authService.current);
+      
+      console.log('서비스 인스턴스 생성 완료');
+      
+      // 기존 스프레드시트가 있는지 확인하고 없으면 생성
+      let currentSpreadsheetId = spreadsheetId;
+      
+      if (currentSpreadsheetId) {
+        console.log('기존 스프레드시트 ID 확인 중:', currentSpreadsheetId);
+        
+        try {
+          // 기존 시트가 실제로 존재하는지 확인
+          const exists = await sheetsService.current.checkSpreadsheetExists(currentSpreadsheetId);
+          if (!exists) {
+            console.log('기존 스프레드시트가 존재하지 않습니다. 새로 생성합니다...');
+            currentSpreadsheetId = null;
+          } else {
+            console.log('기존 스프레드시트가 유효합니다.');
+          }
+        } catch (error) {
+          console.log('기존 스프레드시트 확인 중 오류, 새로 생성합니다:', error);
+          currentSpreadsheetId = null;
+        }
+      }
+      
+      if (!currentSpreadsheetId) {
+        console.log('새 포트폴리오 시트 파일 생성 중...');
+        
+        try {
+          // 기존 포트폴리오 시트 파일 검색
+          const existingFiles = await driveService.current.listFiles(50);
+          const portfolioFile = existingFiles.find(file => 
+            file.name === '포트폴리오 이력' && 
+            file.mimeType === 'application/vnd.google-apps.spreadsheet'
+          );
+          
+          if (portfolioFile) {
+            console.log('기존 포트폴리오 시트 파일 발견:', portfolioFile.id);
+            // 기존 파일 ID 저장
+            currentSpreadsheetId = portfolioFile.id;
+            saveLoginState(true, currentSpreadsheetId);
+          } else {
+            console.log('기존 파일이 없어서 새로 생성합니다...');
+            const spreadsheet = await sheetsService.current.createSpreadsheet('포트폴리오 이력');
+            currentSpreadsheetId = spreadsheet.spreadsheetId;
+            saveLoginState(true, currentSpreadsheetId);
+            await sheetsService.current.setupHeaders(currentSpreadsheetId);
+            console.log('새 스프레드시트 생성 완료:', currentSpreadsheetId);
+          }
+        } catch (error) {
+          console.error('기존 파일 확인 중 오류, 새로 생성합니다:', error);
+          const spreadsheet = await sheetsService.current.createSpreadsheet('포트폴리오 이력');
+          currentSpreadsheetId = spreadsheet.spreadsheetId;
+          saveLoginState(true, currentSpreadsheetId);
+          await sheetsService.current.setupHeaders(currentSpreadsheetId);
+          console.log('새 스프레드시트 생성 완료:', currentSpreadsheetId);
+        }
+      }
+      
+      // 서비스 초기화 상태 설정
+      setIsSheetsInitialized(true);
+      setIsDriveInitialized(true);
+      
+      // 기존 데이터 로드 (시트 생성 후에만 실행)
+      if (currentSpreadsheetId) {
+        // 시트 ID 상태를 먼저 업데이트
+        setSpreadsheetId(currentSpreadsheetId);
+        
+        // 새로 생성된 시트에서 데이터 로드
+        await loadExperiencesFromSheets(currentSpreadsheetId);
+        await loadDriveFiles();
+      }
+      
+      console.log('모든 서비스 초기화 완료');
+      
+    } catch (error) {
+      console.error('서비스 초기화 오류:', error);
+      const errorMessage = error?.message || '서비스 초기화에 실패했습니다.';
+      alert(errorMessage);
+      setIsSheetsInitialized(false);
+      setIsDriveInitialized(false);
+    }
+  }
+
+  // 시트에서 이력 데이터 로드
+  async function loadExperiencesFromSheets(spreadsheetIdToUse = null) {
+    const targetSpreadsheetId = spreadsheetIdToUse || spreadsheetId;
+    
+    if (!targetSpreadsheetId || !sheetsService.current) return;
+    
+    try {
+      const sheetData = await sheetsService.current.readData(targetSpreadsheetId, 'A:D');
+      const experiences = sheetsService.current.formatSheetToExperience(sheetData);
+      setExperiences(experiences);
+    } catch (error) {
+      console.error('이력 데이터 로드 오류:', error);
+      // 시트가 존재하지 않는 경우 로그만 출력하고 새로 생성하지 않음
+      if (error.message.includes('찾을 수 없습니다') || error.status === 404) {
+        console.log('시트가 존재하지 않습니다. 시트를 다시 생성해주세요.');
+        // 사용자에게 알림
+        alert('포트폴리오 시트가 삭제되었습니다. 로그아웃 후 다시 로그인해주세요.');
+      }
+    }
+  }
+
+  // 드라이브 파일 목록 로드
+  async function loadDriveFiles() {
+    if (!driveService.current) return;
+    
+    try {
+      console.log('드라이브 파일 불러오기 시작');
+      const files = await driveService.current.listFiles(20);
+      console.log('드라이브 파일:', files);
+      setDriveFiles(files);
+    } catch (error) {
+      console.error('드라이브 파일 로드 오류:', error);
+    }
+  }
+
+  // 로그인 상태 저장
+  function saveLoginState(loggedIn, spreadsheetIdValue = null) {
+    setIsLoggedIn(loggedIn);
+    localStorage.setItem('isLoggedIn', loggedIn.toString());
+    
+    if (spreadsheetIdValue) {
+      setSpreadsheetId(spreadsheetIdValue);
+      localStorage.setItem('spreadsheetId', spreadsheetIdValue);
+    }
+  }
+
+  // GIS 기반 로그인 (단일 팝업에서 로그인+권한 처리)
+  async function handleGISLogin() {
+    try {
+      setIsLoading(true);
+      console.log('GIS 기반 로그인 시작...');
+      
+      // 통합 인증 시스템 초기화
+      await authService.current.initialize();
+      console.log('인증 시스템 초기화 완료');
+      
+      // 단일 팝업에서 로그인과 권한 요청
+      await authService.current.requestToken();
+      console.log('GIS 로그인 및 권한 요청 완료');
+      
+      // 로그인 상태 저장
+      saveLoginState(true);
+      
+      // 메인 페이지로 이동
+      setActiveSection('main');
+      
+      // 인증 완료 후 서비스들 초기화
+      await initializeServices();
+      
+    } catch (error) {
+      console.error('GIS 로그인 오류:', error);
+      const errorMessage = error?.message || '로그인에 실패했습니다.';
+      alert(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   // 로그아웃
   function logout() {
     if (window.confirm('로그아웃 하시겠습니까?')) {
-      setIsLoggedIn(false);
+      // 통합 인증 서비스에서 로그아웃
+      authService.current.logout();
+      
+      // 로컬 상태 정리
+      saveLoginState(false);
       setActiveSection('main');
+      setIsSheetsInitialized(false);
+      setIsDriveInitialized(false);
+      setAuthStatus('disconnected');
+      
+      // 서비스 인스턴스 정리
+      sheetsService.current = null;
+      driveService.current = null;
+      
+      // localStorage에서 스프레드시트 ID도 제거
+      localStorage.removeItem('spreadsheetId');
     }
   }
 
@@ -43,11 +295,30 @@ function App() {
   }
 
   // 이력 저장
-  function saveExperience(e) {
+  async function saveExperience(e) {
     e.preventDefault();
     if (form.title && form.period && form.description) {
-      setExperiences([...experiences, { ...form }]);
-      closeModal();
+      try {
+        setIsLoading(true);
+        
+        // 로컬 상태 업데이트
+        const newExperience = { ...form };
+        setExperiences([...experiences, newExperience]);
+        
+        // 구글 시트에 저장
+        if (spreadsheetId && sheetsService.current) {
+          const sheetData = sheetsService.current.formatExperienceForSheet(newExperience);
+          await sheetsService.current.appendData(spreadsheetId, 'A:D', [sheetData]);
+        }
+        
+        closeModal();
+      } catch (error) {
+        console.error('이력 저장 오류:', error);
+        const errorMessage = sheetsService.current?.formatErrorMessage(error) || '이력 저장에 실패했습니다.';
+        alert(errorMessage);
+      } finally {
+        setIsLoading(false);
+      }
     }
   }
 
@@ -68,33 +339,188 @@ function App() {
     );
   }
 
-  // 구글 로그인 버튼 렌더링 (GSI 위젯)
+  // 선택된 이력 삭제
+  async function deleteSelectedExperiences() {
+    if (selected.length === 0 || !sheetsService.current) return;
+    
+    if (!window.confirm('선택된 이력을 삭제하시겠습니까?')) return;
+    
+    try {
+      setIsLoading(true);
+      
+      // 선택된 이력들을 구글 시트에서 삭제
+      if (spreadsheetId && isSheetsInitialized) {
+        // 선택된 행들을 역순으로 정렬하여 삭제 (인덱스가 변경되지 않도록)
+        const sortedSelected = [...selected].sort((a, b) => b - a);
+        
+        for (const index of sortedSelected) {
+          // 헤더 + 선택된 인덱스 + 1 (시트는 1부터 시작)
+          const rowNumber = index + 2;
+          await sheetsService.current.deleteData(spreadsheetId, `A${rowNumber}:D${rowNumber}`);
+        }
+      }
+      
+      // 로컬 상태에서도 삭제
+      const newExperiences = experiences.filter((_, idx) => !selected.includes(idx));
+      setExperiences(newExperiences);
+      setSelected([]);
+      
+    } catch (error) {
+      console.error('이력 삭제 오류:', error);
+      const errorMessage = sheetsService.current?.formatErrorMessage(error) || '이력 삭제에 실패했습니다.';
+      alert(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  // 파일 업로드 핸들러
+  async function handleDriveFileUpload(event) {
+    const file = event.target.files[0];
+    if (!file || !driveService.current) return;
+    
+    try {
+      setIsLoading(true);
+      await driveService.current.uploadFile(file.name, file, file.type);
+      await loadDriveFiles();
+      alert('파일이 업로드되었습니다!');
+    } catch (error) {
+      const errorMessage = driveService.current?.formatErrorMessage(error) || '파일 업로드에 실패했습니다.';
+      alert(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  // 파일 삭제 핸들러
+  async function handleDriveFileDelete(fileId) {
+    if (!window.confirm('정말로 이 파일을 삭제하시겠습니까?') || !driveService.current) return;
+    
+    try {
+      setIsLoading(true);
+      await driveService.current.deleteFile(fileId);
+      await loadDriveFiles();
+      alert('파일이 삭제되었습니다!');
+    } catch (error) {
+      const errorMessage = driveService.current?.formatErrorMessage(error) || '파일 삭제에 실패했습니다.';
+      alert(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  // 구글 시트 데이터 새로고침
+  async function refreshSheetsData() {
+    try {
+      setIsLoading(true);
+      await loadExperiencesFromSheets();
+      alert('구글 시트 데이터가 새로고침되었습니다!');
+    } catch (error) {
+      console.error('시트 데이터 새로고침 오류:', error);
+      alert('데이터 새로고침에 실패했습니다: ' + (error?.message || error));
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  // 페이지 로드 시 로그인 상태 복원 및 초기화
+    // 페이지 로드 시 로그인 상태 복원 및 초기화
+    useEffect(() => {
+      // 페이지 로드 시 토큰 초기화
+      const clearTokens = () => {
+        // 구글 토큰 관련 쿠키 및 로컬 스토리지 정리
+        document.cookie.split(";").forEach(function(c) { 
+          document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+        });
+        
+        // 구글 관련 로컬 스토리지 정리
+        Object.keys(localStorage).forEach(key => {
+          if (key.includes('google') || key.includes('gapi') || key.includes('token')) {
+            localStorage.removeItem(key);
+          }
+        });
+        
+        // 로그인 상태를 false로 설정
+        setIsLoggedIn(false);
+        localStorage.setItem('isLoggedIn', 'false');
+        
+        console.log('토큰 초기화 완료');
+      };
+      
+      // 페이지 로드 시 토큰 초기화 실행
+      clearTokens();
+      
+    }, []);
+  // useEffect(() => {
+  //   if (isLoggedIn && !isSheetsInitialized && !isDriveInitialized) {
+  //     // 이미 로그인된 상태라면 서비스 초기화
+  //     const initializeServices = async () => {
+  //       try {
+  //         setIsLoading(true);
+  //         console.log('페이지 로드 시 서비스 초기화 시작...');
+
+  //         // 통합 인증 시스템 초기화
+  //         await initializeGoogleAuth();
+
+  //       } catch (error) {
+  //         console.error('서비스 초기화 오류:', error);
+  //         // 초기화 실패 시에도 로그아웃하지 않고 에러 상태만 표시
+  //         setAuthStatus('error');
+  //         setIsSheetsInitialized(false);
+  //         setIsDriveInitialized(false);
+  //       } finally {
+  //         setIsLoading(false);
+  //       }
+  //     };
+  //     initializeServices();
+  //   }
+  // }, [isLoggedIn, isSheetsInitialized, isDriveInitialized]);
+
+
+  // GIS 기반 로그인 버튼 렌더링
   useEffect(() => {
     if (!isLoggedIn) {
-      // GSI 스크립트 동적 로드
-      const script = document.createElement('script');
-      script.src = 'https://accounts.google.com/gsi/client';
-      script.async = true;
-      script.defer = true;
-      document.body.appendChild(script);
-      script.onload = () => {
-        if (window.google && window.google.accounts && window.google.accounts.id) {
-          window.google.accounts.id.initialize({
-            client_id: '315917737558-2qd5q4as4qbh03vru788h5ccrci9bbed.apps.googleusercontent.com',
-            callback: handleCredentialResponse,
-            auto_select: false,
-          });
-          window.google.accounts.id.renderButton(
-            document.getElementById('googleSignInDiv'),
-            { theme: 'outline', size: 'large', width: 300 }
-          );
+      // GIS 기반 로그인 버튼 렌더링
+      const googleSignInDiv = document.getElementById('googleSignInDiv');
+      if (googleSignInDiv) {
+        googleSignInDiv.innerHTML = `
+          <button 
+            id="gisLoginBtn"
+            style="
+              background: #4285f4; 
+              color: white; 
+              border: none; 
+              padding: 12px 24px; 
+              border-radius: 4px; 
+              font-size: 16px; 
+              cursor: pointer;
+              width: 300px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              gap: 8px;
+            "
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24">
+              <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+              <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+              <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+              <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+            </svg>
+            구글로 로그인
+          </button>
+        `;
+        
+        // 버튼에 이벤트 리스너 추가
+        const loginBtn = document.getElementById('gisLoginBtn');
+        if (loginBtn) {
+          loginBtn.addEventListener('click', handleGISLogin);
         }
-      };
-      return () => {
-        document.body.removeChild(script);
-      };
+      }
     }
   }, [isLoggedIn]);
+
+  // OAuth 권한 부여는 GSI에서 처리되므로 제거됨
 
   // 실제 화면 렌더링
   return (
@@ -128,6 +554,14 @@ function App() {
                 <div className="login-box text-center">
                   <h2 className="mb-4">시작하기</h2>
                   <div id="googleSignInDiv"></div>
+                  {isLoading && (
+                    <div className="mt-3">
+                      <div className="spinner-border text-primary" role="status">
+                        <span className="visually-hidden">로그인 중...</span>
+                      </div>
+                      <p className="mt-2 text-muted">로그인 중...</p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -165,6 +599,32 @@ function App() {
               {/* 메인 섹션 */}
               {activeSection === 'main' && (
                 <div id="mainSection" className="content-section">
+                  {/* 통합 인증 상태 */}
+                  <div className="auth-status mb-4">
+                    <div className={`status-indicator ${authStatus === 'connected' ? 'connected' : authStatus === 'error' ? 'error' : 'disconnected'}`}>
+                      <i className={`fas ${authStatus === 'connected' ? 'fa-check-circle' : authStatus === 'error' ? 'fa-exclamation-triangle' : 'fa-exclamation-circle'}`}></i>
+                      {/*<span>*/}
+                      {/*  {authStatus === 'connected' ? '구글 서비스 연동됨' : */}
+                      {/*   authStatus === 'error' ? '구글 서비스 연동 오류' : */}
+                      {/*   '구글 서비스 연동 중...'}*/}
+                      {/*</span>*/}
+                    </div>
+                    {/*{spreadsheetId && (*/}
+                    {/*  <div className="spreadsheet-info">*/}
+                    {/*    <small>스프레드시트 ID: {spreadsheetId}</small>*/}
+                    {/*    <br />*/}
+                    {/*    <small>총 이력 수: {experiences.length}개</small>*/}
+                    {/*  </div>*/}
+                    {/*)}*/}
+                    {/*{authStatus === 'disconnected' && (*/}
+                    {/*  <div className="auth-help">*/}
+                    {/*    <small className="text-muted">*/}
+                    {/*      구글 서비스 연동이 필요합니다. 구글 계정으로 로그인해주세요.*/}
+                    {/*    </small>*/}
+                    {/*  </div>*/}
+                    {/*)}*/}
+                  </div>
+                  
                   <div className="mac-grid">
                     <div className="mac-card" onClick={showAddExperienceModal}>
                       <i className="fas fa-plus-circle"></i>
@@ -188,15 +648,24 @@ function App() {
                       <div className="d-flex justify-content-between align-items-center mb-3">
                         <div>
                           <button className="btn btn-outline-dark me-2" onClick={() => selectAllExperiences(true)}>전체 선택</button>
-                          <button className="btn btn-outline-dark" onClick={() => selectAllExperiences(false)}>전체 해제</button>
+                          <button className="btn btn-outline-dark me-2" onClick={() => selectAllExperiences(false)}>전체 해제</button>
+                          <button className="btn btn-outline-danger" onClick={deleteSelectedExperiences} disabled={selected.length === 0}>선택 삭제</button>
                         </div>
-                        <button className="btn btn-dark" id="nextButton" disabled={selected.length === 0}>다음</button>
+                        <div>
+                          <button className="btn btn-outline-primary me-2" onClick={refreshSheetsData}>
+                            <i className="fas fa-sync-alt"></i> 시트 새로고침
+                          </button>
+                          <button className="btn btn-dark" id="nextButton" disabled={selected.length === 0}>다음</button>
+                        </div>
                       </div>
                       <div id="experienceList" className="mac-list">
                         {experiences.length === 0 ? (
                           <div className="empty-state">
                             <i className="fas fa-clipboard-list fa-3x mb-3"></i>
                             <p>등록된 이력이 없습니다.</p>
+                            <button className="btn btn-outline-primary" onClick={refreshSheetsData}>
+                              <i className="fas fa-sync-alt"></i> 구글 시트에서 불러오기
+                            </button>
                           </div>
                         ) : (
                           experiences.map((exp, idx) => (
@@ -224,11 +693,73 @@ function App() {
                 <div id="driveSection" className="content-section">
                   <div className="mac-window">
                     <h2>구글 드라이브</h2>
-                    <div className="mac-window-content text-center p-5">
-                      <i className="fab fa-google-drive fa-3x mb-3 text-primary"></i>
-                      <h3 className="mb-3">구글 드라이브로 이동</h3>
-                      <p className="mb-4">구글 드라이브에서 파일을 관리하세요.</p>
-                      <a href="https://drive.google.com" target="_blank" className="btn btn-primary">구글 드라이브 열기</a>
+                    <div className="mac-window-content">
+                      {/* 드라이브 연동 상태 */}
+                      <div className="drive-status mb-4">
+                        <div className={`status-indicator ${isDriveInitialized ? 'connected' : 'disconnected'}`}>
+                          <i className={`fas ${isDriveInitialized ? 'fa-check-circle' : 'fa-exclamation-circle'}`}></i>
+                          <span>{isDriveInitialized ? '구글 드라이브 연동됨' : '구글 드라이브 연동 중...'}</span>
+                        </div>
+                        {!isDriveInitialized && (
+                          <div className="drive-help">
+                            <small className="text-muted">
+                              구글 드라이브 연동이 필요합니다. 구글 계정으로 로그인해주세요.
+                            </small>
+                          </div>
+                        )}
+                      </div>
+                      {/* 파일 목록 */}
+                      {isDriveInitialized && (
+                        <div className="drive-files">
+                          <div className="d-flex justify-content-between align-items-center mb-3">
+                            <h4>내 파일</h4>
+                            <div>
+                              <label htmlFor="drive-upload-input" className="btn btn-outline-success btn-sm me-2">
+                                <i className="fas fa-upload"></i> 업로드
+                              </label>
+                              <input
+                                id="drive-upload-input"
+                                type="file"
+                                style={{ display: 'none' }}
+                                onChange={handleDriveFileUpload}
+                              />
+                              <button className="btn btn-outline-primary btn-sm" onClick={loadDriveFiles}>
+                                <i className="fas fa-sync-alt"></i> 새로고침
+                              </button>
+                            </div>
+                          </div>
+                          <div className="file-list">
+                            {driveFiles.length === 0 ? (
+                              <div className="empty-state">
+                                <i className="fas fa-folder-open fa-3x mb-3"></i>
+                                <p>파일이 없습니다.</p>
+                              </div>
+                            ) : (
+                              driveFiles.map((file, index) => (
+                                <div key={file.id} className="file-item list-group-item">
+                                  <div className="d-flex align-items-center">
+                                    <i className={`fas ${file.mimeType === 'application/vnd.google-apps.folder' ? 'fa-folder' : 'fa-file'} me-3`}></i>
+                                    <div className="flex-grow-1">
+                                      <h6 className="mb-1">{file.name}</h6>
+                                      <small className="text-muted">
+                                        {file.mimeType} • {new Date(file.createdTime).toLocaleDateString()}
+                                      </small>
+                                    </div>
+                                    <div className="file-actions d-flex align-items-center">
+                                      <a href={`https://drive.google.com/file/d/${file.id}/view`} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-outline-primary me-2">
+                                        다운로드
+                                      </a>
+                                      <button className="btn btn-sm btn-outline-danger" onClick={() => handleDriveFileDelete(file.id)}>
+                                        <i className="fas fa-trash-alt"></i> 삭제
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -261,12 +792,20 @@ function App() {
                       </div>
                     </div>
                     <div className="mac-window">
-                      <h2>이력 관리</h2>
+                      <div className="d-flex justify-content-between align-items-center mb-3">
+                        <h2>이력 관리</h2>
+                        <button className="btn btn-outline-primary btn-sm" onClick={refreshSheetsData}>
+                          <i className="fas fa-sync-alt"></i> 시트 새로고침
+                        </button>
+                      </div>
                       <div id="experienceManagement" className="mac-list">
                         {experiences.length === 0 ? (
                           <div className="empty-state">
                             <i className="fas fa-clipboard-list fa-3x mb-3"></i>
                             <p>등록된 이력이 없습니다.</p>
+                            <button className="btn btn-outline-primary" onClick={refreshSheetsData}>
+                              <i className="fas fa-sync-alt"></i> 구글 시트에서 불러오기
+                            </button>
                           </div>
                         ) : (
                           experiences.map((exp, idx) => (
@@ -274,7 +813,11 @@ function App() {
                               <div className="d-flex align-items-center">
                                 <div className="flex-grow-1">
                                   <h6 className="mb-1">{exp.title}</h6>
-                                  <p className="mb-0"><small>{exp.period}</small></p>
+                                  <p className="mb-1"><small>{exp.period}</small></p>
+                                  <p className="mb-0">{exp.description}</p>
+                                </div>
+                                <div className="text-muted">
+                                  <small>구글 시트에서 로드됨</small>
                                 </div>
                               </div>
                             </div>
