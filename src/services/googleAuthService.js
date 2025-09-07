@@ -71,6 +71,14 @@ class GoogleAuthService {
       await this._initializeGis();
       console.log('GIS 초기화 완료');
       
+      // 3. 저장된 토큰 불러오기
+      const tokenLoaded = this._loadTokenFromStorage();
+      if (tokenLoaded) {
+        // 저장된 토큰을 GAPI에 설정
+        const tokenData = JSON.parse(localStorage.getItem('google_token'));
+        this._setTokenToGapi(tokenData);
+      }
+      
       console.log('GIS 기반 인증 시스템 초기화 완료');
       this.emitAuthStateChange(this.isAuthenticated());
       
@@ -238,12 +246,149 @@ class GoogleAuthService {
     });
   }
 
+  // 토큰 갱신 (팝업 없이)
+  async refreshToken() {
+    if (!this.tokenClient) {
+      throw new Error('토큰 클라이언트가 초기화되지 않았습니다.');
+    }
+
+    return new Promise((resolve, reject) => {
+      try {
+        console.log('토큰 갱신 시도 (팝업 없이)...');
+        
+        // 토큰 요청 콜백을 직접 처리
+        const originalCallback = this.tokenClient.callback;
+        this.tokenClient.callback = (tokenResponse) => {
+          console.log('토큰 갱신 응답 받음:', tokenResponse);
+          
+          // interaction_required 오류 처리
+          if (tokenResponse && tokenResponse.error === 'interaction_required') {
+            console.log('사용자 상호작용이 필요합니다. 토큰 갱신을 건너뜁니다.');
+            reject(new Error('interaction_required'));
+            return;
+          }
+          
+          if (tokenResponse && tokenResponse.access_token) {
+            this.accessToken = tokenResponse.access_token;
+            this._setTokenToGapi(tokenResponse);
+            console.log('토큰 갱신 완료');
+            this.emitAuthStateChange(true);
+            resolve();
+          } else {
+            console.log('토큰 갱신 실패 - 액세스 토큰이 없음');
+            reject(new Error('토큰 갱신 실패'));
+          }
+          
+          // 원래 콜백도 호출
+          if (originalCallback) {
+            originalCallback(tokenResponse);
+          }
+        };
+        
+        // 팝업 없이 토큰 갱신 시도
+        this.tokenClient.requestAccessToken({ prompt: 'none' });
+        
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+
+  // 팝업 없이 토큰 요청 (자동 로그인)
+  async requestTokenSilently() {
+    if (!this.tokenClient) {
+      throw new Error('토큰 클라이언트가 초기화되지 않았습니다.');
+    }
+
+    return new Promise((resolve, reject) => {
+      try {
+        console.log('팝업 없이 토큰 요청 시도...');
+        
+        // 토큰 요청 콜백을 직접 처리
+        const originalCallback = this.tokenClient.callback;
+        this.tokenClient.callback = (tokenResponse) => {
+          console.log('자동 토큰 요청 응답 받음:', tokenResponse);
+          
+          if (tokenResponse && tokenResponse.access_token) {
+            this.accessToken = tokenResponse.access_token;
+            this._setTokenToGapi(tokenResponse);
+            console.log('자동 토큰 요청 완료');
+            this.emitAuthStateChange(true);
+            resolve();
+          } else {
+            console.log('자동 토큰 요청 실패 - 액세스 토큰이 없음');
+            reject(new Error('자동 토큰 요청 실패'));
+          }
+          
+          // 원래 콜백도 호출
+          if (originalCallback) {
+            originalCallback(tokenResponse);
+          }
+        };
+        
+        // 팝업 없이 토큰 요청 시도
+        this.tokenClient.requestAccessToken({ prompt: 'none' });
+        
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+
   // 토큰을 GAPI 클라이언트에 설정
   _setTokenToGapi(tokenResponse) {
     if (window.gapi && window.gapi.client && tokenResponse) {
       window.gapi.client.setToken(tokenResponse);
       console.log('GAPI 클라이언트에 토큰 설정 완료');
+      
+      // 토큰을 localStorage에 저장
+      this._saveTokenToStorage(tokenResponse);
       return true;
+    }
+    return false;
+  }
+
+  // 토큰을 localStorage에 저장
+  _saveTokenToStorage(tokenResponse) {
+    try {
+      const tokenData = {
+        access_token: tokenResponse.access_token,
+        expires_in: tokenResponse.expires_in,
+        token_type: tokenResponse.token_type,
+        scope: tokenResponse.scope,
+        saved_at: Date.now()
+      };
+      localStorage.setItem('google_token', JSON.stringify(tokenData));
+      console.log('토큰을 localStorage에 저장 완료');
+    } catch (error) {
+      console.error('토큰 저장 오류:', error);
+    }
+  }
+
+  // localStorage에서 토큰 불러오기
+  _loadTokenFromStorage() {
+    try {
+      const tokenData = localStorage.getItem('google_token');
+      if (tokenData) {
+        const parsed = JSON.parse(tokenData);
+        const now = Date.now();
+        const savedAt = parsed.saved_at || 0;
+        const expiresIn = parsed.expires_in || 3600; // 기본 1시간
+        const expirationTime = savedAt + (expiresIn * 1000);
+        
+        // 토큰이 아직 유효한지 확인 (5분 여유를 둠)
+        if (now < expirationTime - 300000) {
+          this.accessToken = parsed.access_token;
+          console.log('localStorage에서 토큰 불러오기 완료');
+          return true;
+        } else {
+          console.log('저장된 토큰이 만료되었습니다.');
+          localStorage.removeItem('google_token');
+        }
+      }
+    } catch (error) {
+      console.error('토큰 불러오기 오류:', error);
+      localStorage.removeItem('google_token');
     }
     return false;
   }
@@ -276,6 +421,19 @@ class GoogleAuthService {
     return this.gisInited && this.gapiInited && (hasToken || gapiHasToken);
   }
 
+  // 기존 토큰이 있는지 확인 (토큰 갱신 실패 시에도 기존 토큰 사용 가능한지 확인)
+  hasExistingToken() {
+    const hasToken = this.accessToken !== null;
+    const gapiHasToken = window.gapi && window.gapi.client && window.gapi.client.getToken();
+    
+    console.log('기존 토큰 확인:', {
+      hasAccessToken: hasToken,
+      gapiHasToken: !!gapiHasToken
+    });
+    
+    return hasToken || gapiHasToken;
+  }
+
   // 로그아웃
   logout() {
     console.log('GIS 로그아웃 시작...');
@@ -287,6 +445,9 @@ class GoogleAuthService {
     if (window.gapi && window.gapi.client) {
       window.gapi.client.setToken(null);
     }
+    
+    // localStorage에서 토큰 제거
+    localStorage.removeItem('google_token');
     
     // GIS 토큰 클라이언트 리셋
     this.tokenClient = null;
