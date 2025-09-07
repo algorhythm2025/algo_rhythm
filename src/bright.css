@@ -1,0 +1,21 @@
+/* src/bright.css */
+html[data-theme="bright"]{
+    --bg-0:#F7FAFF; --bg-1:#FFFFFF; --bg-2:#FFFFFF;
+    --line-1:#E8EDF8; --txt-1:#0B1220; --txt-2:#5B6476;
+}
+
+/* 핵심 배경만 강제 */
+html[data-theme="bright"] body{
+    background:var(--bg-0) !important;
+    color:var(--txt-1) !important;
+}
+html[data-theme="bright"] .auth{
+    background:linear-gradient(180deg,#EEF3FF, #E7ECFA) !important;
+}
+html[data-theme="bright"] .home-hero,
+html[data-theme="bright"] .mac-window,
+html[data-theme="bright"] .mac-card.action.lg{
+    background:var(--bg-1) !important;
+    border:1px solid var(--line-1) !important;
+    box-shadow:0 12px 28px rgba(15,23,42,.10) !important;
+}

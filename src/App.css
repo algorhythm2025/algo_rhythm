@@ -1,7 +1,19 @@
 /* =========================
    Base / Reset
 ========================= */
+@font-face{
+    font-family: "SUIT Variable";
+    src: url("https://cdn.jsdelivr.net/gh/sunn-us/SUIT/fonts/variable/woff2/SUIT-Variable.woff2")
+    format("woff2-variations");
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: swap;
+}
 :root{
+    --font-sans: "SUIT Variable", -apple-system, system-ui,
+    "Noto Sans KR", "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, "Apple SD Gothic Neo",
+    "Malgun Gothic", sans-serif;
     /* Aurora Blue 팔레트 */
     --brand-1: oklch(0.70 0.12 270);
     --brand-2: oklch(0.64 0.18 320);
@@ -12,6 +24,13 @@
     --glass-bd: rgba(255,255,255,.18);
     --glass-bg-hover: rgba(255,255,255,.14);
     --text-weak: #a9acb3;
+}
+html, body{
+    font-family: var(--font-sans);
+    letter-spacing: -0.01em;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
 }
 
 html, body, #root { height: 100%; margin: 0; }
@@ -592,5 +611,1166 @@ html[data-theme="dark"]  .auth{ background: var(--right-gray) !important; }
     .landing::after{ display:none; }
     .auth__card{ margin-left: 0; }
 }
+/* =========================================
+   MAIN (로그인 후) 레이아웃 & 컴포넌트
+   ─ mac-titlebar / mac-container / mac-sidebar / mac-content
+   ─ mac-grid / mac-card / mac-window / mac-list / empty-state
+========================================= */
+
+/* 상단 타이틀바 */
+.mac-titlebar{
+    height: 48px;
+    display: flex; align-items: center;
+    padding: 0 14px;
+    background: linear-gradient(90deg, var(--brand-2), var(--brand-1));
+    border-bottom: 1px solid #ffffff22;
+    box-shadow: 0 6px 20px rgba(0,0,0,.28);
+}
+.mac-title{ font-weight: 800; letter-spacing:-.2px; }
+
+/* 전체 레이아웃 */
+#mainPage{ height: 100vh; display: flex; flex-direction: column; }
+.mac-container{
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    height: calc(100vh - 48px);
+}
+
+/* 사이드바 */
+.mac-sidebar{
+    display: flex; flex-direction: column;
+    gap: 6px;
+    padding: 12px;
+    background: #0f1218;
+    border-right: 1px solid #181b23;
+}
+.sidebar-item{
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 12px;
+    border-radius: 12px;
+    color: #cfd3de;
+    cursor: pointer;
+    user-select: none;
+    transition: background .15s ease, color .15s ease, box-shadow .15s ease;
+}
+.sidebar-item:hover{ background:#151a22; color:#fff; }
+.sidebar-item.active{
+    background:#1b2030; color:#fff;
+    box-shadow: inset 0 0 0 1px #242a3a;
+}
+
+/* 본문 */
+.mac-content{
+    position: relative;
+    overflow: auto;
+    padding: 18px;
+}
+
+/* 히어로 비주얼(윈도우 카드 재활용) */
+.mac-window{
+    background:#11151c;
+    border:1px solid #1e2431;
+    border-radius:16px;
+    box-shadow: 0 10px 24px rgba(0,0,0,.32);
+}
+.mac-window > h2{ margin:0; padding:14px 16px; border-bottom:1px solid #1c2230; }
+.mac-window-content{ padding:16px; }
+
+/* 카드 그리드 */
+.mac-grid{
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+@media (min-width: 1100px){
+    .mac-grid{ grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+/* 기능 카드 */
+.mac-card{
+    all: unset;
+    background:#131823;
+    border:1px solid #1e2636;
+    border-radius:18px;
+    padding: 18px;
+    display: grid; gap: 6px;
+    cursor: pointer;
+    box-shadow: 0 10px 22px rgba(0,0,0,.28);
+    transition: transform .08s ease, box-shadow .2s ease, background .15s ease, border-color .15s ease;
+}
+.mac-card i{ opacity:.95; }
+.mac-card h3{ margin:6px 0 0; font-size:18px; }
+.mac-card p{ margin:2px 0 0; color:#a8afbc; font-size:13px; }
+.mac-card:hover{
+    transform: translateY(-2px);
+    background:#161d2b;
+    border-color:#2a3550;
+    box-shadow: 0 14px 34px rgba(0,0,0,.38), 0 0 0 3px oklch(0.72 0.10 270 / .28);
+}
+
+/* 리스트/빈 상태 */
+.mac-list{ display: grid; gap: 10px; }
+.list-group-item{
+    background:#121722; border:1px solid #1f2634; border-radius:12px; padding:12px;
+}
+.empty-state{
+    text-align:center; padding:40px 12px; color:#aab0bd;
+}
+
+/* 배지/텍스트 버튼(부트스트랩 미사용 대비) */
+.badge{ display:inline-block; font-size:12px; padding:6px 10px; border-radius:999px; }
+.bg-dark{ background:#232838; color:#e8ecff; }
+.text-btn{ all:unset; color:#9da6ff; cursor:pointer; }
+.text-btn:hover{ text-decoration: underline; }
+
+/* 버튼(간단 버전) */
+.btn{ display:inline-flex; align-items:center; gap:8px; border-radius:10px; padding:8px 12px; font-weight:600; cursor:pointer; border:1px solid transparent; }
+.btn-sm{ padding:6px 10px; font-size:12px; }
+.btn-dark{ background:#2b2f44; color:#fff; border-color:#3a3f58; }
+.btn-outline-dark{ background:transparent; color:#cfd3de; border-color:#3a3f58; }
+.btn-primary{ background: oklch(0.62 0.16 320); border-color: transparent; color:#fff; }
+.btn-secondary{ background:#1a1f2c; color:#d9deea; border-color:#2a3144; }
+.btn:hover{ filter: brightness(1.06); }
+
+/* 스크롤바 살짝 */
+.mac-content::-webkit-scrollbar{ height:10px; width:10px; }
+.mac-content::-webkit-scrollbar-thumb{ background:#2a3042; border-radius:999px; }
+.mac-content::-webkit-scrollbar-track{ background:transparent; }
+
+/* 라이트 테마 보정 */
+html[data-theme="light"] .mac-sidebar{ background:#f3f6ff; border-color:#e6eaf6; }
+html[data-theme="light"] .sidebar-item{ color:#334155; }
+html[data-theme="light"] .sidebar-item:hover{ background:#e9eefc; color:#0e1220; }
+html[data-theme="light"] .sidebar-item.active{ background:#e2e8ff; box-shadow: inset 0 0 0 1px #c9d3ff; }
+html[data-theme="light"] .mac-content{ color:#0e1220; }
+html[data-theme="light"] .mac-window{ background:#ffffff; border-color:#e7ebf5; }
+html[data-theme="light"] .mac-card{ background:#ffffff; border-color:#e7ebf5; box-shadow: 0 10px 26px rgba(15,23,42,.10); }
+html[data-theme="light"] .mac-card:hover{ border-color:#cfd8ff; box-shadow: 0 14px 34px rgba(15,23,42,.16), 0 0 0 3px rgba(86,104,255,.18); }
+html[data-theme="light"] .list-group-item{ background:#ffffff; border-color:#e7ebf5; }
+html[data-theme="light"] .bg-dark{ background:#e9edff; color:#3945a8; }
+html[data-theme="light"] .btn-dark{ background:#334155; }
+html[data-theme="light"] .btn-outline-dark{ color:#334155; border-color:#c7cfdf; }
+/* --- 사이드바 제거용 단일 레이아웃 --- */
+.mac-container.no-sidebar{
+    grid-template-columns: 1fr; /* 한 컬럼만 */
+}
+
+/* 본문 패딩/폭 */
+.mac-content--padded{
+    padding: 18px;
+    max-width: 1160px;
+    margin: 0 auto;
+}
+
+/* 페이지 상단 액션(메인으로) */
+.top-actions{
+    display:flex; justify-content:flex-start; margin-bottom:12px;
+}
+
+/* 6개 카드 그리드: 모바일 2열 → 데스크톱 3열 */
+.cards-6{
+    display:grid;
+    grid-template-columns: repeat(2, minmax(0,1fr));
+    gap: 16px;
+}
+@media (min-width: 980px){
+    .cards-6{ grid-template-columns: repeat(3, minmax(0,1fr)); }
+}
+
+/* mac-card는 기존 스타일 재사용 (이미 정의됨) */
+/* ====== 홈 상단 히어로(컴팩트) ====== */
+.home-hero{
+    display:flex; align-items:center; justify-content:space-between;
+    gap:16px;
+    margin: 8px 0 14px;
+    padding: 14px 18px;
+    background:#10141c;
+    border:1px solid #1c2231;
+    border-radius:16px;
+    box-shadow: 0 10px 24px rgba(0,0,0,.28);
+}
+.home-hero h2{ margin:0 0 4px 0; font-size:20px; }
+.home-hero p{ margin:0; color:#aeb4c2; font-size:13px; }
+
+.chips{ display:flex; gap:8px; flex-wrap:wrap; }
+.chip{
+    padding:6px 10px; border-radius:999px; font-size:12px; color:#cfd6e8;
+    background:#192032; border:1px solid #273149;
+}
+
+/* ====== 패널 헤더 ====== */
+.section-head{ display:flex; align-items:center; justify-content:space-between; margin:2px 0 10px; }
+.section-head h3{ margin:0; font-size:16px; }
+
+/* ====== 컨테이너 밀도 조정 ====== */
+.mac-content--padded{ padding:16px; max-width:1100px; margin:0 auto; }
+
+/* ====== 6카드 그리드: 촘촘 모드 ====== */
+.cards-6{ display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:14px; }
+.cards-6.tight .mac-card{ min-height:110px; }
+@media (min-width: 980px){
+    .cards-6{ grid-template-columns: repeat(3, minmax(0,1fr)); }
+}
+
+/* ====== 액션 카드(아이콘 + 텍스트 좌우배치) ====== */
+.mac-card.action{ padding:14px 14px; }
+.card-row{ display:flex; align-items:center; gap:12px; }
+.card-icon{
+    width:40px; height:40px; border-radius:12px;
+    display:flex; align-items:center; justify-content:center;
+    background:#172034; border:1px solid #26324a;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.03);
+}
+.card-icon i{ font-size:18px; opacity:.95; }
+.card-text{ display:grid; gap:2px; text-align:left; }
+.card-title{ font-weight:800; font-size:15px; }
+.card-sub{ color:#99a3b7; font-size:12px; }
+
+/* 호버 강화(밀도 유지) */
+.mac-card.action:hover{
+    transform: translateY(-1px);
+    border-color:#33406a;
+    box-shadow: 0 12px 28px rgba(0,0,0,.34), 0 0 0 3px oklch(0.72 0.10 270 / .22);
+}
+
+/* 라이트 테마 보정 */
+html[data-theme="light"] .home-hero{ background:#ffffff; border-color:#e6eaf5; }
+html[data-theme="light"] .chip{ background:#eef2ff; border-color:#d9e0ff; color:#334155; }
+html[data-theme="light"] .card-icon{ background:#f3f6ff; border-color:#e0e7ff; }
+html[data-theme="light"] .card-sub{ color:#5b6476; }
+/* ===== 카드 그리드: 더 크게/촘촘하게 ===== */
+.cards-6.big{ gap:18px; }
+@media (min-width: 980px){ .cards-6.big{ grid-template-columns: repeat(3, minmax(0,1fr)); } }
+
+/* ===== 카드 크기 업 + 밝은 톤 ===== */
+.mac-card.action.lg{
+    padding:18px 18px;
+    min-height: 160px;            /* ← 카드 높이 업 */
+    background: #0f1623;          /* 기존보다 약간 더 밝은 남색 */
+    border: 1px solid #223049;
+}
+.mac-card.action.lg:hover{
+    background:#121c2c;
+    border-color:#33466b;
+}
+
+/* 아이콘 배지(이모지 컨테이너) */
+.card-row{ display:flex; align-items:center; gap:14px; }
+.card-icon{
+    width:56px; height:56px;      /* ← 아이콘 박스 크게 */
+    border-radius:14px;
+    display:flex; align-items:center; justify-content:center;
+    background:#17243a; border:1px solid #2a3b57;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.03);
+    flex:0 0 56px;
+}
+.card-emoji{ font-size:26px; line-height:1; }
+.card-title{ font-weight:800; font-size:18px; }
+.card-sub{ color:#9eabc1; font-size:13px; }
+
+/* 호버 링 */
+.mac-card.action.lg:hover{
+    transform: translateY(-2px);
+    box-shadow: 0 14px 34px rgba(0,0,0,.38);
+}
+
+/* ===== 악센트(포인트 컬러) ===== */
+/* 보조 변수 느낌의 투명 링 컬러를 각 악센트에 적용 */
+.mac-card.accent-violet:hover{ box-shadow: 0 14px 34px rgba(0,0,0,.38), 0 0 0 4px rgba(139,92,246,.22); }
+.mac-card.accent-mint:hover  { box-shadow: 0 14px 34px rgba(0,0,0,.38), 0 0 0 4px rgba(45,212,191,.22); }
+.mac-card.accent-amber:hover { box-shadow: 0 14px 34px rgba(0,0,0,.38), 0 0 0 4px rgba(245,158,11,.22); }
+.mac-card.accent-pink:hover  { box-shadow: 0 14px 34px rgba(0,0,0,.38), 0 0 0 4px rgba(236,72,153,.22); }
+.mac-card.accent-blue:hover  { box-shadow: 0 14px 34px rgba(0,0,0,.38), 0 0 0 4px rgba(96,165,250,.22); }
+.mac-card.accent-lime:hover  { box-shadow: 0 14px 34px rgba(0,0,0,.38), 0 0 0 4px rgba(132,204,22,.22); }
+
+/* 아이콘 배지 배경에도 살짝 그라데이션 포인트 */
+.mac-card.accent-violet .card-icon{
+    background: radial-gradient(110% 110% at 30% 30%, rgba(167,139,250,.25), transparent 60%), #17243a;
+    border-color:#3a2f6b;
+}
+.mac-card.accent-mint .card-icon{
+    background: radial-gradient(110% 110% at 30% 30%, rgba(45,212,191,.25), transparent 60%), #17243a;
+    border-color:#1d5c5a;
+}
+.mac-card.accent-amber .card-icon{
+    background: radial-gradient(110% 110% at 30% 30%, rgba(245,158,11,.25), transparent 60%), #17243a;
+    border-color:#5a4530;
+}
+.mac-card.accent-pink .card-icon{
+    background: radial-gradient(110% 110% at 30% 30%, rgba(236,72,153,.25), transparent 60%), #17243a;
+    border-color:#5a2d49;
+}
+.mac-card.accent-blue .card-icon{
+    background: radial-gradient(110% 110% at 30% 30%, rgba(96,165,250,.25), transparent 60%), #17243a;
+    border-color:#284b73;
+}
+.mac-card.accent-lime .card-icon{
+    background: radial-gradient(110% 110% at 30% 30%, rgba(132,204,22,.25), transparent 60%), #17243a;
+    border-color:#415a26;
+}
+
+/* 라이트 테마 보정(더 화사하게) */
+html[data-theme="light"] .mac-card.action.lg{
+    background:#ffffff; border-color:#e6eaf5;
+    box-shadow: 0 10px 26px rgba(15,23,42,.10);
+}
+html[data-theme="light"] .card-icon{
+    background:#f3f6ff; border-color:#e0e7ff;
+}
+html[data-theme="light"] .card-sub{ color:#5b6476; }
+/* ===============================
+   COHESIVE COLOR SYSTEM (Dark/Light)
+   - 화면 전역 톤 통일
+   - 카드/패널/텍스트/보더 변수화
+================================== */
+:root{
+    /* Dark base: 딥 네이비 */
+    --bg-0: oklch(0.16 0.02 260); /* 페이지 배경 */
+    --bg-1: oklch(0.20 0.02 260); /* 패널/히어로 */
+    --bg-2: oklch(0.24 0.03 260); /* 카드 */
+    --line-1: oklch(0.34 0.02 260 / .36);
+
+    --txt-1: oklch(0.93 0.02 260); /* 본문/제목 */
+    --txt-2: oklch(0.78 0.02 260); /* 보조 */
+
+    --shadow-1: 0 10px 24px rgba(0,0,0,.35);
+
+    /* Accent palette (OKLCH로 선명도 유지) */
+    --acc-violet: oklch(0.72 0.18 300);
+    --acc-mint:   oklch(0.83 0.11 170);
+    --acc-amber:  oklch(0.82 0.14 80);
+    --acc-pink:   oklch(0.78 0.19 350);
+    --acc-blue:   oklch(0.78 0.12 250);
+    --acc-lime:   oklch(0.87 0.14 130);
+    --acc-ring-a: .22; /* 호버 링 알파 */
+}
+
+/* Light theme 토큰 */
+html[data-theme="light"]{
+    --bg-0: #f5f7ff;
+    --bg-1: #ffffff;
+    --bg-2: #ffffff;
+    --line-1: #e6eaf5;
+    --txt-1: #0e1220;
+    --txt-2: #5b6476;
+    --shadow-1: 0 10px 26px rgba(15,23,42,.10);
+}
+
+/* 전역 적용 */
+body{ background:var(--bg-0); color:var(--txt-1); }
+
+/* 상단 히어로/패널/카드 통일 */
+.home-hero,
+.mac-window{ background:var(--bg-1); border:1px solid var(--line-1); box-shadow:var(--shadow-1); }
+.mac-card.action.lg{ background:var(--bg-2); border:1px solid var(--line-1); }
+
+/* 텍스트/칩 톤 */
+.card-title{ color:var(--txt-1); }
+.card-sub{ color:var(--txt-2); }
+.home-hero p{ color:var(--txt-2); }
+.chip{ background:var(--bg-2); border:1px solid var(--line-1); color:var(--txt-2); }
+
+/* 아이콘 배지의 기본(악센트 없을 때) */
+.card-icon{
+    background: linear-gradient(180deg, color-mix(in oklab, var(--bg-2) 92%, white 8%), var(--bg-2));
+    border-color: var(--line-1);
+}
+
+/* Hover: 살짝 선명/밝게 */
+.mac-card.action.lg:hover{
+    background: color-mix(in oklab, var(--bg-2) 90%, white 10%);
+    transform: translateY(-2px);
+    box-shadow: 0 14px 34px rgba(0,0,0,.38);
+}
+
+/* ===== Accent mapping (카드에 class="accent-*" 사용) ===== */
+.mac-card.accent-violet:hover{ box-shadow: 0 14px 34px rgba(0,0,0,.38), 0 0 0 5px color-mix(in oklab, var(--acc-violet) 100%, transparent calc(100% - (var(--acc-ring-a)*100%))); }
+.mac-card.accent-mint  :hover{ box-shadow: 0 14px 34px rgba(0,0,0,.38), 0 0 0 5px color-mix(in oklab, var(--acc-mint)   100%, transparent calc(100% - (var(--acc-ring-a)*100%))); }
+.mac-card.accent-amber :hover{ box-shadow: 0 14px 34px rgba(0,0,0,.38), 0 0 0 5px color-mix(in oklab, var(--acc-amber)  100%, transparent calc(100% - (var(--acc-ring-a)*100%))); }
+.mac-card.accent-pink  :hover{ box-shadow: 0 14px 34px rgba(0,0,0,.38), 0 0 0 5px color-mix(in oklab, var(--acc-pink)   100%, transparent calc(100% - (var(--acc-ring-a)*100%))); }
+.mac-card.accent-blue  :hover{ box-shadow: 0 14px 34px rgba(0,0,0,.38), 0 0 0 5px color-mix(in oklab, var(--acc-blue)   100%, transparent calc(100% - (var(--acc-ring-a)*100%))); }
+.mac-card.accent-lime  :hover{ box-shadow: 0 14px 34px rgba(0,0,0,.38), 0 0 0 5px color-mix(in oklab, var(--acc-lime)   100%, transparent calc(100% - (var(--acc-ring-a)*100%))); }
+
+/* 아이콘 배지에 악센트 하이라이트(과하지 않게) */
+.mac-card.accent-violet .card-icon{ background:
+        radial-gradient(120% 120% at 28% 28%, color-mix(in oklab, var(--acc-violet) 28%, transparent) 0%, transparent 60%),
+        var(--bg-2); border-color: color-mix(in oklab, var(--acc-violet) 32%, var(--line-1)); }
+.mac-card.accent-mint .card-icon{ background:
+        radial-gradient(120% 120% at 28% 28%, color-mix(in oklab, var(--acc-mint) 28%, transparent) 0%, transparent 60%),
+        var(--bg-2); border-color: color-mix(in oklab, var(--acc-mint) 32%, var(--line-1)); }
+.mac-card.accent-amber .card-icon{ background:
+        radial-gradient(120% 120% at 28% 28%, color-mix(in oklab, var(--acc-amber) 28%, transparent) 0%, transparent 60%),
+        var(--bg-2); border-color: color-mix(in oklab, var(--acc-amber) 32%, var(--line-1)); }
+.mac-card.accent-pink .card-icon{ background:
+        radial-gradient(120% 120% at 28% 28%, color-mix(in oklab, var(--acc-pink) 28%, transparent) 0%, transparent 60%),
+        var(--bg-2); border-color: color-mix(in oklab, var(--acc-pink) 32%, var(--line-1)); }
+.mac-card.accent-blue .card-icon{ background:
+        radial-gradient(120% 120% at 28% 28%, color-mix(in oklab, var(--acc-blue) 28%, transparent) 0%, transparent 60%),
+        var(--bg-2); border-color: color-mix(in oklab, var(--acc-blue) 32%, var(--line-1)); }
+.mac-card.accent-lime .card-icon{ background:
+        radial-gradient(120% 120% at 28% 28%, color-mix(in oklab, var(--acc-lime) 28%, transparent) 0%, transparent 60%),
+        var(--bg-2); border-color: color-mix(in oklab, var(--acc-lime) 32%, var(--line-1)); }
+
+/* 라이트 모드에서도 조화롭게 */
+html[data-theme="light"] .home-hero,
+html[data-theme="light"] .mac-window{ background:var(--bg-1); border-color:var(--line-1); box-shadow:var(--shadow-1); }
+html[data-theme="light"] .mac-card.action.lg{ background:var(--bg-2); border-color:var(--line-1); }
+html[data-theme="light"] .mac-card.action.lg:hover{
+    background: color-mix(in oklab, var(--bg-2) 92%, black 8%);
+}
+
+/* 페이지 빈공간을 살짝 다듬는 배경 하이라이트(아주 미세) */
+#mainPage::before{
+    content:""; position:fixed; inset:0; pointer-events:none; z-index:0;
+    background:
+            radial-gradient(800px 400px at 50% 140px, rgba(255,255,255,.05), transparent 60%),
+            radial-gradient(600px 600px at 50% 60%, rgba(123,97,255,.06), transparent 70%);
+}
+/* =========================================
+   FORCE OVERRIDE + FALLBACK (put at very end)
+   - 상위 규칙/!important 덮어쓰고
+   - oklch 미지원 시에도 헥사 값으로 적용
+========================================= */
+
+/* 1) 폴백용 헥사 팔레트 */
+:root{
+    --bg0-hex:#0e1118;  /* 페이지 */
+    --bg1-hex:#101521;  /* 패널/히어로 */
+    --bg2-hex:#121a2a;  /* 카드 */
+    --ln1-hex:#2a3446;  /* 보더 */
+    --t1-hex:#ecf0ff;   /* 본문/제목 */
+    --t2-hex:#aab3c6;   /* 보조 */
+    --sh1:0 10px 24px rgba(0,0,0,.35);
+    /* 악센트 링 농도 */
+    --accA:.24;
+}
+
+/* 2) 전역 토큰 (oklch 지원엔 이 값이 쓰이고, 미지원이면 아래 폴백 값이 유지됨) */
+:root{
+    --bg-0: oklch(0.16 0.02 260);
+    --bg-1: oklch(0.20 0.02 260);
+    --bg-2: oklch(0.24 0.03 260);
+    --line-1: oklch(0.34 0.02 260 / .36);
+    --txt-1: oklch(0.93 0.02 260);
+    --txt-2: oklch(0.78 0.02 260);
+}
+html[data-theme="light"]{
+    --bg-0:#f5f7ff; --bg-1:#ffffff; --bg-2:#ffffff;
+    --line-1:#e6eaf5; --txt-1:#0e1220; --txt-2:#5b6476;
+}
+
+/* 3) 실제 적용 (항상 '헥사 → 변수' 두 줄, 그리고 !important) */
+body{
+    background: var(--bg0-hex) !important;
+    background: var(--bg-0) !important;
+    color: var(--t1-hex) !important;
+    color: var(--txt-1) !important;
+}
+
+.home-hero, .mac-window{
+    background: var(--bg1-hex) !important;
+    background: var(--bg-1) !important;
+    border: 1px solid var(--ln1-hex) !important;
+    border-color: var(--line-1) !important;
+    box-shadow: var(--sh1) !important;
+}
+
+.mac-card.action.lg{
+    background: var(--bg2-hex) !important;
+    background: var(--bg-2) !important;
+    border: 1px solid var(--ln1-hex) !important;
+    border-color: var(--line-1) !important;
+}
+.mac-card.action.lg:hover{
+    background: #162136 !important; /* 살짝 밝게 */
+}
+
+.card-title{ color: var(--t1-hex) !important; color: var(--txt-1) !important; }
+.card-sub, .home-hero p{
+    color: var(--t2-hex) !important; color: var(--txt-2) !important;
+}
+.chip{
+    background: var(--bg2-hex) !important;
+    background: var(--bg-2) !important;
+    border: 1px solid var(--ln1-hex) !important;
+    border-color: var(--line-1) !important;
+    color: var(--t2-hex) !important; color: var(--txt-2) !important;
+}
+
+/* 4) 악센트 링(hover)도 통일감 있게 */
+.mac-card.accent-violet:hover{ box-shadow: 0 14px 34px rgba(0,0,0,.38), 0 0 0 5px rgba(139,92,246,var(--accA)); }
+.mac-card.accent-mint  :hover{ box-shadow: 0 14px 34px rgba(0,0,0,.38), 0 0 0 5px rgba(45,212,191,var(--accA)); }
+.mac-card.accent-amber :hover{ box-shadow: 0 14px 34px rgba(0,0,0,.38), 0 0 0 5px rgba(245,158,11,var(--accA)); }
+.mac-card.accent-pink  :hover{ box-shadow: 0 14px 34px rgba(0,0,0,.38), 0 0 0 5px rgba(236,72,153,var(--accA)); }
+.mac-card.accent-blue  :hover{ box-shadow: 0 14px 34px rgba(0,0,0,.38), 0 0 0 5px rgba(96,165,250,var(--accA)); }
+.mac-card.accent-lime  :hover{ box-shadow: 0 14px 34px rgba(0,0,0,.38), 0 0 0 5px rgba(132,204,22,var(--accA)); }
+/* =========================
+   THEME OVERRIDE (FINAL)
+   붙여넣기 위치: App.css "맨 아래"
+========================= */
+:root{
+    /* Dark */
+    --bg-0:#0e1118;  /* 페이지 배경 */
+    --bg-1:#101521;  /* 패널/히어로 */
+    --bg-2:#121a2a;  /* 카드 */
+    --line-1:#2a3446;/* 보더 */
+    --txt-1:#ecf0ff; /* 본문/제목 */
+    --txt-2:#aab3c6; /* 보조 */
+    --shadow-1:0 10px 24px rgba(0,0,0,.35);
+
+    /* Accents */
+    --acc-violet:#8b5cf6;
+    --acc-mint:#2dd4bf;
+    --acc-amber:#f59e0b;
+    --acc-pink:#ec4899;
+    --acc-blue:#60a5fa;
+    --acc-lime:#84cc16;
+    --accA:.24; /* hover 링 투명도 */
+}
+
+/* Light */
+html[data-theme="light"]{
+    --bg-0:#f5f7ff; --bg-1:#ffffff; --bg-2:#ffffff;
+    --line-1:#e6eaf5; --txt-1:#0e1220; --txt-2:#5b6476;
+    --shadow-1:0 10px 26px rgba(15,23,42,.10);
+}
+
+/* 전역 */
+body{
+    background:var(--bg-0) !important;
+    color:var(--txt-1) !important;
+}
+
+/* 패널/히어로/카드 */
+.home-hero,.mac-window{
+    background:var(--bg-1) !important;
+    border:1px solid var(--line-1) !important;
+    box-shadow:var(--shadow-1) !important;
+}
+.mac-card.action.lg{
+    background:var(--bg-2) !important;
+    border:1px solid var(--line-1) !important;
+}
+.mac-card.action.lg:hover{
+    background:#162136 !important;   /* 살짝 밝게 */
+    transform:translateY(-2px);
+    box-shadow:0 14px 34px rgba(0,0,0,.38) !important;
+}
+
+/* 텍스트/칩/아이콘 배지 */
+.card-title{ color:var(--txt-1) !important; }
+.card-sub,.home-hero p{ color:var(--txt-2) !important; }
+
+.chip{
+    background:var(--bg-2) !important;
+    border:1px solid var(--line-1) !important;
+    color:var(--txt-2) !important;
+}
+
+.card-icon{
+    background:linear-gradient(180deg,#1b2740,#17243a) !important;
+    border:1px solid #2a3b57 !important;
+}
+
+/* 악센트 호버 링 */
+.mac-card.accent-violet:hover{ box-shadow:0 14px 34px rgba(0,0,0,.38),0 0 0 5px rgba(139,92,246,var(--accA)) !important; }
+.mac-card.accent-mint:hover  { box-shadow:0 14px 34px rgba(0,0,0,.38),0 0 0 5px rgba(45,212,191,var(--accA)) !important; }
+.mac-card.accent-amber:hover { box-shadow:0 14px 34px rgba(0,0,0,.38),0 0 0 5px rgba(245,158,11,var(--accA)) !important; }
+.mac-card.accent-pink:hover  { box-shadow:0 14px 34px rgba(0,0,0,.38),0 0 0 5px rgba(236,72,153,var(--accA)) !important; }
+.mac-card.accent-blue:hover  { box-shadow:0 14px 34px rgba(0,0,0,.38),0 0 0 5px rgba(96,165,250,var(--accA)) !important; }
+.mac-card.accent-lime:hover  { box-shadow:0 14px 34px rgba(0,0,0,.38),0 0 0 5px rgba(132,204,22,var(--accA)) !important; }
+
+/* 페이지 배경 하이라이트(은은) */
+#mainPage::before{
+    content:""; position:fixed; inset:0; pointer-events:none; z-index:0;
+    background:
+            radial-gradient(800px 400px at 50% 140px, rgba(255,255,255,.05), transparent 60%),
+            radial-gradient(600px 600px at 50% 60%, rgba(123,97,255,.06), transparent 70%); }
+/* =========================================================
+   BRIGHT THEME (전체를 밝고 세련되게)
+   paste at the VERY END of App.css
+========================================================= */
+
+/* 1) 토큰: 페이지/카드/보더/텍스트 */
+html[data-theme="bright"]{
+    /* Base */
+    --bg-0: #F7FAFF;   /* 페이지 배경 */
+    --bg-1: #FFFFFF;   /* 패널/히어로/카드 상위 */
+    --bg-2: #FFFFFF;   /* 카드 */
+    --line-1: #E8EDF8; /* 경계선 */
+    --txt-1: #0B1220;  /* 본문/제목 */
+    --txt-2: #5B6476;  /* 보조 텍스트 */
+    --shadow-1: 0 12px 28px rgba(15,23,42,.10);
+
+    /* Brand & accents (보라 중심, 블루 보조) */
+    --brand-1: #8B5CF6;      /* violet 500 */
+    --brand-2: #60A5FA;      /* blue 400 */
+    --brand-3: #C4B5FD;      /* violet 300 */
+    --brand-spot: rgba(139,92,246,.10);
+
+    --acc-violet:#8B5CF6;
+    --acc-mint:#2DD4BF;
+    --acc-amber:#F59E0B;
+    --acc-pink:#EC4899;
+    --acc-blue:#60A5FA;
+    --acc-lime:#84CC16;
+    --accA:.16; /* hover 링 투명도(밝은 톤이라 낮춤) */
+}
+
+/* 2) 전역 배경/텍스트 */
+html[data-theme="bright"] body{
+    background: var(--bg-0) !important;
+    color: var(--txt-1) !important;
+}
+
+/* 3) 로그인 화면(오른쪽) – 너무 많은 이펙트 제거 + 라이트 톤 */
+html[data-theme="bright"] .auth{
+    background:
+            radial-gradient(1200px 600px at 60% -10%, rgba(255,255,255,.9) 0%, transparent 60%),
+            linear-gradient(180deg, #EEF3FF 0%, #EAF0FF 50%, #E7ECFA 100%);
+}
+html[data-theme="bright"] .auth::before,
+html[data-theme="bright"] .auth::after{ content:none !important; }
+
+html[data-theme="bright"] .auth__card{
+    background:#FFFFFF;
+    border:1px solid #E6EAF5;
+    border-radius:20px;
+    box-shadow:
+            0 1px 0 rgba(255,255,255,.9) inset,
+            0 8px 16px rgba(15,23,42,.06),
+            0 28px 60px rgba(15,23,42,.10) !important;
+}
+html[data-theme="bright"] .auth__card::before,
+html[data-theme="bright"] .auth__card::after{ content:none !important; }
+
+html[data-theme="bright"] .auth__title{ color:#1F2430 !important; }
+html[data-theme="bright"] .auth__sub{ color:#48505B !important; }
+html[data-theme="bright"] .auth__divider{ color:#6E7682 !important; }
+html[data-theme="bright"] .auth__benefits{ color:#2F343B !important; }
+html[data-theme="bright"] .auth__meta{ color:#5A6270 !important; }
+html[data-theme="bright"] .auth__meta a{ color:#2B4ACB !important; }
+
+/* 구글 버튼 컨테이너(버튼 자체는 정책상 제한) */
+html[data-theme="bright"] #googleSignInDiv > div{
+    width:100% !important;
+    border:1px solid #E6E9F2 !important;
+    border-radius:12px !important;
+    box-shadow: 0 1px 2px rgba(15,23,42,.05), 0 2px 8px rgba(15,23,42,.06) !important;
+}
+
+/* 4) 상단 타이틀바 – 파스텔 그래디언트 */
+html[data-theme="bright"] .mac-titlebar{
+    background: linear-gradient(90deg, #A78BFA, #93C5FD);
+    border-bottom:1px solid #E8EDF8;
+    box-shadow: 0 8px 22px rgba(93,109,180,.18);
+}
+html[data-theme="bright"] .mac-title{ color:#0B1220; }
+
+/* 5) 전체 레이아웃/사이드바/콘텐츠 */
+html[data-theme="bright"] .mac-container{ background:transparent; }
+html[data-theme="bright"] .mac-sidebar{
+    background:#F3F6FF;
+    border-right:1px solid #E6EAF5;
+}
+html[data-theme="bright"] .sidebar-item{
+    color:#334155;
+    background:transparent;
+    border:1px solid transparent;
+}
+html[data-theme="bright"] .sidebar-item:hover{
+    background:#E9EEFC; color:#0E1220;
+}
+html[data-theme="bright"] .sidebar-item.active{
+    background:#E2E8FF; color:#0E1220;
+    box-shadow: inset 0 0 0 1px #C9D3FF;
+}
+
+/* 6) 카드/윈도우/칩 – 라이트 톤 */
+html[data-theme="bright"] .home-hero,
+html[data-theme="bright"] .mac-window{
+    background: var(--bg-1) !important;
+    border:1px solid var(--line-1) !important;
+    box-shadow: var(--shadow-1) !important;
+}
+html[data-theme="bright"] .home-hero p{ color:var(--txt-2); }
+
+html[data-theme="bright"] .mac-card.action.lg{
+    background: var(--bg-2) !important;
+    border:1px solid var(--line-1) !important;
+    box-shadow: 0 10px 26px rgba(15,23,42,.10);
+}
+html[data-theme="bright"] .mac-card.action.lg:hover{
+    transform: translateY(-2px);
+    background: #FFFFFF;
+    border-color:#CFD8FF !important;
+    box-shadow: 0 14px 34px rgba(15,23,42,.16), 0 0 0 3px rgba(86,104,255,.16) !important;
+}
+
+html[data-theme="bright"] .card-icon{
+    background:#F3F6FF; border:1px solid #E0E7FF;
+}
+html[data-theme="bright"] .card-title{ color:var(--txt-1); }
+html[data-theme="bright"] .card-sub{ color:var(--txt-2); }
+
+html[data-theme="bright"] .chip{
+    background:#EEF2FF;
+    border:1px solid #D9E0FF;
+    color:#334155;
+}
+
+/* 7) 악센트 호버 링 – 파스텔 농도 */
+html[data-theme="bright"] .mac-card.accent-violet:hover{ box-shadow:0 14px 34px rgba(0,0,0,.14),0 0 0 4px rgba(139,92,246,.18) !important; }
+html[data-theme="bright"] .mac-card.accent-mint:hover  { box-shadow:0 14px 34px rgba(0,0,0,.14),0 0 0 4px rgba(45,212,191,.18) !important; }
+html[data-theme="bright"] .mac-card.accent-amber:hover { box-shadow:0 14px 34px rgba(0,0,0,.14),0 0 0 4px rgba(245,158,11,.18) !important; }
+html[data-theme="bright"] .mac-card.accent-pink:hover  { box-shadow:0 14px 34px rgba(0,0,0,.14),0 0 0 4px rgba(236,72,153,.18) !important; }
+html[data-theme="bright"] .mac-card.accent-blue:hover  { box-shadow:0 14px 34px rgba(0,0,0,.14),0 0 0 4px rgba(96,165,250,.18) !important; }
+html[data-theme="bright"] .mac-card.accent-lime:hover  { box-shadow:0 14px 34px rgba(0,0,0,.14),0 0 0 4px rgba(132,204,22,.18) !important; }
+
+/* 8) 메인 페이지 빈 공간 하이라이트(아주 미세) */
+html[data-theme="bright"] #mainPage::before{
+    content:""; position:fixed; inset:0; pointer-events:none; z-index:0;
+    background:
+            radial-gradient(800px 400px at 50% 120px, rgba(139,92,246,.06), transparent 60%),
+            radial-gradient(600px 600px at 60% 40%, rgba(96,165,250,.05), transparent 70%);
+}
+/* ========== BRIGHT WINS PATCH — put at the VERY END ========== */
+html[data-theme="bright"]{
+    /* 토큰 */
+    --bg-0:#F7FAFF; --bg-1:#FFFFFF; --bg-2:#FFFFFF;
+    --line-1:#E8EDF8; --txt-1:#0B1220; --txt-2:#5B6476;
+    --shadow-1:0 12px 28px rgba(15,23,42,.10);
+}
+
+html[data-theme="bright"] body{
+    background:var(--bg-0) !important;
+    color:var(--txt-1) !important;
+}
+
+/* 로그인 패널 */
+html[data-theme="bright"] .auth{
+    background:
+            radial-gradient(1200px 600px at 60% -10%, rgba(255,255,255,.9) 0%, transparent 60%),
+            linear-gradient(180deg, #EEF3FF 0%, #EAF0FF 50%, #E7ECFA 100%) !important;
+}
+html[data-theme="bright"] .auth__card{
+    background:#fff !important;
+    border:1px solid #E6EAF5 !important;
+    border-radius:20px !important;
+    box-shadow:
+            0 1px 0 rgba(255,255,255,.9) inset,
+            0 8px 16px rgba(15,23,42,.06),
+            0 28px 60px rgba(15,23,42,.10) !important;
+}
+
+/* 메인 컴포넌트 */
+html[data-theme="bright"] .home-hero,
+html[data-theme="bright"] .mac-window{
+    background:var(--bg-1) !important;
+    border:1px solid var(--line-1) !important;
+    box-shadow:var(--shadow-1) !important;
+}
+
+html[data-theme="bright"] .mac-card.action.lg{
+    background:var(--bg-2) !important;
+    border:1px solid var(--line-1) !important;
+}
+html[data-theme="bright"] .mac-card.action.lg:hover{
+    transform:translateY(-2px);
+    background:#fff !important;
+    border-color:#CFD8FF !important;
+    box-shadow:0 14px 34px rgba(15,23,42,.16), 0 0 0 3px rgba(86,104,255,.16) !important;
+}
+
+/* 카드 내부 */
+html[data-theme="bright"] .card-title{ color:var(--txt-1) !important; }
+html[data-theme="bright"] .card-sub{ color:var(--txt-2) !important; }
+html[data-theme="bright"] .card-icon{
+    background:#F3F6FF !important; border:1px solid #E0E7FF !important;
+}
+html[data-theme="bright"] .chip{
+    background:#EEF2FF !important; border:1px solid #D9E0FF !important; color:#334155 !important;
+}
+/* Bright + Ivory palette */
+:root[data-theme="bright"][data-palette="ivory"]{
+    /* Neutrals: 밝은 아이보리 */
+    --bg:#FFFBF2;               /* 페이지 배경 */
+    --surface:#FFF7E8;          /* 카드/섹션 배경 */
+    --surface-2:#FFF1DB;        /* hover용 살짝 강조 */
+    --border:#F1E6D4;
+
+    --text-strong:#221A0E;      /* 제목/강조 텍스트 */
+    --text:#2F281C;             /* 본문 */
+    --text-mute:#7E6C55;        /* 보조 텍스트 */
+
+    /* Accent (보라 포인트 유지 – 필요시 바꿔도 됨) */
+    --primary-50:#F6F2FF;
+    --primary-100:#EEE9FF;
+    --primary-300:#CFC3FF;
+    --primary-500:#8B6CF6;
+    --primary-600:#7A5AE6;
+
+    --success:#27B17D;
+    --warning:#F4A11A;
+    --danger:#E04F5F;
+
+    /* 그림자 컬러 베이스 */
+    --shadow-rgb: 28,20,10;
+}
+/* =========================================================
+   BRIGHT + IVORY — FINAL OVERRIDES
+   (Paste at the VERY END of App.css)
+   - 페이지/카드/보더/텍스트 토큰을 아이보리로 매핑
+   - 로그인 패널과 메인 카드/칩/아이콘까지 일괄 톤 변경
+========================================================= */
+
+/* 0) 아이보리 팔레트(중립 토큰) */
+html[data-theme="bright"][data-palette="ivory"]{
+    /* Neutrals (Ivory) */
+    --bg:        #FFFBF2;  /* 페이지 배경 */
+    --surface:   #FFF7E8;  /* 카드/섹션 배경 */
+    --surface-2: #FFF1DB;  /* hover용 강조 */
+    --border:    #F1E6D4;
+
+    --text-strong:#221A0E; /* 제목 */
+    --text:       #2F281C; /* 본문 */
+    --text-mute:  #7E6C55; /* 보조 */
+
+    /* (선택) 보라 악센트 유지 */
+    --primary-50:#F6F2FF;
+    --primary-100:#EEE9FF;
+    --primary-300:#CFC3FF;
+    --primary-500:#8B6CF6;
+    --primary-600:#7A5AE6;
+
+    /* 그림자 베이스 */
+    --shadow-rgb: 28,20,10;
+}
+
+/* 1) 기존 컴포넌트 토큰에 아이보리 값 매핑 */
+html[data-theme="bright"][data-palette="ivory"]{
+    --bg-0: var(--bg);
+    --bg-1: var(--surface);
+    --bg-2: var(--surface);
+    --line-1: var(--border);
+    --txt-1: var(--text-strong);
+    --txt-2: var(--text-mute);
+    --shadow-1: 0 12px 28px rgba(var(--shadow-rgb), .10);
+}
+
+/* 2) 전역 배경/텍스트 */
+html[data-theme="bright"][data-palette="ivory"] body{
+    background: var(--bg-0) !important;
+    color: var(--txt-1) !important;
+}
+
+/* 3) 로그인 섹션(오른쪽) */
+html[data-theme="bright"][data-palette="ivory"] .auth{
+    background:
+            radial-gradient(1200px 600px at 60% -10%, rgba(255,255,255,.9) 0%, transparent 60%),
+            linear-gradient(180deg, #FFF8EA 0%, #FFF4DE 50%, #FFF0D4 100%) !important;
+}
+html[data-theme="bright"][data-palette="ivory"] .auth__card{
+    background: var(--surface) !important;
+    border: 1px solid var(--line-1) !important;
+    border-radius: 20px !important;
+    box-shadow:
+            0 1px 0 rgba(255,255,255,.85) inset,
+            0 8px 16px rgba(var(--shadow-rgb), .06),
+            0 28px 60px rgba(var(--shadow-rgb), .10) !important;
+}
+html[data-theme="bright"][data-palette="ivory"] .auth__title   { color: var(--txt-1) !important; }
+html[data-theme="bright"][data-palette="ivory"] .auth__sub     { color: var(--txt-2) !important; }
+html[data-theme="bright"][data-palette="ivory"] .auth__divider { color: color-mix(in srgb, var(--txt-2), #000 10%) !important; }
+html[data-theme="bright"][data-palette="ivory"] .auth__benefits{ color: color-mix(in srgb, var(--txt-2), #000 15%) !important; }
+html[data-theme="bright"][data-palette="ivory"] .auth__meta    { color: color-mix(in srgb, var(--txt-2), #000 5%) !important; }
+html[data-theme="bright"][data-palette="ivory"] .auth__meta a  { color: #5A64D6 !important; }
+
+/* 4) 메인(로그인 후) — 홈 히어로/윈도우/카드 */
+html[data-theme="bright"][data-palette="ivory"] .home-hero,
+html[data-theme="bright"][data-palette="ivory"] .mac-window{
+    background: var(--bg-1) !important;
+    border: 1px solid var(--line-1) !important;
+    box-shadow: var(--shadow-1) !important;
+}
+
+html[data-theme="bright"][data-palette="ivory"] .mac-card{
+    background: var(--bg-2) !important;
+    border: 1px solid var(--line-1) !important;
+    color: var(--txt-1) !important;
+}
+html[data-theme="bright"][data-palette="ivory"] .mac-card.action.lg{
+    background: var(--bg-2) !important;
+    border: 1px solid var(--line-1) !important;
+    box-shadow: 0 10px 26px rgba(var(--shadow-rgb), .10) !important;
+}
+html[data-theme="bright"][data-palette="ivory"] .mac-card.action.lg:hover{
+    transform: translateY(-2px);
+    background: var(--bg-2) !important;
+    border-color: color-mix(in srgb, var(--line-1), var(--primary-500) 20%) !important;
+    box-shadow: 0 14px 34px rgba(var(--shadow-rgb), .16),
+    0 0 0 3px color-mix(in srgb, var(--primary-500) 16%, transparent) !important;
+}
+
+/* 5) 카드 내부 텍스트/칩/아이콘 */
+html[data-theme="bright"][data-palette="ivory"] .card-title { color: var(--txt-1) !important; }
+html[data-theme="bright"][data-palette="ivory"] .card-sub   { color: var(--txt-2) !important; }
+
+html[data-theme="bright"][data-palette="ivory"] .chip{
+    background: var(--surface-2) !important;
+    border: 1px solid var(--line-1) !important;
+    color: var(--txt-2) !important;
+}
+
+html[data-theme="bright"][data-palette="ivory"] .card-icon{
+    background: var(--surface-2) !important;
+    border: 1px solid var(--line-1) !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.25);
+}
+
+/* 6) 사이드바(라이트 톤 유지하되 아이보리 보더로) */
+html[data-theme="bright"][data-palette="ivory"] .mac-sidebar{
+    background: #FFF6E6 !important;
+    border-right: 1px solid var(--line-1) !important;
+}
+html[data-theme="bright"][data-palette="ivory"] .sidebar-item:hover{
+    background: #FFF2DA !important;
+    color: var(--txt-1) !important;
+}
+html[data-theme="bright"][data-palette="ivory"] .sidebar-item.active{
+    background: #FFEFD0 !important;
+    color: var(--txt-1) !important;
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--line-1), var(--primary-500) 20%) !important;
+}
+
+/* 7) 악센트 호버 링(파스텔 농도) */
+html[data-theme="bright"][data-palette="ivory"] .mac-card.accent-violet:hover{ box-shadow:0 14px 34px rgba(var(--shadow-rgb), .14),0 0 0 4px rgba(139,108,246,.18) !important; }
+html[data-theme="bright"][data-palette="ivory"] .mac-card.accent-mint:hover  { box-shadow:0 14px 34px rgba(var(--shadow-rgb), .14),0 0 0 4px rgba(45,212,191,.18)  !important; }
+html[data-theme="bright"][data-palette="ivory"] .mac-card.accent-amber:hover { box-shadow:0 14px 34px rgba(var(--shadow-rgb), .14),0 0 0 4px rgba(244,161,26,.18)  !important; }
+html[data-theme="bright"][data-palette="ivory"] .mac-card.accent-pink:hover  { box-shadow:0 14px 34px rgba(var(--shadow-rgb), .14),0 0 0 4px rgba(236,72,153,.18)  !important; }
+html[data-theme="bright"][data-palette="ivory"] .mac-card.accent-blue:hover  { box-shadow:0 14px 34px rgba(var(--shadow-rgb), .14),0 0 0 4px rgba(96,165,250,.18)   !important; }
+html[data-theme="bright"][data-palette="ivory"] .mac-card.accent-lime:hover  { box-shadow:0 14px 34px rgba(var(--shadow-rgb), .14),0 0 0 4px rgba(132,204,22,.18)   !important; }
+
+/* 8) 페이지 공간 하이라이트도 아이보리 톤으로 */
+html[data-theme="bright"][data-palette="ivory"] #mainPage::before{
+    background:
+            radial-gradient(800px 400px at 50% 120px, rgba(139,108,246,.05), transparent 60%),
+            radial-gradient(600px 600px at 60% 40%, rgba(255,200,120,.04), transparent 70%) !important;
+}
+/* =========================================================
+   IVORY → PORCELAIN (쿨 아이보리, 덜 노랗고 더 세련된 톤)
+   Paste at the VERY END of App.css
+========================================================= */
+
+/* 1) 팔레트: 채도/노랑기 낮춘 중립 톤 */
+html[data-theme="bright"][data-palette="ivory"]{
+    --bg:        #FAFAF7; /* page 배경: 거의 화이트에 살짝 베이지 */
+    --surface:   #FFFFFF; /* 카드/패널은 화이트로 깔끔 */
+    --surface-2: #F4F1EB; /* hover 살짝만 톤 차이 */
+    --border:    #ECE7DF; /* 경계선은 연한 토프 */
+
+    --text-strong:#141518; /* 제목: 완전 검정보다 한 톤 부드럽게 */
+    --text:       #1E1F22; /* 본문 */
+    --text-mute:  #6A6A63; /* 보조(회색기) */
+
+    /* 악센트 보라: 채도/명도 살짝 눌러서 과하지 않게 */
+    --primary-500:#7C6CF2;
+    --primary-600:#6E61E6;
+
+    --shadow-rgb: 22,18,12; /* 그림자 색도 살짝 중성화 */
+}
+
+/* 2) 전역 매핑 */
+html[data-theme="bright"][data-palette="ivory"]{
+    --bg-0: var(--bg);
+    --bg-1: var(--surface);
+    --bg-2: var(--surface);
+    --line-1: var(--border);
+    --txt-1: var(--text-strong);
+    --txt-2: var(--text-mute);
+}
+
+/* 3) 배경/컨테이너(가운데 까만 판 없애기) */
+html[data-theme="bright"][data-palette="ivory"] body,
+html[data-theme="bright"][data-palette="ivory"] #mainPage,
+html[data-theme="bright"][data-palette="ivory"] .mac-content,
+html[data-theme="bright"][data-palette="ivory"] .landing{
+    background: var(--bg-0) !important;
+    color: var(--txt-1) !important;
+}
+
+/* 4) 상단 바: 채도 낮춘 파스텔 */
+html[data-theme="bright"][data-palette="ivory"] .mac-titlebar{
+    background: linear-gradient(90deg, #EDECF9, #EAF2FF);
+    border-bottom: 1px solid var(--line-1);
+    box-shadow: 0 6px 18px rgba(var(--shadow-rgb), .06);
+    color: var(--txt-1);
+}
+
+/* 5) 패널/카드(화이트 베이스 + 얕은 그림자) */
+html[data-theme="bright"][data-palette="ivory"] .home-hero,
+html[data-theme="bright"][data-palette="ivory"] .mac-window{
+    background: var(--bg-1) !important;
+    border: 1px solid var(--line-1) !important;
+    box-shadow:
+            0 1px 0 rgba(255,255,255,.8) inset,
+            0 8px 16px rgba(var(--shadow-rgb), .06),
+            0 20px 48px rgba(var(--shadow-rgb), .08) !important;
+}
+
+/* 6) 기능 카드 */
+html[data-theme="bright"][data-palette="ivory"] .mac-card,
+html[data-theme="bright"][data-palette="ivory"] .mac-card.action.lg{
+    background: var(--bg-2) !important;
+    border: 1px solid var(--line-1) !important;
+    box-shadow: 0 8px 18px rgba(var(--shadow-rgb), .06) !important;
+    color: var(--txt-1) !important;
+}
+html[data-theme="bright"][data-palette="ivory"] .mac-card.action.lg:hover{
+    transform: translateY(-2px);
+    background: var(--bg-2) !important;
+    border-color: color-mix(in srgb, var(--line-1), var(--primary-500) 18%) !important;
+    box-shadow: 0 14px 28px rgba(var(--shadow-rgb), .10),
+    0 0 0 3px color-mix(in srgb, var(--primary-500) 14%, transparent) !important;
+}
+
+/* 7) 카드 내부 톤 */
+html[data-theme="bright"][data-palette="ivory"] .card-title{ color: var(--txt-1) !important; }
+html[data-theme="bright"][data-palette="ivory"] .card-sub  { color: var(--txt-2) !important; }
+html[data-theme="bright"][data-palette="ivory"] .card-icon {
+    background: var(--surface-2) !important;
+    border: 1px solid var(--line-1) !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.25);
+}
+
+/* 8) 칩/사이드바 */
+html[data-theme="bright"][data-palette="ivory"] .chip{
+    background: var(--surface-2) !important;
+    border: 1px solid var(--line-1) !important;
+    color: var(--txt-2) !important;
+}
+html[data-theme="bright"][data-palette="ivory"] .mac-sidebar{
+    background: #F9F7F1 !important;
+    border-right: 1px solid var(--line-1) !important;
+}
+html[data-theme="bright"][data-palette="ivory"] .sidebar-item:hover{
+    background: #F4F1EB !important; color: var(--txt-1) !important;
+}
+html[data-theme="bright"][data-palette="ivory"] .sidebar-item.active{
+    background: #EEE9E0 !important; color: var(--txt-1) !important;
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--line-1), var(--primary-500) 18%) !important;
+}
+
+/* 9) 페이지 하이라이트(보라/파랑 글로우 제거 → 중립) */
+html[data-theme="bright"][data-palette="ivory"] #mainPage::before{
+    background:
+            radial-gradient(800px 400px at 50% 120px, rgba(0,0,0,.02), transparent 60%) !important;
+}
+/* =========================================================
+   MONO UNDER TITLEBAR — Neutral, bright, minimal
+   (paste at the VERY END of App.css)
+========================================================= */
+
+/* 메인 영역 전용 중립 토큰 주입 */
+html[data-theme="bright"][data-palette="ivory"] #mainPage{
+    --bg-0:#F7F8FA;   /* 페이지 바탕 (쿨 그레이) */
+    --bg-1:#FFFFFF;   /* 패널/카드 */
+    --bg-2:#FFFFFF;   /* 카드 */
+    --line-1:#E7EAF0; /* 매우 연한 그레이 보더 */
+    --txt-1:#0B1220;  /* 제목/본문 */
+    --txt-2:#667085;  /* 보조 텍스트 */
+    --shadow-1:0 10px 24px rgba(16,24,40,.08);
+}
+
+/* 페이지 바탕을 중립으로 */
+html[data-theme="bright"][data-palette="ivory"] #mainPage,
+html[data-theme="bright"][data-palette="ivory"] .mac-content{
+    background: var(--bg-0) !important;
+    color: var(--txt-1) !important;
+}
+
+/* 패널/카드(무채색 화이트 + 아주 얕은 그림자) */
+html[data-theme="bright"][data-palette="ivory"] #mainPage .home-hero,
+html[data-theme="bright"][data-palette="ivory"] #mainPage .mac-window{
+    background: var(--bg-1) !important;
+    border: 1px solid var(--line-1) !important;
+    box-shadow:
+            0 1px 0 rgba(255,255,255,.85) inset,
+            0 8px 16px rgba(16,24,40,.06),
+            0 20px 44px rgba(16,24,40,.08) !important;
+}
+
+html[data-theme="bright"][data-palette="ivory"] #mainPage .mac-card,
+html[data-theme="bright"][data-palette="ivory"] #mainPage .mac-card.action.lg{
+    background: var(--bg-2) !important;
+    border: 1px solid var(--line-1) !important;
+    box-shadow: 0 8px 18px rgba(16,24,40,.06) !important;
+    color: var(--txt-1) !important;
+}
+html[data-theme="bright"][data-palette="ivory"] #mainPage .mac-card.action.lg:hover{
+    transform: translateY(-2px);
+    background: var(--bg-2) !important;
+    border-color: color-mix(in srgb, var(--line-1), #8B5CF6 16%) !important; /* 은은한 링 */
+    box-shadow: 0 14px 28px rgba(16,24,40,.10),
+    0 0 0 3px color-mix(in srgb, #8B5CF6 12%, transparent) !important;
+}
+
+/* 카드 내부 톤(완전 무채색) */
+html[data-theme="bright"][data-palette="ivory"] #mainPage .card-title{ color: var(--txt-1) !important; }
+html[data-theme="bright"][data-palette="ivory"] #mainPage .card-sub  { color: var(--txt-2) !important; }
+html[data-theme="bright"][data-palette="ivory"] #mainPage .card-icon{
+    background:#F3F4F6 !important;
+    border:1px solid var(--line-1) !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.25);
+}
+
+/* 칩/사이드 요소도 무채색화 */
+html[data-theme="bright"][data-palette="ivory"] #mainPage .chip{
+    background:#F3F4F6 !important;
+    border:1px solid var(--line-1) !important;
+    color: var(--txt-2) !important;
+}
+
+/* 배경 하이라이트(보라/주황 글로우) 제거 */
+html[data-theme="bright"][data-palette="ivory"] #mainPage::before{ content:none !important; }
+/* =========================================================
+   READABILITY PATCH — bright/mono에서 흐린 글씨 살리기
+   (Paste at the VERY END of App.css)
+========================================================= */
+
+/* 섹션/패널 헤더 글자: 완전 불투명 + 중립 텍스트 컬러 */
+html[data-theme="bright"][data-palette="ivory"] #mainPage h1,
+html[data-theme="bright"][data-palette="ivory"] #mainPage h2,
+html[data-theme="bright"][data-palette="ivory"] #mainPage h3,
+html[data-theme="bright"][data-palette="ivory"] #mainPage .section-head h3,
+html[data-theme="bright"][data-palette="ivory"] #mainPage .section-title,
+html[data-theme="bright"][data-palette="ivory"] #mainPage .mac-window > h2{
+    color: var(--txt-1) !important;
+    opacity: 1 !important;
+    text-shadow: none !important;
+}
+
+/* 작은 라벨/부제/메타 텍스트(‘빠른 작업’ 주변, 카드 부제 등) */
+html[data-theme="bright"][data-palette="ivory"] #mainPage .label,
+html[data-theme="bright"][data-palette="ivory"] #mainPage .subtle,
+html[data-theme="bright"][data-palette="ivory"] #mainPage .meta,
+html[data-theme="bright"][data-palette="ivory"] #mainPage .card-sub{
+    color: var(--txt-2) !important;
+    opacity: .95 !important;  /* 너무 흐리지 않게 */
+    text-shadow: none !important;
+}
+
+/* 패널 상단 보더도 밝은 톤으로 통일 */
+html[data-theme="bright"][data-palette="ivory"] #mainPage .mac-window > h2{
+    border-bottom: 1px solid var(--line-1) !important;
+}
+
+/* 혹시 남아있는 흰색 고정 스타일을 무력화 */
+html[data-theme="bright"][data-palette="ivory"] #mainPage [style*="color:#fff"],
+html[data-theme="bright"][data-palette="ivory"] #mainPage [style*="color: #fff"]{
+    color: var(--txt-1) !important;
+}
+
+
 
 
