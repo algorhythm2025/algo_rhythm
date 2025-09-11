@@ -10,7 +10,10 @@ const SECTION_LIST = [
 function App() {
   // 상태 관리
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [activeSection, setActiveSection] = useState('main');
+  const [activeSection, setActiveSection] = useState(() => {
+    // localStorage에서 저장된 섹션 복원
+    return localStorage.getItem('activeSection') || 'main';
+  });
   const [showModal, setShowModal] = useState(false);
   const [experiences, setExperiences] = useState([]);
   const [form, setForm] = useState({ title: '', startDate: '', endDate: '', description: '' });
@@ -23,11 +26,27 @@ function App() {
   const [isDriveInitialized, setIsDriveInitialized] = useState(false);
   const [driveFiles, setDriveFiles] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSheetLoading, setIsSheetLoading] = useState(false);
+  const [isExperienceLoading, setIsExperienceLoading] = useState(false);
+  const [isDriveLoading, setIsDriveLoading] = useState(false);
+  const [isUploadLoading, setIsUploadLoading] = useState(false);
+  const [isRefreshLoading, setIsRefreshLoading] = useState(false);
+  const [isDeleteLoading, setIsDeleteLoading] = useState(false);
+  const [isViewModeLoading, setIsViewModeLoading] = useState(false);
+  const [currentPath, setCurrentPath] = useState([]); // 현재 경로 추적
   const [authStatus, setAuthStatus] = useState('disconnected');
   const [selectedImages, setSelectedImages] = useState([]); // 선택된 이미지 파일들
   const [imagePreviews, setImagePreviews] = useState([]); // 이미지 미리보기 URL들
   const [showImageModal, setShowImageModal] = useState(false); // 이미지 확대 모달
   const [selectedImageForModal, setSelectedImageForModal] = useState(null); // 모달에 표시할 이미지
+  const [driveViewMode, setDriveViewMode] = useState(() => {
+    // localStorage에서 저장된 뷰 모드 복원
+    return localStorage.getItem('driveViewMode') || 'all';
+  }); // 'all' 또는 'portfolio'
+  const [portfolioFolderId, setPortfolioFolderId] = useState(() => {
+    // localStorage에서 저장된 포트폴리오 폴더 ID 복원
+    return localStorage.getItem('portfolioFolderId') || null;
+  }); // 포트폴리오 폴더 ID
   const formRef = useRef();
   
   // 통합 인증 서비스 인스턴스
@@ -38,6 +57,7 @@ function App() {
   // 섹션 전환
   function showSection(section) {
     setActiveSection(section);
+    localStorage.setItem('activeSection', section);
   }
 
   // 통합 인증 시스템 초기화
@@ -139,23 +159,33 @@ function App() {
           // 기존 시트가 실제로 존재하는지 확인
           const exists = await sheetsService.current.checkSpreadsheetExists(currentSpreadsheetId);
           if (!exists) {
-            console.log('기존 스프레드시트가 존재하지 않습니다. 새로 생성합니다...');
+            console.log('기존 스프레드시트가 존재하지 않습니다. 상태를 초기화합니다...');
             currentSpreadsheetId = null;
+            setSpreadsheetId(null);
+            localStorage.removeItem('spreadsheetId');
           } else {
             console.log('기존 스프레드시트가 유효합니다.');
           }
         } catch (error) {
-          console.log('기존 스프레드시트 확인 중 오류, 새로 생성합니다:', error);
+          console.log('기존 스프레드시트 확인 중 오류, 상태를 초기화합니다:', error);
           currentSpreadsheetId = null;
+          setSpreadsheetId(null);
+          localStorage.removeItem('spreadsheetId');
         }
       }
       
       if (!currentSpreadsheetId) {
-        console.log('새 포트폴리오 시트 파일 생성 중...');
+        console.log('기존 포트폴리오 시트 파일 검색 중...');
         
         try {
-          // 기존 포트폴리오 시트 파일 검색
-          const existingFiles = await driveService.current.listFiles(50);
+          // 포트폴리오 이력 폴더가 있는지 확인 (생성하지 않고 찾기만)
+          const portfolioFolder = await driveService.current.findFolder('포트폴리오 이력');
+          
+          if (portfolioFolder) {
+            console.log('기존 포트폴리오 이력 폴더 발견:', portfolioFolder.id);
+            
+            // 포트폴리오 이력 폴더 안에서 기존 시트 파일 검색
+            const existingFiles = await driveService.current.listFiles(50, portfolioFolder.id);
           const portfolioFile = existingFiles.find(file => 
             file.name === '포트폴리오 이력' && 
             file.mimeType === 'application/vnd.google-apps.spreadsheet'
@@ -167,23 +197,23 @@ function App() {
             currentSpreadsheetId = portfolioFile.id;
             setSpreadsheetId(currentSpreadsheetId);
             localStorage.setItem('spreadsheetId', currentSpreadsheetId);
+              
+              // 포트폴리오 폴더 ID 설정
+              setPortfolioFolderId(portfolioFolder.id);
+              localStorage.setItem('portfolioFolderId', portfolioFolder.id);
           } else {
-            console.log('기존 파일이 없어서 새로 생성합니다...');
-            const spreadsheet = await sheetsService.current.createSpreadsheet('포트폴리오 이력');
-            currentSpreadsheetId = spreadsheet.spreadsheetId;
-            setSpreadsheetId(currentSpreadsheetId);
-            localStorage.setItem('spreadsheetId', currentSpreadsheetId);
-            await sheetsService.current.setupHeaders(currentSpreadsheetId);
-            console.log('새 스프레드시트 생성 완료:', currentSpreadsheetId);
+              console.log('포트폴리오 이력 폴더는 있지만 시트 파일이 없습니다.');
+              // 폴더는 있지만 시트가 없으면 폴더 ID만 저장
+              setPortfolioFolderId(portfolioFolder.id);
+              localStorage.setItem('portfolioFolderId', portfolioFolder.id);
+            }
+          } else {
+            console.log('포트폴리오 이력 폴더가 없습니다. 시트 생성 시 함께 생성됩니다.');
           }
+          
         } catch (error) {
-          console.error('기존 파일 확인 중 오류, 새로 생성합니다:', error);
-          const spreadsheet = await sheetsService.current.createSpreadsheet('포트폴리오 이력');
-          currentSpreadsheetId = spreadsheet.spreadsheetId;
-          setSpreadsheetId(currentSpreadsheetId);
-          localStorage.setItem('spreadsheetId', currentSpreadsheetId);
-          await sheetsService.current.setupHeaders(currentSpreadsheetId);
-          console.log('새 스프레드시트 생성 완료:', currentSpreadsheetId);
+          console.error('기존 파일 확인 중 오류:', error);
+          console.log('시트 생성 시 폴더도 함께 생성됩니다.');
         }
       }
       
@@ -234,13 +264,43 @@ function App() {
   }
 
   // 드라이브 파일 목록 로드
-  async function loadDriveFiles() {
+  async function loadDriveFiles(parentId = null) {
     if (!driveService.current) return;
     
     try {
-      console.log('드라이브 파일 불러오기 시작');
-      const files = await driveService.current.listFiles(20);
-      console.log('드라이브 파일:', files);
+      console.log('드라이브 파일 불러오기 시작, 뷰 모드:', driveViewMode, '부모 ID:', parentId);
+      
+      // 시트가 있다면 실제로 존재하는지 확인
+      if (spreadsheetId && sheetsService.current) {
+        try {
+          const exists = await sheetsService.current.checkSpreadsheetExists(spreadsheetId);
+          if (!exists) {
+            console.log('저장된 시트가 존재하지 않습니다. 상태를 초기화합니다.');
+            setSpreadsheetId(null);
+            localStorage.removeItem('spreadsheetId');
+          }
+        } catch (error) {
+          console.log('시트 존재 확인 중 오류:', error);
+          setSpreadsheetId(null);
+          localStorage.removeItem('spreadsheetId');
+        }
+      }
+      
+      let files;
+      if (parentId) {
+        // 특정 폴더 내 파일 로드
+        files = await driveService.current.listFiles(50, parentId);
+        console.log('폴더 내 파일:', files);
+      } else if (driveViewMode === 'portfolio' && portfolioFolderId) {
+        // 포트폴리오 폴더 내 파일만 로드
+        files = await driveService.current.listFiles(50, portfolioFolderId);
+        console.log('포트폴리오 폴더 파일:', files);
+      } else {
+        // 전체 파일 로드
+        files = await driveService.current.listFiles(20);
+        console.log('전체 드라이브 파일:', files);
+      }
+      
       setDriveFiles(files);
     } catch (error) {
       console.error('드라이브 파일 로드 오류:', error);
@@ -281,8 +341,9 @@ function App() {
       // 로그인 상태 저장 (이미 isLoggedIn이 true로 설정되어 있으므로 스프레드시트 ID만 전달)
       saveLoginState(true);
       
-      // 메인 페이지로 이동
-      setActiveSection('main');
+      // 메인 페이지로 이동 (저장된 섹션이 있으면 그대로 유지)
+      const savedSection = localStorage.getItem('activeSection') || 'main';
+      setActiveSection(savedSection);
       
       // 인증 완료 후 서비스들 초기화
       await initializeServices();
@@ -305,6 +366,10 @@ function App() {
       // 로컬 상태 정리 (saveLoginState에서 스프레드시트 ID도 제거됨)
       saveLoginState(false);
       setActiveSection('main');
+      localStorage.setItem('activeSection', 'main');
+      localStorage.setItem('driveViewMode', 'all');
+      localStorage.removeItem('portfolioFolderId');
+      setPortfolioFolderId(null);
       setIsSheetsInitialized(false);
       setIsDriveInitialized(false);
       setAuthStatus('disconnected');
@@ -386,14 +451,14 @@ function App() {
       
       try
       {
-        setIsLoading(true);
+        setIsExperienceLoading(true);
         
         let imageUrls = [];
         
         // 이미지들이 선택된 경우 구글 드라이브에 업로드
         if (selectedImages.length > 0) {
           for (const imageFile of selectedImages) {
-            const imageUrl = await uploadImageToDrive(imageFile);
+            const imageUrl = await uploadImageToDrive(imageFile, form.title);
             imageUrls.push(imageUrl);
           }
         }
@@ -421,7 +486,7 @@ function App() {
         const errorMessage = sheetsService.current?.formatErrorMessage(error) || '이력 저장에 실패했습니다.';
         alert(errorMessage);
       } finally {
-        setIsLoading(false);
+        setIsExperienceLoading(false);
       }
     }
   }
@@ -518,17 +583,25 @@ function App() {
   }
 
   // 이미지를 구글 드라이브에 업로드하고 공개 링크 생성
-  async function uploadImageToDrive(imageFile) {
+  async function uploadImageToDrive(imageFile, experienceTitle) {
     if (!driveService.current) {
       throw new Error('구글 드라이브 서비스가 초기화되지 않았습니다.');
     }
 
     try {
-      // 이미지 파일을 드라이브에 업로드
+      // 포트폴리오 이력 폴더와 이미지 폴더 확인/생성
+      const portfolioFolder = await driveService.current.ensurePortfolioFolder();
+      const imageFolder = await driveService.current.ensureImageFolder(portfolioFolder.id);
+      
+      // 이력별 이미지 폴더 생성 또는 찾기
+      const experienceFolder = await driveService.current.ensureExperienceImageFolder(experienceTitle, imageFolder.id);
+      
+      // 이미지 파일을 해당 이력 폴더에 업로드
       const uploadResult = await driveService.current.uploadFile(
         `portfolio_${Date.now()}_${imageFile.name}`,
         imageFile,
-        imageFile.type
+        imageFile.type,
+        experienceFolder.id
       );
 
       if (!uploadResult.id) {
@@ -560,7 +633,7 @@ function App() {
     if (!window.confirm('선택된 이력을 삭제하시겠습니까?')) return;
     
     try {
-      setIsLoading(true);
+      setIsExperienceLoading(true);
       
       // 선택된 이력들을 구글 시트에서 삭제
       if (spreadsheetId && isSheetsInitialized) {
@@ -584,7 +657,7 @@ function App() {
       const errorMessage = sheetsService.current?.formatErrorMessage(error) || '이력 삭제에 실패했습니다.';
       alert(errorMessage);
     } finally {
-      setIsLoading(false);
+      setIsExperienceLoading(false);
     }
   }
 
@@ -646,7 +719,7 @@ async function handleDriveFileDownload(file) {
     if (!file || !driveService.current) return;
     
     try {
-      setIsLoading(true);
+      setIsUploadLoading(true);
       await driveService.current.uploadFile(file.name, file, file.type);
       await loadDriveFiles();
       alert('파일이 업로드되었습니다!');
@@ -654,7 +727,7 @@ async function handleDriveFileDownload(file) {
       const errorMessage = driveService.current?.formatErrorMessage(error) || '파일 업로드에 실패했습니다.';
       alert(errorMessage);
     } finally {
-      setIsLoading(false);
+      setIsUploadLoading(false);
     }
   }
 
@@ -663,7 +736,7 @@ async function handleDriveFileDownload(file) {
     if (!window.confirm('정말로 이 파일을 삭제하시겠습니까?') || !driveService.current) return;
     
     try {
-      setIsLoading(true);
+      setIsDeleteLoading(true);
       await driveService.current.deleteFile(fileId);
       await loadDriveFiles();
       alert('파일이 삭제되었습니다!');
@@ -671,23 +744,329 @@ async function handleDriveFileDownload(file) {
       const errorMessage = driveService.current?.formatErrorMessage(error) || '파일 삭제에 실패했습니다.';
       alert(errorMessage);
     } finally {
-      setIsLoading(false);
+      setIsDeleteLoading(false);
     }
   }
 
   // 구글 시트 데이터 새로고침
   async function refreshSheetsData() {
     try {
-      setIsLoading(true);
+      setIsExperienceLoading(true);
       await loadExperiencesFromSheets();
       alert('구글 시트 데이터가 새로고침되었습니다!');
     } catch (error) {
       console.error('시트 데이터 새로고침 오류:', error);
       alert('데이터 새로고침에 실패했습니다: ' + (error?.message || error));
     } finally {
-      setIsLoading(false);
+      setIsExperienceLoading(false);
     }
   }
+
+  // 시트 생성
+  async function createSheet() {
+    if (!sheetsService.current || !driveService.current) return;
+    
+    try {
+      setIsSheetLoading(true);
+      
+      // 포트폴리오 이력 폴더 생성 또는 찾기
+      const portfolioFolder = await driveService.current.ensurePortfolioFolder();
+      setPortfolioFolderId(portfolioFolder.id);
+      localStorage.setItem('portfolioFolderId', portfolioFolder.id);
+      
+      // 이미지 폴더도 생성
+      await driveService.current.ensureImageFolder(portfolioFolder.id);
+      
+      // 시트 생성
+      const spreadsheet = await sheetsService.current.createSpreadsheet('포트폴리오 이력', portfolioFolder.id);
+      const newSpreadsheetId = spreadsheet.spreadsheetId;
+      
+      // 상태 업데이트
+      setSpreadsheetId(newSpreadsheetId);
+      localStorage.setItem('spreadsheetId', newSpreadsheetId);
+      
+      // 헤더 설정
+      await sheetsService.current.setupHeaders(newSpreadsheetId);
+      
+      // 파일 목록 새로고침
+      await loadDriveFiles();
+      
+      alert('포트폴리오 시트와 폴더가 생성되었습니다!');
+    } catch (error) {
+      console.error('시트 생성 오류:', error);
+      alert('시트 생성에 실패했습니다: ' + (error?.message || error));
+    } finally {
+      setIsSheetLoading(false);
+    }
+  }
+
+  // 시트 삭제
+  async function deleteSheet() {
+    if (!spreadsheetId || !driveService.current) return;
+    
+    if (!window.confirm('포트폴리오 시트와 포트폴리오 이력 폴더를 모두 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) return;
+    
+    try {
+      setIsSheetLoading(true);
+      
+      // 시트 파일 삭제
+      await driveService.current.deleteFile(spreadsheetId);
+      
+      // 포트폴리오 이력 폴더도 삭제
+      if (portfolioFolderId) {
+        try {
+          await driveService.current.deleteFile(portfolioFolderId);
+          console.log('포트폴리오 이력 폴더도 삭제됨');
+        } catch (folderError) {
+          console.warn('포트폴리오 폴더 삭제 실패:', folderError);
+        }
+      }
+      
+      // 상태 초기화
+      setSpreadsheetId(null);
+      localStorage.removeItem('spreadsheetId');
+      setPortfolioFolderId(null);
+      localStorage.removeItem('portfolioFolderId');
+      setExperiences([]);
+      
+      // 강제로 상태 업데이트
+      setTimeout(() => {
+        setSpreadsheetId(null);
+        setPortfolioFolderId(null);
+      }, 100);
+      
+      // 파일 목록 새로고침
+      await loadDriveFiles();
+      
+      alert('포트폴리오 시트와 폴더가 삭제되었습니다!');
+    } catch (error) {
+      console.error('시트 삭제 오류:', error);
+      alert('시트 삭제에 실패했습니다: ' + (error?.message || error));
+    } finally {
+      setIsSheetLoading(false);
+    }
+  }
+
+  // 뷰 모드 전환
+  async function switchViewMode(mode) {
+    try {
+      setIsViewModeLoading(true);
+      setDriveViewMode(mode);
+      localStorage.setItem('driveViewMode', mode);
+      setCurrentPath([]); // 경로 초기화
+      await loadDriveFiles();
+    } finally {
+      setIsViewModeLoading(false);
+    }
+  }
+
+  // 드라이브 새로고침
+  async function handleDriveRefresh() {
+    try {
+      setIsRefreshLoading(true);
+      await loadDriveFiles();
+    } finally {
+      setIsRefreshLoading(false);
+    }
+  }
+
+  // 폴더 진입
+  async function enterFolder(folderId, folderName) {
+    try {
+      setIsViewModeLoading(true);
+      setCurrentPath(prev => [...prev, { id: folderId, name: folderName }]);
+      await loadDriveFiles(folderId);
+    } finally {
+      setIsViewModeLoading(false);
+    }
+  }
+
+  // 뒤로가기
+  async function goBack() {
+    if (currentPath.length === 0) return;
+    
+    try {
+      setIsViewModeLoading(true);
+      const newPath = currentPath.slice(0, -1);
+      setCurrentPath(newPath);
+      
+      if (newPath.length === 0) {
+        // 루트로 돌아가기
+        await loadDriveFiles();
+      } else {
+        // 이전 폴더로 돌아가기
+        const parentFolderId = newPath[newPath.length - 1].id;
+        await loadDriveFiles(parentFolderId);
+      }
+    } finally {
+      setIsViewModeLoading(false);
+    }
+  }
+
+  // 파일 다운로드
+  async function downloadFile(file) {
+    if (!driveService.current) return;
+    
+    try {
+      // 구글 문서 파일인지 확인 (Google Docs, Sheets, Slides 등)
+      const isGoogleDoc = file.mimeType && file.mimeType.includes('application/vnd.google-apps');
+      
+      if (isGoogleDoc) {
+        // 구글 문서 파일은 export API 사용
+        await downloadGoogleDoc(file);
+      } else {
+        // 일반 파일은 직접 다운로드
+        await downloadRegularFile(file);
+      }
+    } catch (error) {
+      console.error('파일 다운로드 오류:', error);
+      alert('파일 다운로드에 실패했습니다: ' + (error?.message || error));
+    }
+  }
+
+  // 구글 문서 파일 다운로드
+  async function downloadGoogleDoc(file) {
+    try {
+      const accessToken = authService.current?.getAccessToken();
+      if (!accessToken) {
+        throw new Error('인증 토큰이 없습니다.');
+      }
+
+      // MIME 타입에 따른 export 형식 결정
+      let exportMimeType;
+      let fileExtension;
+      
+      switch (file.mimeType) {
+        case 'application/vnd.google-apps.spreadsheet':
+          exportMimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+          fileExtension = '.xlsx';
+          break;
+        case 'application/vnd.google-apps.document':
+          exportMimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+          fileExtension = '.docx';
+          break;
+        case 'application/vnd.google-apps.presentation':
+          exportMimeType = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
+          fileExtension = '.pptx';
+          break;
+        case 'application/vnd.google-apps.drawing':
+          exportMimeType = 'image/png';
+          fileExtension = '.png';
+          break;
+        default:
+          exportMimeType = 'application/pdf';
+          fileExtension = '.pdf';
+      }
+
+      const exportUrl = `https://www.googleapis.com/drive/v3/files/${file.id}/export?mimeType=${exportMimeType}`;
+      
+      const response = await fetch(exportUrl, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Export 실패: ${response.status} ${response.statusText}`);
+      }
+
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = file.name + fileExtension;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // 메모리 정리
+      window.URL.revokeObjectURL(downloadUrl);
+      
+    } catch (error) {
+      console.error('구글 문서 다운로드 오류:', error);
+      throw error;
+    }
+  }
+
+  // 일반 파일 다운로드
+  async function downloadRegularFile(file) {
+    try {
+      const accessToken = authService.current?.getAccessToken();
+      if (!accessToken) {
+        throw new Error('인증 토큰이 없습니다.');
+      }
+
+      const downloadUrl = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`;
+      
+      const response = await fetch(downloadUrl, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`다운로드 실패: ${response.status} ${response.statusText}`);
+      }
+
+      const blob = await response.blob();
+      const objectUrl = window.URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.href = objectUrl;
+      link.download = file.name;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // 메모리 정리
+      window.URL.revokeObjectURL(objectUrl);
+      
+    } catch (error) {
+      console.error('일반 파일 다운로드 오류:', error);
+      throw error;
+    }
+  }
+
+  // 뷰 모드 변경 시 파일 목록 다시 로드
+  useEffect(() => {
+    if (isDriveInitialized) {
+      loadDriveFiles();
+    }
+  }, [driveViewMode, portfolioFolderId]);
+
+  // 포트폴리오 폴더 ID 설정
+  async function setPortfolioFolder() {
+    if (!driveService.current) return;
+    
+    try {
+      // 기존 폴더가 있는지 확인만 (생성하지 않음)
+      const portfolioFolder = await driveService.current.findFolder('포트폴리오 이력');
+      if (portfolioFolder) {
+        setPortfolioFolderId(portfolioFolder.id);
+        localStorage.setItem('portfolioFolderId', portfolioFolder.id);
+        console.log('기존 포트폴리오 폴더 ID 설정됨:', portfolioFolder.id);
+      } else {
+        console.log('포트폴리오 폴더가 없습니다. 시트 생성 시 함께 생성됩니다.');
+      }
+    } catch (error) {
+      console.error('포트폴리오 폴더 확인 오류:', error);
+    }
+  }
+
+  // 드라이브 섹션이 활성화될 때 포트폴리오 폴더 ID 설정
+  useEffect(() => {
+    if (activeSection === 'drive' && isDriveInitialized && !portfolioFolderId) {
+      setPortfolioFolder();
+    }
+  }, [activeSection, isDriveInitialized, portfolioFolderId]);
+
+  // 포트폴리오 폴더 ID가 변경될 때 localStorage 업데이트
+  useEffect(() => {
+    if (portfolioFolderId) {
+      localStorage.setItem('portfolioFolderId', portfolioFolderId);
+    }
+  }, [portfolioFolderId]);
 
   // 페이지 로드 시 로그인 상태 복원 및 초기화
   useEffect(() => {
@@ -824,7 +1203,7 @@ async function handleDriveFileDownload(file) {
                       <div className="spinner-border text-primary" role="status">
                         <span className="visually-hidden">로그인 중...</span>
                       </div>
-                      <p className="mt-2 text-muted">로그인 중...</p>
+                      <p className="mt-2" style={{ color: 'white' }}>로그인 중...</p>
                     </div>
                   )}
                 </div>
@@ -912,15 +1291,33 @@ async function handleDriveFileDownload(file) {
                     <div className="mac-window-content">
                       <div className="d-flex justify-content-between align-items-center mb-3">
                         <div>
-                          <button className="btn btn-outline-dark me-2" onClick={() => selectAllExperiences(true)}>전체 선택</button>
-                          <button className="btn btn-outline-dark me-2" onClick={() => selectAllExperiences(false)}>전체 해제</button>
-                          <button className="btn btn-outline-danger" onClick={deleteSelectedExperiences} disabled={selected.length === 0}>선택 삭제</button>
+                          <button className="btn btn-outline-dark me-2" onClick={() => selectAllExperiences(true)} disabled={isExperienceLoading}>전체 선택</button>
+                          <button className="btn btn-outline-dark me-2" onClick={() => selectAllExperiences(false)} disabled={isExperienceLoading}>전체 해제</button>
+                          <button className="btn btn-outline-danger" onClick={deleteSelectedExperiences} disabled={selected.length === 0 || isExperienceLoading}>
+                            {isExperienceLoading ? (
+                              <>
+                                <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                삭제 중...
+                              </>
+                            ) : (
+                              '선택 삭제'
+                            )}
+                          </button>
                         </div>
                         <div>
-                          <button className="btn btn-outline-primary me-2" onClick={refreshSheetsData}>
+                          <button className="btn btn-outline-primary me-2" onClick={refreshSheetsData} disabled={isExperienceLoading}>
+                            {isExperienceLoading ? (
+                              <>
+                                <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                새로고침 중...
+                              </>
+                            ) : (
+                              <>
                             <i className="fas fa-sync-alt"></i> 시트 새로고침
+                              </>
+                            )}
                           </button>
-                          <button className="btn btn-dark" id="nextButton" disabled={selected.length === 0}>다음</button>
+                          <button className="btn btn-dark" id="nextButton" disabled={selected.length === 0 || isExperienceLoading}>다음</button>
                         </div>
                       </div>
                       <div id="experienceList" className="mac-list">
@@ -966,7 +1363,7 @@ async function handleDriveFileDownload(file) {
                                         </div>
                                       ))}
                                       {exp.imageUrls.length > 3 && (
-                                        <div className="text-center" style={{ fontSize: '0.8rem', color: '#6c757d' }}>
+                                        <div className="text-center" style={{ fontSize: '0.8rem', color: 'white' }}>
                                           +{exp.imageUrls.length - 3}
                                         </div>
                                       )}
@@ -982,7 +1379,7 @@ async function handleDriveFileDownload(file) {
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
-                                        color: '#6c757d'
+                                        color: 'white'
                                       }}
                                       title="이미지 없음"
                                     >
@@ -1021,20 +1418,140 @@ async function handleDriveFileDownload(file) {
                         </div>
                         {!isDriveInitialized && (
                           <div className="drive-help">
-                            <small className="text-muted">
+                            <small style={{ color: 'white' }}>
                               구글 드라이브 연동이 필요합니다. 구글 계정으로 로그인해주세요.
                             </small>
                           </div>
                         )}
                       </div>
+                      
+                      {/* 시트 관리 버튼 */}
+                      {isDriveInitialized && (
+                        <div className="sheet-management">
+                          <div className="d-flex justify-content-between align-items-center mb-3">
+                            <h4>포트폴리오 시트 관리</h4>
+                            <div>
+                              {spreadsheetId ? (
+                                <button 
+                                  className="btn btn-outline-danger btn-sm" 
+                                  onClick={deleteSheet}
+                                  disabled={isSheetLoading}
+                                >
+                                  {isSheetLoading ? (
+                                    <>
+                                      <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                      삭제 중...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <i className="fas fa-trash-alt"></i> 시트 삭제
+                                    </>
+                                  )}
+                                </button>
+                              ) : (
+                                <button 
+                                  className="btn btn-outline-success btn-sm" 
+                                  onClick={createSheet}
+                                  disabled={isSheetLoading}
+                                >
+                                  {isSheetLoading ? (
+                                    <>
+                                      <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                      생성 중...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <i className="fas fa-plus"></i> 시트 생성
+                                    </>
+                                  )}
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                          {!spreadsheetId && (
+                            <div className="alert alert-info" role="alert">
+                              <i className="fas fa-info-circle me-2"></i>
+                              시트파일이 없습니다. 새로 생성해주세요.
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      
+                      {/* 뷰 모드 선택 */}
+                      {isDriveInitialized && (
+                        <div className="view-mode-selector">
+                          <div className="d-flex justify-content-between align-items-center mb-3">
+                            <h4>파일 보기</h4>
+                            <div className="btn-group" role="group">
+                              <button 
+                                type="button" 
+                                className={`btn btn-sm ${driveViewMode === 'all' ? 'btn-primary' : 'btn-outline-primary'}`}
+                                onClick={() => switchViewMode('all')}
+                                disabled={isViewModeLoading}
+                              >
+                                <i className="fas fa-globe"></i> 전체 파일
+                              </button>
+                              <button 
+                                type="button" 
+                                className={`btn btn-sm ${driveViewMode === 'portfolio' ? 'btn-primary' : 'btn-outline-primary'}`}
+                                onClick={() => switchViewMode('portfolio')}
+                                disabled={!portfolioFolderId || isViewModeLoading}
+                                title={!portfolioFolderId ? '포트폴리오 폴더가 없습니다. 시트를 먼저 생성해주세요.' : '포트폴리오 폴더 보기'}
+                              >
+                                {!portfolioFolderId ? (
+                                  <>
+                                    <i className="fas fa-folder-plus"></i> 포트폴리오 폴더
+                                  </>
+                                ) : (
+                                  <>
+                                    <i className="fas fa-folder"></i> 포트폴리오 폴더
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* 구분선 */}
+                      {isDriveInitialized && (
+                        <hr style={{ border: 'none', height: '2px', background: 'linear-gradient(to right, #007bff, #6c757d, #007bff)', margin: '20px 0' }} />
+                      )}
+                      
                       {/* 파일 목록 */}
                       {isDriveInitialized && (
                         <div className="drive-files">
                           <div className="d-flex justify-content-between align-items-center mb-3">
-                            <h4>내 파일</h4>
+                            <div className="d-flex align-items-center">
+                              {currentPath.length > 0 && (
+                                <button 
+                                  className="btn btn-outline-secondary btn-sm me-3" 
+                                  onClick={goBack}
+                                  disabled={isViewModeLoading}
+                                >
+                                  <i className="fas fa-arrow-left"></i> 뒤로가기
+                                </button>
+                              )}
+                              <h4>
+                                {currentPath.length > 0 ? currentPath[currentPath.length - 1].name : 
+                                 driveViewMode === 'all' ? '전체 파일' : '포트폴리오 폴더 내용'}
+                                {driveViewMode === 'portfolio' && portfolioFolderId && currentPath.length === 0 && (
+                                  <small className="ms-2" style={{ color: 'white' }}>(포트폴리오 이력 폴더)</small>
+                                )}
+                              </h4>
+                            </div>
                             <div>
-                              <label htmlFor="drive-upload-input" className="btn btn-outline-success btn-sm me-2">
+                              <label htmlFor="drive-upload-input" className={`btn btn-outline-success btn-sm me-2 ${isUploadLoading ? 'disabled' : ''}`} style={{ pointerEvents: isUploadLoading ? 'none' : 'auto' }}>
+                                {isUploadLoading ? (
+                                  <>
+                                    <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                    업로드 중...
+                                  </>
+                                ) : (
+                                  <>
                                 <i className="fas fa-upload"></i> 업로드
+                                  </>
+                                )}
                               </label>
                               <input
                                 id="drive-upload-input"
@@ -1042,8 +1559,17 @@ async function handleDriveFileDownload(file) {
                                 style={{ display: 'none' }}
                                 onChange={handleDriveFileUpload}
                               />
-                              <button className="btn btn-outline-primary btn-sm" onClick={loadDriveFiles}>
+                              <button className="btn btn-outline-primary btn-sm" onClick={handleDriveRefresh} disabled={isRefreshLoading}>
+                                {isRefreshLoading ? (
+                                  <>
+                                    <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                    새로고침 중...
+                                  </>
+                                ) : (
+                                  <>
                                 <i className="fas fa-sync-alt"></i> 새로고침
+                                  </>
+                                )}
                               </button>
                             </div>
                           </div>
@@ -1051,37 +1577,136 @@ async function handleDriveFileDownload(file) {
                             {driveFiles.length === 0 ? (
                               <div className="empty-state">
                                 <i className="fas fa-folder-open fa-3x mb-3"></i>
-                                <p>파일이 없습니다.</p>
+                                <p>
+                                  {driveViewMode === 'portfolio' ? '포트폴리오 폴더가 비어있습니다.' : '파일이 없습니다.'}
+                                </p>
                               </div>
                             ) : (
-                              driveFiles.map((file, index) => (
-                                <div key={file.id} className="file-item list-group-item">
-                                  <div className="d-flex align-items-center">
-                                    <i className={`fas ${file.mimeType === 'application/vnd.google-apps.folder' ? 'fa-folder' : 'fa-file'} me-3`}></i>
-                                    <div className="flex-grow-1">
-                                      <h6
-                                        className="mb-1"
-                                        style={{ cursor: file.mimeType === 'application/vnd.google-apps.folder' ? 'default' : 'pointer', color: file.mimeType === 'application/vnd.google-apps.folder' ? 'inherit' : '#0d6efd' }}
-                                        onClick={() => file.mimeType !== 'application/vnd.google-apps.folder' && handleDriveFileDownload(file)}
-                                      >
-                                        {file.name}
-                                      </h6>
-                                      <small className="text-muted">
-                                        {file.mimeType} • {new Date(file.createdTime).toLocaleDateString()}
-                                      </small>
+                              <>
+                                {/* 폴더들 먼저 표시 */}
+                                {driveFiles
+                                  .filter(file => file.mimeType === 'application/vnd.google-apps.folder')
+                                  .map((file, index, array) => (
+                                    <div key={file.id}>
+                                      <div className="file-item list-group-item folder-item" style={{ cursor: 'pointer' }} onClick={() => enterFolder(file.id, file.name)}>
+                                        <div className="d-flex align-items-center">
+                                          <i className="fas fa-folder me-3" style={{ color: '#ffc107' }}></i>
+                                          <div className="flex-grow-1">
+                                            <h6 className="mb-1 folder-name">
+                                              {file.name}
+                                            </h6>
+                                            <small style={{ color: 'white' }}>
+                                              폴더 • {new Date(file.createdTime).toLocaleDateString()}
+                                            </small>
+                                          </div>
+                                          <div className="file-actions d-flex align-items-center">
+                                            <button 
+                                              className="btn btn-sm btn-outline-danger" 
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleDriveFileDelete(file.id);
+                                              }}
+                                              disabled={isDeleteLoading}
+                                            >
+                                              {isDeleteLoading ? (
+                                                <>
+                                                  <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                                  삭제 중...
+                                                </>
+                                              ) : (
+                                                <>
+                                                  <i className="fas fa-trash-alt"></i> 삭제
+                                                </>
+                                              )}
+                                            </button>
+                                          </div>
+                                        </div>
+                                      </div>
+                                      {/* 폴더들 사이 구분선 */}
+                                      {index < array.length - 1 && (
+                                        <hr style={{ 
+                                          border: 'none', 
+                                          height: '1px', 
+                                          background: 'linear-gradient(to right, transparent, #ffc107, transparent)', 
+                                          margin: '8px 0' 
+                                        }} />
+                                      )}
                                     </div>
-                
-                                    <div className="file-actions d-flex align-items-center">
-                                      <a href={`https://drive.google.com/file/d/${file.id}/view`} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-outline-primary me-2">
-                                        다운로드
-                                      </a>
-                                      <button className="btn btn-sm btn-outline-danger" onClick={() => handleDriveFileDelete(file.id)}>
+                                  ))}
+                                
+                                {/* 폴더와 파일 사이 구분선 */}
+                                {driveFiles.filter(file => file.mimeType === 'application/vnd.google-apps.folder').length > 0 && 
+                                 driveFiles.filter(file => file.mimeType !== 'application/vnd.google-apps.folder').length > 0 && (
+                                  <hr style={{ border: 'none', height: '1px', background: '#e9ecef', margin: '15px 0' }} />
+                                )}
+                                
+                                {/* 파일들 표시 */}
+                                {driveFiles
+                                  .filter(file => file.mimeType !== 'application/vnd.google-apps.folder')
+                                  .map((file, index, array) => (
+                                    <div key={file.id}>
+                                      <div className="file-item list-group-item">
+                                        <div className="d-flex align-items-center">
+                                          <i className={`fas ${
+                                            file.mimeType === 'application/vnd.google-apps.spreadsheet' ? 'fa-file-excel' :
+                                            file.mimeType === 'application/vnd.google-apps.document' ? 'fa-file-word' :
+                                            file.mimeType === 'application/vnd.google-apps.presentation' ? 'fa-file-powerpoint' :
+                                            file.mimeType.startsWith('image/') ? 'fa-file-image' :
+                                            'fa-file'
+                                          } me-3`} style={{ 
+                                            color: file.mimeType === 'application/vnd.google-apps.spreadsheet' ? '#28a745' :
+                                                   file.mimeType === 'application/vnd.google-apps.document' ? '#007bff' :
+                                                   file.mimeType === 'application/vnd.google-apps.presentation' ? '#dc3545' :
+                                                   file.mimeType.startsWith('image/') ? '#6f42c1' : 'white'
+                                          }}></i>
+                                          <div className="flex-grow-1">
+                                            <h6
+                                              className="mb-1 file-name"
+                                              style={{ cursor: 'pointer', color: '#0d6efd' }}
+                                              onClick={() => downloadFile(file)}
+                                            >
+                                              {file.name}
+                                            </h6>
+                                            <small style={{ color: 'white' }}>
+                                              {file.mimeType === 'application/vnd.google-apps.spreadsheet' ? '스프레드시트' :
+                                               file.mimeType === 'application/vnd.google-apps.document' ? '문서' :
+                                               file.mimeType === 'application/vnd.google-apps.presentation' ? '프레젠테이션' :
+                                               file.mimeType.startsWith('image/') ? '이미지' : '파일'} • 
+                                              {new Date(file.createdTime).toLocaleDateString()}
+                                            </small>
+                                          </div>
+                                          <div className="file-actions d-flex align-items-center">
+                                            <button 
+                                              className="btn btn-sm btn-outline-danger" 
+                                              onClick={() => handleDriveFileDelete(file.id)}
+                                              disabled={isDeleteLoading}
+                                            >
+                                              {isDeleteLoading ? (
+                                                <>
+                                                  <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                                  삭제 중...
+                                                </>
+                                              ) : (
+                                                <>
                                         <i className="fas fa-trash-alt"></i> 삭제
+                                                </>
+                                              )}
                                       </button>
                                     </div>
                                   </div>
                                 </div>
-                              ))
+                                      {/* 파일들 사이 구분선 */}
+                                      {index < array.length - 1 && (
+                                        <hr style={{ 
+                                          border: 'none', 
+                                          height: '1px', 
+                                          background: 'linear-gradient(to right, transparent, #dee2e6, transparent)', 
+                                          margin: '8px 0' 
+                                        }} />
+                                      )}
+                                    </div>
+                                  ))}
+                              </>
                             )}
                           </div>
                         </div>
@@ -1167,7 +1792,7 @@ async function handleDriveFileDownload(file) {
                                         </div>
                                       ))}
                                       {exp.imageUrls.length > 3 && (
-                                        <div className="text-center" style={{ fontSize: '0.8rem', color: '#6c757d' }}>
+                                        <div className="text-center" style={{ fontSize: '0.8rem', color: 'white' }}>
                                           +{exp.imageUrls.length - 3}
                                         </div>
                                       )}
@@ -1183,7 +1808,7 @@ async function handleDriveFileDownload(file) {
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
-                                        color: '#6c757d'
+                                        color: 'white'
                                       }}
                                       title="이미지 없음"
                                     >
@@ -1196,7 +1821,7 @@ async function handleDriveFileDownload(file) {
                                   <p className="mb-1"><small>{exp.period}</small></p>
                                   <p className="mb-0">{exp.description}</p>
                                 </div>
-                                <div className="text-muted">
+                                <div style={{ color: 'white' }}>
                                   <small>구글 시트에서 로드됨</small>
                                 </div>
                               </div>
@@ -1233,7 +1858,7 @@ async function handleDriveFileDownload(file) {
                     <div className="period-container">
                       <div className="row">
                         <div className="col-6">
-                          <label className="form-label small text-muted">시작일</label>
+                          <label className="form-label small" style={{ color: 'white' }}>시작일</label>
                                                   <input 
                           type="date" 
                           className="form-control" 
@@ -1251,7 +1876,7 @@ async function handleDriveFileDownload(file) {
                         />
                         </div>
                         <div className="col-6">
-                          <label className="form-label small text-muted">종료일</label>
+                          <label className="form-label small" style={{ color: 'white' }}>종료일</label>
                                                   <input 
                           type="date" 
                           className="form-control" 
@@ -1272,7 +1897,7 @@ async function handleDriveFileDownload(file) {
                       </div>
                       {form.startDate && form.endDate && (
                         <div className="period-preview">
-                          <small className="text-muted">
+                          <small style={{ color: 'white' }}>
                             선택된 기간: {formatPeriod(form.startDate, form.endDate)}
                           </small>
                         </div>
@@ -1342,13 +1967,22 @@ async function handleDriveFileDownload(file) {
                       </div>
                     )}
                     <div className="image-size-info mt-2">
-                      <small className="text-muted">최대 파일 크기: 5MB, 지원 형식: JPG, PNG, GIF</small>
+                      <small style={{ color: 'white' }}>최대 파일 크기: 5MB, 지원 형식: JPG, PNG, GIF</small>
                     </div>
                   </div>
                 </div>
                 <div className="modal-footer">
-                  <button type="button" className="btn btn-secondary" onClick={closeModal}>취소</button>
-                  <button type="submit" className="btn btn-primary">저장</button>
+                  <button type="button" className="btn btn-secondary" onClick={closeModal} disabled={isExperienceLoading}>취소</button>
+                  <button type="submit" className="btn btn-primary" disabled={isExperienceLoading}>
+                    {isExperienceLoading ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        저장 중...
+                      </>
+                    ) : (
+                      '저장'
+                    )}
+                  </button>
                 </div>
               </form>
             </div>

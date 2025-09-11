@@ -15,7 +15,7 @@ class GoogleDriveService {
   }
 
   // 파일 목록 가져오기
-  async listFiles(pageSize = 10) {
+  async listFiles(pageSize = 10, parentId = null) {
     try {
       await this.ensureAuthenticated();
       
@@ -28,11 +28,30 @@ class GoogleDriveService {
       
       console.log('Drive API 로드 확인됨, 파일 목록 가져오기 시작...');
       
+      let query = 'trashed=false';
+      if (parentId) {
+        // 특정 폴더 내 파일만 가져오기
+        query += ` and '${parentId}' in parents`;
+      } else {
+        // 루트 레벨의 파일과 폴더만 가져오기 (중첩된 폴더 제외)
+        query += ` and 'root' in parents`;
+      }
+      
       const response = await gapiClient.drive.files.list({
+        q: query,
         pageSize: pageSize,
-        fields: 'nextPageToken, files(id, name, mimeType, createdTime, modifiedTime, size)',
+        fields: 'nextPageToken, files(id, name, mimeType, createdTime, modifiedTime, size, parents)',
       });
-      return response.result.files || [];
+      
+      const files = response.result.files || [];
+      
+      // 클라이언트 측에서 추가 필터링 (소유자 확인)
+      const myFiles = files.filter(file => {
+        // 현재 사용자가 소유한 파일만 필터링
+        return true; // 일단 모든 파일을 반환 (소유자 필터링은 나중에 추가)
+      });
+      
+      return myFiles;
     } catch (error) {
       console.error('파일 목록 가져오기 오류:', error);
       if (error.message.includes('403')) {
@@ -43,17 +62,24 @@ class GoogleDriveService {
   }
 
   // 폴더 생성
-  async createFolder(name) {
+  async createFolder(name, parentId = null) {
     try {
       await this.ensureAuthenticated();
       
       const gapiClient = this.authService.getAuthenticatedGapiClient();
       
+      const folderResource = {
+        name: name,
+        mimeType: 'application/vnd.google-apps.folder',
+      };
+      
+      // 부모 폴더가 지정된 경우 parents 배열에 추가
+      if (parentId) {
+        folderResource.parents = [parentId];
+      }
+      
       const response = await gapiClient.drive.files.create({
-        resource: {
-          name: name,
-          mimeType: 'application/vnd.google-apps.folder',
-        },
+        resource: folderResource,
         fields: 'id, name, mimeType',
       });
       return response.result;
@@ -63,8 +89,100 @@ class GoogleDriveService {
     }
   }
 
+  // 폴더 검색
+  async findFolder(folderName, parentId = null) {
+    try {
+      await this.ensureAuthenticated();
+      
+      const gapiClient = this.authService.getAuthenticatedGapiClient();
+      
+      let query = `name='${folderName}' and mimeType='application/vnd.google-apps.folder' and trashed=false`;
+      
+      // 부모 폴더가 지정된 경우 해당 폴더 안에서만 검색
+      if (parentId) {
+        query += ` and '${parentId}' in parents`;
+      }
+      
+      const response = await gapiClient.drive.files.list({
+        q: query,
+        fields: 'files(id, name, mimeType)',
+      });
+      
+      return response.result.files && response.result.files.length > 0 ? response.result.files[0] : null;
+    } catch (error) {
+      console.error('폴더 검색 오류:', error);
+      throw new Error('폴더 검색에 실패했습니다.');
+    }
+  }
+
+  // 포트폴리오 이력 폴더 생성 또는 찾기
+  async ensurePortfolioFolder() {
+    try {
+      // 먼저 기존 폴더가 있는지 확인
+      let portfolioFolder = await this.findFolder('포트폴리오 이력');
+      
+      if (!portfolioFolder) {
+        // 폴더가 없으면 생성
+        portfolioFolder = await this.createFolder('포트폴리오 이력');
+        console.log('포트폴리오 이력 폴더 생성됨:', portfolioFolder.id);
+      } else {
+        console.log('기존 포트폴리오 이력 폴더 발견:', portfolioFolder.id);
+      }
+      
+      return portfolioFolder;
+    } catch (error) {
+      console.error('포트폴리오 이력 폴더 확인/생성 오류:', error);
+      throw new Error('포트폴리오 이력 폴더를 확인하거나 생성하는데 실패했습니다.');
+    }
+  }
+
+  // 이미지 폴더 생성 또는 찾기
+  async ensureImageFolder(portfolioFolderId) {
+    try {
+      // 먼저 기존 이미지 폴더가 있는지 확인
+      let imageFolder = await this.findFolder('image', portfolioFolderId);
+      
+      if (!imageFolder) {
+        // 폴더가 없으면 생성
+        imageFolder = await this.createFolder('image', portfolioFolderId);
+        console.log('이미지 폴더 생성됨:', imageFolder.id);
+      } else {
+        console.log('기존 이미지 폴더 발견:', imageFolder.id);
+      }
+      
+      return imageFolder;
+    } catch (error) {
+      console.error('이미지 폴더 확인/생성 오류:', error);
+      throw new Error('이미지 폴더를 확인하거나 생성하는데 실패했습니다.');
+    }
+  }
+
+  // 이력별 이미지 폴더 생성 또는 찾기
+  async ensureExperienceImageFolder(experienceTitle, imageFolderId) {
+    try {
+      // 이력 제목을 폴더명으로 사용 (특수문자 제거)
+      const folderName = experienceTitle.replace(/[<>:"/\\|?*]/g, '_');
+      
+      // 먼저 기존 폴더가 있는지 확인
+      let experienceFolder = await this.findFolder(folderName, imageFolderId);
+      
+      if (!experienceFolder) {
+        // 폴더가 없으면 생성
+        experienceFolder = await this.createFolder(folderName, imageFolderId);
+        console.log(`이력 이미지 폴더 생성됨: ${folderName}`, experienceFolder.id);
+      } else {
+        console.log(`기존 이력 이미지 폴더 발견: ${folderName}`, experienceFolder.id);
+      }
+      
+      return experienceFolder;
+    } catch (error) {
+      console.error('이력 이미지 폴더 확인/생성 오류:', error);
+      throw new Error('이력 이미지 폴더를 확인하거나 생성하는데 실패했습니다.');
+    }
+  }
+
   // 파일 업로드
-  async uploadFile(name, file, mimeType = 'application/octet-stream') {
+  async uploadFile(name, file, mimeType = 'application/octet-stream', parentId = null) {
     try {
       await this.ensureAuthenticated();
       
@@ -72,6 +190,11 @@ class GoogleDriveService {
         name: name,
         mimeType: mimeType,
       };
+
+      // 부모 폴더가 지정된 경우 parents 배열에 추가
+      if (parentId) {
+        metadata.parents = [parentId];
+      }
 
       const accessToken = this.authService.getAccessToken();
 
