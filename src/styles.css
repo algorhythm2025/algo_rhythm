@@ -41,6 +41,54 @@ body {
     color: rgba(255, 255, 255, 0.7);
 }
 
+/* 날짜 선택기 스타일 */
+input[type="date"] {
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #fff;
+    border-radius: 5px;
+    padding: 8px 12px;
+}
+
+input[type="date"]:focus {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.3);
+    color: #fff;
+    box-shadow: none;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+    cursor: pointer;
+}
+
+input[type="date"]::-webkit-datetime-edit {
+    color: #fff;
+}
+
+input[type="date"]::-webkit-datetime-edit-fields-wrapper {
+    color: #fff;
+}
+
+/* 기간 선택 컨테이너 */
+.period-container {
+    background-color: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+
+.period-preview {
+    background-color: rgba(0, 123, 255, 0.1);
+    border: 1px solid rgba(0, 123, 255, 0.3);
+    border-radius: 5px;
+    padding: 8px 12px;
+    margin-top: 10px;
+    text-align: center;
+    font-weight: 500;
+}
+
 #loginPage {
     background: linear-gradient(135deg, #007bff, #0056b3);
 }
@@ -778,6 +826,12 @@ a.btn:hover,
     cursor: pointer;
 }
 
+.image-upload-container.dragover {
+    border-color: #fff;
+    background-color: rgba(255, 255, 255, 0.15);
+    transform: scale(1.02);
+}
+
 .image-upload-container:hover {
     border-color: rgba(255, 255, 255, 0.5);
     background-color: rgba(255, 255, 255, 0.1);
@@ -840,6 +894,27 @@ a.btn:hover,
 
 .image-preview .remove-image:hover {
     background-color: rgba(0, 0, 0, 0.7);
+}
+
+/* 여러 이미지 미리보기 컨테이너 */
+.image-previews-container {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    padding: 15px;
+}
+
+.image-preview-item {
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.image-preview-item img {
+    transition: transform 0.3s ease;
+}
+
+.image-preview-item:hover img {
+    transform: scale(1.05);
 }
 
 .file-input {

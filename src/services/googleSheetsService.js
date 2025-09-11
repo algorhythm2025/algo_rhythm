@@ -15,7 +15,7 @@ class GoogleSheetsService {
   }
 
   // 스프레드시트 생성
-  async createSpreadsheet(title) {
+  async createSpreadsheet(title, parentId = null) {
     try {
       await this.ensureAuthenticated();
       
@@ -33,6 +33,22 @@ class GoogleSheetsService {
           title: title || '포트폴리오 이력'
         }
       });
+      
+      // 부모 폴더가 지정된 경우 파일을 해당 폴더로 이동
+      if (parentId && response.result.spreadsheetId) {
+        try {
+          await gapiClient.drive.files.update({
+            fileId: response.result.spreadsheetId,
+            addParents: parentId,
+            removeParents: 'root'
+          });
+          console.log('스프레드시트가 지정된 폴더로 이동됨');
+        } catch (moveError) {
+          console.warn('스프레드시트 폴더 이동 실패:', moveError);
+          // 폴더 이동 실패해도 시트 생성은 성공으로 처리
+        }
+      }
+      
       return response.result;
     } catch (error) {
       console.error('스프레드시트 생성 오류:', error);
@@ -162,6 +178,7 @@ class GoogleSheetsService {
       experience.title,
       experience.period,
       experience.description,
+      Array.isArray(experience.imageUrls) ? experience.imageUrls.join(', ') : (experience.imageUrl || ''), // 여러 이미지 URL을 쉼표로 구분
       new Date().toISOString() // 생성 시간
     ];
   }
@@ -177,14 +194,15 @@ class GoogleSheetsService {
       title: row[0] || '',
       period: row[1] || '',
       description: row[2] || '',
-      createdAt: row[3] || ''
+      imageUrls: row[3] ? row[3].split(', ').filter(url => url.trim()) : [], // 여러 이미지 URL을 쉼표로 구분하여 배열로 변환
+      createdAt: row[4] || ''
     }));
   }
 
   // 초기 헤더 설정
   async setupHeaders(spreadsheetId) {
-    const headers = [['제목', '기간', '설명', '생성시간']];
-    return await this.updateData(spreadsheetId, 'A1:D1', headers);
+    const headers = [['제목', '기간', '설명', '이미지', '생성시간']];
+    return await this.updateData(spreadsheetId, 'A1:E1', headers);
   }
 
   // 스프레드시트 존재 여부 확인
