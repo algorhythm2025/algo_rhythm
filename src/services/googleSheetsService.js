@@ -162,6 +162,7 @@ class GoogleSheetsService {
       experience.title,
       experience.period,
       experience.description,
+      Array.isArray(experience.imageUrls) ? experience.imageUrls.join(', ') : (experience.imageUrl || ''), // 여러 이미지 URL을 쉼표로 구분
       new Date().toISOString() // 생성 시간
     ];
   }
@@ -177,14 +178,15 @@ class GoogleSheetsService {
       title: row[0] || '',
       period: row[1] || '',
       description: row[2] || '',
-      createdAt: row[3] || ''
+      imageUrls: row[3] ? row[3].split(', ').filter(url => url.trim()) : [], // 여러 이미지 URL을 쉼표로 구분하여 배열로 변환
+      createdAt: row[4] || ''
     }));
   }
 
   // 초기 헤더 설정
   async setupHeaders(spreadsheetId) {
-    const headers = [['제목', '기간', '설명', '생성시간']];
-    return await this.updateData(spreadsheetId, 'A1:D1', headers);
+    const headers = [['제목', '기간', '설명', '이미지', '생성시간']];
+    return await this.updateData(spreadsheetId, 'A1:E1', headers);
   }
 
   // 스프레드시트 존재 여부 확인

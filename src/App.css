@@ -99,6 +99,55 @@
   margin-top: 0.5rem;
 }
 
+/* 이미지 업로드 스타일 */
+.image-upload-container {
+  border: 2px dashed #dee2e6;
+  border-radius: 8px;
+  padding: 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background-color: #f8f9fa;
+}
+
+.image-upload-container:hover {
+  border-color: #007bff;
+  background-color: #e3f2fd;
+}
+
+.image-upload-icon {
+  font-size: 3rem;
+  color: #6c757d;
+  margin-bottom: 1rem;
+}
+
+.image-upload-text {
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: #495057;
+  margin-bottom: 0.5rem;
+}
+
+.image-upload-subtext {
+  font-size: 0.9rem;
+  color: #6c757d;
+}
+
+.image-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+}
+
+.image-size-info {
+  color: #6c757d;
+  font-size: 0.85rem;
+}
+
 .file-list {
   max-height: 400px;
   overflow-y: auto;

@@ -13,7 +13,7 @@ function App() {
   const [activeSection, setActiveSection] = useState('main');
   const [showModal, setShowModal] = useState(false);
   const [experiences, setExperiences] = useState([]);
-  const [form, setForm] = useState({ title: '', period: '', description: '' });
+  const [form, setForm] = useState({ title: '', startDate: '', endDate: '', description: '' });
   const [selected, setSelected] = useState([]);
   const [spreadsheetId, setSpreadsheetId] = useState(() => {
     // localStorage에서 스프레드시트 ID 복원
@@ -24,6 +24,10 @@ function App() {
   const [driveFiles, setDriveFiles] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [authStatus, setAuthStatus] = useState('disconnected');
+  const [selectedImages, setSelectedImages] = useState([]); // 선택된 이미지 파일들
+  const [imagePreviews, setImagePreviews] = useState([]); // 이미지 미리보기 URL들
+  const [showImageModal, setShowImageModal] = useState(false); // 이미지 확대 모달
+  const [selectedImageForModal, setSelectedImageForModal] = useState(null); // 모달에 표시할 이미지
   const formRef = useRef();
   
   // 통합 인증 서비스 인스턴스
@@ -215,7 +219,7 @@ function App() {
     if (!targetSpreadsheetId || !sheetsService.current) return;
     
     try {
-      const sheetData = await sheetsService.current.readData(targetSpreadsheetId, 'A:D');
+      const sheetData = await sheetsService.current.readData(targetSpreadsheetId, 'A:E');
       const experiences = sheetsService.current.formatSheetToExperience(sheetData);
       setExperiences(experiences);
     } catch (error) {
@@ -317,28 +321,102 @@ function App() {
   }
   function closeModal() {
     setShowModal(false);
-    setForm({ title: '', period: '', description: '' });
+            setForm({ title: '', startDate: '', endDate: '', description: '' });
+    setSelectedImages([]);
+    setImagePreviews([]);
+  }
+
+  // 기간 포맷팅 함수
+  function formatPeriod(startDate, endDate) {
+    if (!startDate || !endDate) return '';
+    
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    
+    // 시작일과 종료일이 같은 경우 (하루짜리)
+    if (start.toDateString() === end.toDateString()) {
+      const year = start.getFullYear();
+      const month = String(start.getMonth() + 1).padStart(2, '0');
+      const day = String(start.getDate()).padStart(2, '0');
+      return `${year}.${month}.${day}`;
+    }
+    
+    // 여러 기간인 경우
+    const startYear = start.getFullYear();
+    const startMonth = String(start.getMonth() + 1).padStart(2, '0');
+    const startDay = String(start.getDate()).padStart(2, '0');
+    const endYear = end.getFullYear();
+    const endMonth = String(end.getMonth() + 1).padStart(2, '0');
+    const endDay = String(end.getDate()).padStart(2, '0');
+    
+    return `${startYear}.${startMonth}.${startDay} - ${endYear}.${endMonth}.${endDay}`;
+  }
+
+  // 날짜 유효성 검사 함수
+  function validateDates(startDate, endDate) {
+    if (!startDate || !endDate) return false;
+    
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    
+    // 시작일이 종료일보다 늦으면 안됨
+    if (start > end) {
+      alert('시작일은 종료일보다 이전이어야 합니다.');
+      return false;
+    }
+    
+    // 미래 날짜 체크 (선택사항)
+    const today = new Date();
+    if (start > today) {
+      alert('시작일은 오늘 이전이어야 합니다.');
+      return false;
+    }
+    
+    return true;
   }
 
   // 이력 저장
   async function saveExperience(e) {
     e.preventDefault();
-    if (form.title && form.period && form.description) {
-      try {
+    if (form.title && form.startDate && form.endDate && form.description) {
+      // 날짜 유효성 검사
+      if (!validateDates(form.startDate, form.endDate)) {
+        return;
+      }
+      
+      try
+      {
         setIsLoading(true);
         
-        // 로컬 상태 업데이트
-        const newExperience = { ...form };
+        let imageUrls = [];
+        
+        // 이미지들이 선택된 경우 구글 드라이브에 업로드
+        if (selectedImages.length > 0) {
+          for (const imageFile of selectedImages) {
+            const imageUrl = await uploadImageToDrive(imageFile);
+            imageUrls.push(imageUrl);
+          }
+        }
+        
+        // 기간 포맷팅
+        const period = formatPeriod(form.startDate, form.endDate);
+        
+        // 로컬 상태 업데이트 (기간 포함)
+        const newExperience = { 
+          ...form, 
+          period, // 포맷팅된 기간 추가
+          imageUrls 
+        };
         setExperiences([...experiences, newExperience]);
         
         // 구글 시트에 저장
         if (spreadsheetId && sheetsService.current) {
           const sheetData = sheetsService.current.formatExperienceForSheet(newExperience);
-          await sheetsService.current.appendData(spreadsheetId, 'A:D', [sheetData]);
+          await sheetsService.current.appendData(spreadsheetId, 'A:E', [sheetData]);
         }
         
         closeModal();
-      } catch (error) {
+      }catch (error) {
         console.error('이력 저장 오류:', error);
         const errorMessage = sheetsService.current?.formatErrorMessage(error) || '이력 저장에 실패했습니다.';
         alert(errorMessage);
@@ -365,6 +443,116 @@ function App() {
     );
   }
 
+  // 이미지 선택 핸들러
+  function handleImageSelect(event) {
+    const files = Array.from(event.target.files);
+    
+    // 각 파일에 대해 검증 및 처리
+    files.forEach(file => {
+      // 파일 크기 체크 (5MB 제한)
+      if (file.size > 5 * 1024 * 1024) {
+        alert(`파일 ${file.name}의 크기는 5MB 이하여야 합니다.`);
+        return;
+      }
+      
+      // 이미지 파일 타입 체크
+      if (!file.type.startsWith('image/')) {
+        alert(`파일 ${file.name}은 이미지 파일이 아닙니다.`);
+        return;
+      }
+      
+      // 이미지 미리보기 URL 생성
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setSelectedImages(prev => [...prev, file]);
+        setImagePreviews(prev => [...prev, e.target.result]);
+      };
+      reader.readAsDataURL(file);
+    });
+    
+    // input 초기화 (같은 파일을 다시 선택할 수 있도록)
+    event.target.value = '';
+  }
+
+  // 이미지 제거
+  function removeImage(index) {
+    setSelectedImages(prev => prev.filter((_, i) => i !== index));
+    setImagePreviews(prev => prev.filter((_, i) => i !== index));
+  }
+
+  // 이미지 확대 모달 표시
+  function openImageModal(imageUrl, title) {
+    setSelectedImageForModal({ url: imageUrl, title });
+    setShowImageModal(true);
+  }
+
+  // 이미지 확대 모달 닫기
+  function closeImageModal() {
+    setShowImageModal(false);
+    setSelectedImageForModal(null);
+  }
+
+  // 드롭된 파일 처리
+  function handleDroppedFiles(files) {
+    files.forEach(file => {
+      // 파일 크기 체크 (5MB 제한)
+      if (file.size > 5 * 1024 * 1024) {
+        alert(`파일 ${file.name}의 크기는 5MB 이하여야 합니다.`);
+        return;
+      }
+      
+      // 이미지 파일 타입 체크
+      if (!file.type.startsWith('image/')) {
+        alert(`파일 ${file.name}은 이미지 파일이 아닙니다.`);
+        return;
+      }
+      
+      // 이미지 미리보기 URL 생성
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setSelectedImages(prev => [...prev, file]);
+        setImagePreviews(prev => [...prev, e.target.result]);
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // 이미지를 구글 드라이브에 업로드하고 공개 링크 생성
+  async function uploadImageToDrive(imageFile) {
+    if (!driveService.current) {
+      throw new Error('구글 드라이브 서비스가 초기화되지 않았습니다.');
+    }
+
+    try {
+      // 이미지 파일을 드라이브에 업로드
+      const uploadResult = await driveService.current.uploadFile(
+        `portfolio_${Date.now()}_${imageFile.name}`,
+        imageFile,
+        imageFile.type
+      );
+
+      if (!uploadResult.id) {
+        throw new Error('이미지 업로드에 실패했습니다.');
+      }
+
+      // 파일을 공개로 설정 (링크 공유 가능하게)
+      const gapiClient = authService.current.getAuthenticatedGapiClient();
+      await gapiClient.drive.permissions.create({
+        fileId: uploadResult.id,
+        resource: {
+          role: 'reader',
+          type: 'anyone'
+        }
+      });
+
+      // 공개 링크 반환 - 직접 이미지 표시가 가능한 형식 사용
+      return `https://drive.google.com/uc?export=view&id=${uploadResult.id}`;
+    } catch (error) {
+      console.error('이미지 업로드 오류:', error);
+      throw new Error('이미지를 구글 드라이브에 업로드하는데 실패했습니다.');
+    }
+  }
+
   // 선택된 이력 삭제
   async function deleteSelectedExperiences() {
     if (selected.length === 0 || !sheetsService.current) return;
@@ -382,7 +570,7 @@ function App() {
         for (const index of sortedSelected) {
           // 헤더 + 선택된 인덱스 + 1 (시트는 1부터 시작)
           const rowNumber = index + 2;
-          await sheetsService.current.deleteData(spreadsheetId, `A${rowNumber}:D${rowNumber}`);
+          await sheetsService.current.deleteData(spreadsheetId, `A${rowNumber}:E${rowNumber}`);
         }
       }
       
@@ -580,6 +768,23 @@ async function handleDriveFileDownload(file) {
     }
   }, [isLoggedIn]);
 
+  // ESC 키로 이미지 모달 닫기
+  useEffect(() => {
+    const handleEscKey = (event) => {
+      if (event.key === 'Escape' && showImageModal) {
+        closeImageModal();
+      }
+    };
+
+    if (showImageModal) {
+      document.addEventListener('keydown', handleEscKey);
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscKey);
+    };
+  }, [showImageModal]);
+
   // OAuth 권한 부여는 GSI에서 처리되므로 제거됨
 
   // 실제 화면 렌더링
@@ -731,6 +936,60 @@ async function handleDriveFileDownload(file) {
                           experiences.map((exp, idx) => (
                             <div className="list-group-item" key={idx}>
                               <div className="d-flex align-items-center">
+                                <div className="me-3 d-flex flex-column" style={{ gap: '5px' }}>
+                                  {(exp.imageUrls && exp.imageUrls.length > 0) ? (
+                                    <>
+                                      {exp.imageUrls.slice(0, 3).map((imageUrl, imgIdx) => (
+                                        <div 
+                                          key={imgIdx} 
+                                          style={{ 
+                                            width: '60px', 
+                                            height: '60px', 
+                                            overflow: 'hidden', 
+                                            borderRadius: '4px',
+                                            cursor: 'pointer',
+                                            border: '2px solid transparent',
+                                            transition: 'border-color 0.2s'
+                                          }}
+                                          onMouseEnter={(e) => e.currentTarget.style.borderColor = '#007bff'}
+                                          onMouseLeave={(e) => e.currentTarget.style.borderColor = 'transparent'}
+                                          onClick={() => openImageModal(imageUrl, `${exp.title} - 이미지 ${imgIdx + 1}`)}
+                                        >
+                                          <img 
+                                            src={imageUrl} 
+                                            alt={`${exp.title} 이미지 ${imgIdx + 1}`}
+                                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                            onError={(e) => {
+                                              e.target.style.display = 'none';
+                                            }}
+                                          />
+                                        </div>
+                                      ))}
+                                      {exp.imageUrls.length > 3 && (
+                                        <div className="text-center" style={{ fontSize: '0.8rem', color: '#6c757d' }}>
+                                          +{exp.imageUrls.length - 3}
+                                        </div>
+                                      )}
+                                    </>
+                                  ) : (
+                                    <div 
+                                      style={{ 
+                                        width: '60px', 
+                                        height: '60px', 
+                                        backgroundColor: '#f8f9fa',
+                                        border: '2px dashed #dee2e6',
+                                        borderRadius: '4px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        color: '#6c757d'
+                                      }}
+                                      title="이미지 없음"
+                                    >
+                                      <i className="fas fa-image" style={{ fontSize: '1.5rem' }}></i>
+                                    </div>
+                                  )}
+                                </div>
                                 <div className="flex-grow-1">
                                   <h6 className="mb-1">{exp.title}</h6>
                                   <p className="mb-1"><small>{exp.period}</small></p>
@@ -878,6 +1137,60 @@ async function handleDriveFileDownload(file) {
                           experiences.map((exp, idx) => (
                             <div className="list-group-item" key={idx}>
                               <div className="d-flex align-items-center">
+                                <div className="me-3 d-flex flex-column" style={{ gap: '5px' }}>
+                                  {(exp.imageUrls && exp.imageUrls.length > 0) ? (
+                                    <>
+                                      {exp.imageUrls.slice(0, 3).map((imageUrl, imgIdx) => (
+                                        <div 
+                                          key={imgIdx} 
+                                          style={{ 
+                                            width: '50px', 
+                                            height: '50px', 
+                                            overflow: 'hidden', 
+                                            borderRadius: '4px',
+                                            cursor: 'pointer',
+                                            border: '2px solid transparent',
+                                            transition: 'border-color 0.2s'
+                                          }}
+                                          onMouseEnter={(e) => e.currentTarget.style.borderColor = '#007bff'}
+                                          onMouseLeave={(e) => e.currentTarget.style.borderColor = 'transparent'}
+                                          onClick={() => openImageModal(imageUrl, `${exp.title} - 이미지 ${imgIdx + 1}`)}
+                                        >
+                                          <img 
+                                            src={imageUrl} 
+                                            alt={`${exp.title} 이미지 ${imgIdx + 1}`}
+                                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                            onError={(e) => {
+                                              e.target.style.display = 'none';
+                                            }}
+                                          />
+                                        </div>
+                                      ))}
+                                      {exp.imageUrls.length > 3 && (
+                                        <div className="text-center" style={{ fontSize: '0.8rem', color: '#6c757d' }}>
+                                          +{exp.imageUrls.length - 3}
+                                        </div>
+                                      )}
+                                    </>
+                                  ) : (
+                                    <div 
+                                      style={{ 
+                                        width: '50px', 
+                                        height: '50px', 
+                                        backgroundColor: '#f8f9fa',
+                                        border: '2px dashed #dee2e6',
+                                        borderRadius: '4px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        color: '#6c757d'
+                                      }}
+                                      title="이미지 없음"
+                                    >
+                                      <i className="fas fa-image" style={{ fontSize: '1.2rem' }}></i>
+                                    </div>
+                                  )}
+                                </div>
                                 <div className="flex-grow-1">
                                   <h6 className="mb-1">{exp.title}</h6>
                                   <p className="mb-1"><small>{exp.period}</small></p>
@@ -917,11 +1230,120 @@ async function handleDriveFileDownload(file) {
                   </div>
                   <div className="mb-3">
                     <label className="form-label">기간</label>
-                    <input type="text" className="form-control" placeholder="예: 2023.03 - 2023.12" required value={form.period} onChange={e => setForm({ ...form, period: e.target.value })} />
+                    <div className="period-container">
+                      <div className="row">
+                        <div className="col-6">
+                          <label className="form-label small text-muted">시작일</label>
+                                                  <input 
+                          type="date" 
+                          className="form-control" 
+                          required 
+                          value={form.startDate} 
+                          onChange={e => {
+                            const newStartDate = e.target.value;
+                            setForm({ ...form, startDate: newStartDate });
+                            
+                            // 시작일이 종료일보다 늦으면 종료일 초기화
+                            if (newStartDate && form.endDate && newStartDate > form.endDate) {
+                              setForm(prev => ({ ...prev, endDate: '' }));
+                            }
+                          }} 
+                        />
+                        </div>
+                        <div className="col-6">
+                          <label className="form-label small text-muted">종료일</label>
+                                                  <input 
+                          type="date" 
+                          className="form-control" 
+                          required 
+                          value={form.endDate} 
+                          onChange={e => {
+                            const newEndDate = e.target.value;
+                            setForm({ ...form, endDate: newEndDate });
+                            
+                            // 종료일이 시작일보다 이르면 경고
+                            if (newEndDate && form.startDate && newEndDate < form.startDate) {
+                              alert('종료일은 시작일보다 이후여야 합니다.');
+                              setForm(prev => ({ ...prev, endDate: '' }));
+                            }
+                          }} 
+                        />
+                        </div>
+                      </div>
+                      {form.startDate && form.endDate && (
+                        <div className="period-preview">
+                          <small className="text-muted">
+                            선택된 기간: {formatPeriod(form.startDate, form.endDate)}
+                          </small>
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <div className="mb-3">
                     <label className="form-label">설명</label>
                     <textarea className="form-control" rows="3" required value={form.description} onChange={e => setForm({ ...form, description: e.target.value })}></textarea>
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label">이미지 첨부</label>
+                    <div 
+                      className="image-upload-container" 
+                      onClick={() => document.getElementById('imageInput').click()}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        e.currentTarget.style.borderColor = '#007bff';
+                      }}
+                      onDragLeave={(e) => {
+                        e.preventDefault();
+                        e.currentTarget.style.borderColor = '#dee2e6';
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        e.currentTarget.style.borderColor = '#dee2e6';
+                        const files = Array.from(e.dataTransfer.files);
+                        handleDroppedFiles(files);
+                      }}
+                    >
+                      <input 
+                        type="file" 
+                        id="imageInput" 
+                        className="file-input" 
+                        accept="image/*"
+                        multiple
+                        onChange={handleImageSelect}
+                        style={{ display: 'none' }}
+                      />
+                      <i className="fas fa-cloud-upload-alt image-upload-icon"></i>
+                      <div className="image-upload-text">클릭하여 이미지 선택 (여러 개 가능)</div>
+                      <div className="image-upload-subtext">또는 이미지를 여기로 드래그하세요</div>
+                    </div>
+                    {imagePreviews.length > 0 && (
+                      <div className="image-previews-container mt-3">
+                        <h6 className="mb-2">선택된 이미지들:</h6>
+                        <div className="row">
+                          {imagePreviews.map((preview, index) => (
+                            <div key={index} className="col-md-4 col-sm-6 mb-2">
+                              <div className="image-preview-item position-relative">
+                                <img 
+                                  src={preview} 
+                                  alt={`이미지 ${index + 1}`} 
+                                  className="img-fluid rounded"
+                                  style={{ width: '100%', height: '150px', objectFit: 'cover' }}
+                                />
+                                <button 
+                                  type="button" 
+                                  className="btn btn-sm btn-outline-danger position-absolute top-0 end-0 m-1" 
+                                  onClick={() => removeImage(index)}
+                                  style={{ zIndex: 10 }}
+                                />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    <div className="image-size-info mt-2">
+                      <small className="text-muted">최대 파일 크기: 5MB, 지원 형식: JPG, PNG, GIF</small>
+                    </div>
                   </div>
                 </div>
                 <div className="modal-footer">
@@ -929,6 +1351,37 @@ async function handleDriveFileDownload(file) {
                   <button type="submit" className="btn btn-primary">저장</button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 이미지 확대 모달 */}
+      {showImageModal && selectedImageForModal && (
+        <div 
+          className="modal fade show" 
+          style={{ display: 'block', background: 'rgba(0,0,0,0.8)', zIndex: 9999 }} 
+          tabIndex="-1"
+          onClick={closeImageModal}
+        >
+          <div className="modal-dialog modal-dialog-centered modal-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-content bg-transparent border-0">
+              <div className="modal-header border-0 bg-transparent">
+                <h5 className="modal-title text-white">{selectedImageForModal.title}</h5>
+                <button type="button" className="btn-close btn-close-white" onClick={closeImageModal}></button>
+              </div>
+              <div className="modal-body text-center p-0">
+                <img 
+                  src={selectedImageForModal.url} 
+                  alt={selectedImageForModal.title}
+                  className="img-fluid"
+                  style={{ maxHeight: '80vh', maxWidth: '100%' }}
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    alert('이미지를 불러올 수 없습니다.');
+                  }}
+                />
+              </div>
             </div>
           </div>
         </div>

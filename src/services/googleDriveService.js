@@ -63,7 +63,7 @@ class GoogleDriveService {
     }
   }
 
-  // 파일 업로드 (이미지 등 바이너리 포함)
+  // 파일 업로드
   async uploadFile(name, file, mimeType = 'application/octet-stream') {
     try {
       await this.ensureAuthenticated();
