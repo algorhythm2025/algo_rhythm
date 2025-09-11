@@ -649,6 +649,57 @@ a.btn-google:hover {
     padding: 16px;
 }
 
+/* 슬라이드 편집기 스타일 */
+.slide-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.slide-item {
+    background: rgba(40, 40, 40, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 16px;
+}
+
+.slide-item h4 {
+    color: #fff;
+    margin-bottom: 16px;
+    font-size: 1.2rem;
+    font-weight: 500;
+}
+
+.slide-content {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.text-box {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    padding: 12px;
+}
+
+.text-box input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-size: 1rem;
+    padding: 8px 0;
+    outline: none;
+}
+
+.text-box input:focus {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+    padding: 8px 12px;
+}
+
 /* 전체 선택/해제 버튼 스타일 */
 .select-all-btn,
 .deselect-all-btn {
