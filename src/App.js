@@ -9,11 +9,7 @@ const SECTION_LIST = [
 
 function App() {
   // 상태 관리
-  const [isLoggedIn, setIsLoggedIn] = useState(() => {
-    // localStorage에서 로그인 상태 복원
-    const savedLoginState = localStorage.getItem('isLoggedIn');
-    return savedLoginState === 'true';
-  });
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [activeSection, setActiveSection] = useState('main');
   const [showModal, setShowModal] = useState(false);
   const [experiences, setExperiences] = useState([]);
@@ -66,15 +62,35 @@ function App() {
       if (!authService.current.isAuthenticated()) {
         console.log('인증 상태가 유효하지 않습니다. 토큰 갱신을 시도합니다...');
         try {
-          // 토큰 갱신 시도
-          await authService.current.requestToken();
+          // 토큰 갱신 시도 (팝업 없이)
+          await authService.current.refreshToken();
           console.log('토큰 갱신 완료');
         } catch (tokenError) {
-          console.log('토큰 갱신 실패, 인증 상태는 유지하되 서비스 초기화는 건너뜁니다:', tokenError);
-          // 토큰 갱신 실패 시에도 로그인 상태는 유지
-          setAuthStatus('disconnected');
-          // 서비스 초기화는 건너뛰고 로그인 상태만 유지
-          return;
+          console.log('토큰 갱신 실패:', tokenError);
+          
+          // interaction_required 오류는 정상적인 상황으로 처리
+          if (tokenError.message === 'interaction_required') {
+            console.log('사용자 상호작용이 필요한 상황입니다. 로그인 상태는 유지합니다.');
+
+
+            // 토큰 갱신이 실패해도 기존 토큰이 있다면 서비스 초기화를 시도
+            if (authService.current.hasExistingToken()) {
+              console.log('기존 토큰이 있습니다. 서비스 초기화를 시도합니다.');
+            } else {
+              console.log('기존 토큰이 없습니다. 서비스 초기화를 건너뜁니다.');
+              // 토큰이 없으면 서비스 초기화를 건너뜀 (로그인 상태는 유지)
+              setAuthStatus('disconnected');
+              setIsSheetsInitialized(false);
+              setIsDriveInitialized(false);
+              return;
+            }
+          } else {
+            // 다른 오류는 서비스 초기화를 건너뜀
+            setAuthStatus('disconnected');
+            setIsSheetsInitialized(false);
+            setIsDriveInitialized(false);
+            return;
+          }
         }
       }
       
@@ -95,7 +111,11 @@ function App() {
       
       // 인증 상태 확인
       if (!authService.current.isAuthenticated()) {
-        console.log('인증이 완료되지 않았습니다.');
+        console.log('인증이 완료되지 않았습니다. 서비스 초기화를 건너뜁니다.');
+        // 토큰이 없으면 서비스 초기화를 건너뜀
+        setAuthStatus('disconnected');
+        setIsSheetsInitialized(false);
+        setIsDriveInitialized(false);
         return;
       }
       
@@ -141,12 +161,14 @@ function App() {
             console.log('기존 포트폴리오 시트 파일 발견:', portfolioFile.id);
             // 기존 파일 ID 저장
             currentSpreadsheetId = portfolioFile.id;
-            saveLoginState(true, currentSpreadsheetId);
+            setSpreadsheetId(currentSpreadsheetId);
+            localStorage.setItem('spreadsheetId', currentSpreadsheetId);
           } else {
             console.log('기존 파일이 없어서 새로 생성합니다...');
             const spreadsheet = await sheetsService.current.createSpreadsheet('포트폴리오 이력');
             currentSpreadsheetId = spreadsheet.spreadsheetId;
-            saveLoginState(true, currentSpreadsheetId);
+            setSpreadsheetId(currentSpreadsheetId);
+            localStorage.setItem('spreadsheetId', currentSpreadsheetId);
             await sheetsService.current.setupHeaders(currentSpreadsheetId);
             console.log('새 스프레드시트 생성 완료:', currentSpreadsheetId);
           }
@@ -154,7 +176,8 @@ function App() {
           console.error('기존 파일 확인 중 오류, 새로 생성합니다:', error);
           const spreadsheet = await sheetsService.current.createSpreadsheet('포트폴리오 이력');
           currentSpreadsheetId = spreadsheet.spreadsheetId;
-          saveLoginState(true, currentSpreadsheetId);
+          setSpreadsheetId(currentSpreadsheetId);
+          localStorage.setItem('spreadsheetId', currentSpreadsheetId);
           await sheetsService.current.setupHeaders(currentSpreadsheetId);
           console.log('새 스프레드시트 생성 완료:', currentSpreadsheetId);
         }
@@ -229,6 +252,12 @@ function App() {
       setSpreadsheetId(spreadsheetIdValue);
       localStorage.setItem('spreadsheetId', spreadsheetIdValue);
     }
+    
+    // 로그아웃 시에는 스프레드시트 ID도 제거
+    if (!loggedIn) {
+      localStorage.removeItem('spreadsheetId');
+      setSpreadsheetId(null);
+    }
   }
 
   // GIS 기반 로그인 (단일 팝업에서 로그인+권한 처리)
@@ -245,7 +274,7 @@ function App() {
       await authService.current.requestToken();
       console.log('GIS 로그인 및 권한 요청 완료');
       
-      // 로그인 상태 저장
+      // 로그인 상태 저장 (이미 isLoggedIn이 true로 설정되어 있으므로 스프레드시트 ID만 전달)
       saveLoginState(true);
       
       // 메인 페이지로 이동
@@ -269,7 +298,7 @@ function App() {
       // 통합 인증 서비스에서 로그아웃
       authService.current.logout();
       
-      // 로컬 상태 정리
+      // 로컬 상태 정리 (saveLoginState에서 스프레드시트 ID도 제거됨)
       saveLoginState(false);
       setActiveSection('main');
       setIsSheetsInitialized(false);
@@ -279,9 +308,6 @@ function App() {
       // 서비스 인스턴스 정리
       sheetsService.current = null;
       driveService.current = null;
-      
-      // localStorage에서 스프레드시트 ID도 제거
-      localStorage.removeItem('spreadsheetId');
     }
   }
 
@@ -374,6 +400,58 @@ function App() {
     }
   }
 
+  // 파일 다운로드 (Access Token 사용)
+async function handleDriveFileDownload(file) {
+  if (!driveService.current || !authService.current) return;
+  try {
+    setIsLoading(true);
+    const accessToken = authService.current.getAccessToken();
+    // 구글 문서류(import가 필요한 유형)는 export, 일반 파일은 alt=media
+    const isGoogleDoc = file.mimeType?.includes('application/vnd.google-apps');
+    const exportMap = {
+      'application/vnd.google-apps.document': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.google-apps.spreadsheet': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.google-apps.presentation': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'application/vnd.google-apps.drawing': 'image/png',
+    };
+
+    const url = isGoogleDoc
+      ? `https://www.googleapis.com/drive/v3/files/${file.id}/export?mimeType=${encodeURIComponent(exportMap[file.mimeType] || 'application/pdf')}`
+      : `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`;
+
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
+    if (!res.ok) throw new Error(`다운로드 실패: ${res.status}`);
+    const blob = await res.blob();
+
+    // 파일명/확장자 보정
+    let filename = file.name;
+    if (isGoogleDoc) {
+      const extMap = {
+        'application/vnd.google-apps.document': '.docx',
+        'application/vnd.google-apps.spreadsheet': '.xlsx',
+        'application/vnd.google-apps.presentation': '.pptx',
+        'application/vnd.google-apps.drawing': '.png',
+      };
+      if (!/\.[a-z0-9]+$/i.test(filename)) filename += (extMap[file.mimeType] || '.pdf');
+    }
+
+    const objectUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = objectUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(objectUrl);
+  } catch (e) {
+    const msg = driveService.current?.formatErrorMessage?.(e) || e.message || '다운로드 오류';
+    alert(msg);
+  } finally {
+    setIsLoading(false);
+  }
+}
+  
+
   // 파일 업로드 핸들러
   async function handleDriveFileUpload(event) {
     const file = event.target.files[0];
@@ -424,57 +502,39 @@ function App() {
   }
 
   // 페이지 로드 시 로그인 상태 복원 및 초기화
-    // 페이지 로드 시 로그인 상태 복원 및 초기화
-    useEffect(() => {
-      // 페이지 로드 시 토큰 초기화
-      const clearTokens = () => {
-        // 구글 토큰 관련 쿠키 및 로컬 스토리지 정리
-        document.cookie.split(";").forEach(function(c) { 
-          document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
-        });
+  useEffect(() => {
+    const initializeApp = async () => {
+      try {
+        console.log('앱 초기화 시작...');
         
-        // 구글 관련 로컬 스토리지 정리
-        Object.keys(localStorage).forEach(key => {
-          if (key.includes('google') || key.includes('gapi') || key.includes('token')) {
-            localStorage.removeItem(key);
-          }
-        });
+        // localStorage에서 로그인 상태 확인
+        const savedLoginState = localStorage.getItem('isLoggedIn');
+        const savedSpreadsheetId = localStorage.getItem('spreadsheetId');
         
-        // 로그인 상태를 false로 설정
+        if (savedLoginState === 'true' && savedSpreadsheetId) {
+          console.log('저장된 로그인 상태 발견, 서비스 초기화 시작...');
+          
+          // 로그인 상태를 먼저 설정
+          setIsLoggedIn(true);
+          setSpreadsheetId(savedSpreadsheetId);
+          
+          // 통합 인증 시스템 초기화
+          await initializeGoogleAuth();
+        } else {
+          console.log('저장된 로그인 상태가 없습니다.');
+          // 로그인 상태가 없으면 명시적으로 false로 설정
+          setIsLoggedIn(false);
+        }
+      } catch (error) {
+        console.error('앱 초기화 오류:', error);
+        // 초기화 실패 시 로그인 상태를 false로 설정
         setIsLoggedIn(false);
-        localStorage.setItem('isLoggedIn', 'false');
-        
-        console.log('토큰 초기화 완료');
-      };
-      
-      // 페이지 로드 시 토큰 초기화 실행
-      clearTokens();
-      
-    }, []);
-  // useEffect(() => {
-  //   if (isLoggedIn && !isSheetsInitialized && !isDriveInitialized) {
-  //     // 이미 로그인된 상태라면 서비스 초기화
-  //     const initializeServices = async () => {
-  //       try {
-  //         setIsLoading(true);
-  //         console.log('페이지 로드 시 서비스 초기화 시작...');
-
-  //         // 통합 인증 시스템 초기화
-  //         await initializeGoogleAuth();
-
-  //       } catch (error) {
-  //         console.error('서비스 초기화 오류:', error);
-  //         // 초기화 실패 시에도 로그아웃하지 않고 에러 상태만 표시
-  //         setAuthStatus('error');
-  //         setIsSheetsInitialized(false);
-  //         setIsDriveInitialized(false);
-  //       } finally {
-  //         setIsLoading(false);
-  //       }
-  //     };
-  //     initializeServices();
-  //   }
-  // }, [isLoggedIn, isSheetsInitialized, isDriveInitialized]);
+        setAuthStatus('error');
+      }
+    };
+    
+    initializeApp();
+  }, []);
 
 
   // GIS 기반 로그인 버튼 렌더링
@@ -740,11 +800,18 @@ function App() {
                                   <div className="d-flex align-items-center">
                                     <i className={`fas ${file.mimeType === 'application/vnd.google-apps.folder' ? 'fa-folder' : 'fa-file'} me-3`}></i>
                                     <div className="flex-grow-1">
-                                      <h6 className="mb-1">{file.name}</h6>
+                                      <h6
+                                        className="mb-1"
+                                        style={{ cursor: file.mimeType === 'application/vnd.google-apps.folder' ? 'default' : 'pointer', color: file.mimeType === 'application/vnd.google-apps.folder' ? 'inherit' : '#0d6efd' }}
+                                        onClick={() => file.mimeType !== 'application/vnd.google-apps.folder' && handleDriveFileDownload(file)}
+                                      >
+                                        {file.name}
+                                      </h6>
                                       <small className="text-muted">
                                         {file.mimeType} • {new Date(file.createdTime).toLocaleDateString()}
                                       </small>
                                     </div>
+                
                                     <div className="file-actions d-flex align-items-center">
                                       <a href={`https://drive.google.com/file/d/${file.id}/view`} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-outline-primary me-2">
                                         다운로드

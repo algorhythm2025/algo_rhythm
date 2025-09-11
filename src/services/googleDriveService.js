@@ -130,6 +130,75 @@ class GoogleDriveService {
     }
   }
 
+  // 파일 다운로드
+  async downloadFile(fileId, mimeType = null) {
+    try {
+      await this.ensureAuthenticated();
+      
+      const accessToken = this.authService.getAccessToken();
+      let downloadUrl;
+      
+      // 구글 문서 파일인지 확인 (Google Docs, Sheets, Slides 등)
+      const isGoogleDoc = mimeType && (
+        mimeType.includes('google-apps') || 
+        mimeType.includes('application/vnd.google-apps')
+      );
+      
+      if (isGoogleDoc) {
+        // 구글 문서 파일은 export API 사용
+        const exportMimeType = this.getExportMimeType(mimeType);
+        downloadUrl = `https://www.googleapis.com/drive/v3/files/${fileId}/export?mimeType=${exportMimeType}`;
+      } else {
+        // 일반 파일은 alt=media 사용
+        downloadUrl = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`;
+      }
+      
+      console.log('다운로드 URL:', downloadUrl);
+      
+      const response = await fetch(downloadUrl, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        },
+      });
+      
+      if (!response.ok) {
+        console.error('다운로드 응답 오류:', response.status, response.statusText);
+        throw new Error(`파일 다운로드 실패: ${response.status} ${response.statusText}`);
+      }
+      
+      return await response.arrayBuffer();
+    } catch (error) {
+      console.error('파일 다운로드 오류:', error);
+      throw new Error('파일 다운로드에 실패했습니다.');
+    }
+  }
+
+  // 구글 문서 파일의 export MIME 타입 반환
+  getExportMimeType(originalMimeType) {
+    const mimeTypeMap = {
+      'application/vnd.google-apps.document': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
+      'application/vnd.google-apps.spreadsheet': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+      'application/vnd.google-apps.presentation': 'application/vnd.openxmlformats-officedocument.presentationml.presentation', // .pptx
+      'application/vnd.google-apps.drawing': 'image/png', // .png
+      'application/vnd.google-apps.form': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+    };
+    
+    return mimeTypeMap[originalMimeType] || 'application/octet-stream';
+  }
+
+  // 구글 문서 파일의 확장자 반환
+  getFileExtension(originalMimeType) {
+    const extensionMap = {
+      'application/vnd.google-apps.document': '.docx',
+      'application/vnd.google-apps.spreadsheet': '.xlsx',
+      'application/vnd.google-apps.presentation': '.pptx',
+      'application/vnd.google-apps.drawing': '.png',
+      'application/vnd.google-apps.form': '.xlsx',
+    };
+    
+    return extensionMap[originalMimeType] || '';
+  }
+
   // 에러 메시지 포맷팅
   formatErrorMessage(error) {
     const errorMessage = error?.message || error?.toString() || '알 수 없는 오류';
