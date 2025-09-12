@@ -273,16 +273,16 @@
     flex-direction: column;
     gap: 4px;
   }
-  
+
   .file-actions .btn {
     font-size: 0.75rem;
     padding: 0.25rem 0.5rem;
   }
-  
+
   .btn-group {
     flex-direction: column;
   }
-  
+
   .btn-group .btn {
     margin-bottom: 4px;
     margin-right: 0;

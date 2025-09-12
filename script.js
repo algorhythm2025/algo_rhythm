@@ -55,10 +55,10 @@ function showSection(sectionName) {
     sections.forEach(section => {
         document.getElementById(section).classList.add('d-none');
     });
-    
+
     // 선택한 섹션 표시
     document.getElementById(sectionName + 'Section').classList.remove('d-none');
-    
+
     // 사이드바 활성 항목 변경
     document.querySelectorAll('.sidebar-item').forEach(item => {
         item.classList.remove('active');
@@ -81,7 +81,7 @@ function saveExperience() {
     const imagePreview = document.getElementById('imagePreview');
     const hasImage = !imagePreview.classList.contains('d-none');
     const imageSrc = hasImage ? imagePreview.querySelector('img').src : '';
-    
+
     if (title && period && description) {
         // 빈 상태 메시지 제거
         const emptyStateList = document.querySelectorAll('.empty-state');
@@ -90,7 +90,7 @@ function saveExperience() {
                 emptyState.remove();
             }
         });
-        
+
         // 이력 목록에 추가
         const experienceList = document.getElementById('experienceList');
         const item = document.createElement('div');
@@ -111,7 +111,7 @@ function saveExperience() {
             </div>
         `;
         experienceList.appendChild(item);
-        
+
         // 이력 관리 목록에도 추가
         const managementList = document.getElementById('experienceManagement');
         const managementItem = document.createElement('div');
@@ -132,7 +132,7 @@ function saveExperience() {
             </div>
         `;
         managementList.appendChild(managementItem);
-        
+
         // 모달 닫기 및 폼 초기화
         bootstrap.Modal.getInstance(document.getElementById('addExperienceModal')).hide();
         form.reset();
@@ -220,7 +220,7 @@ function editExperience(button) {
     const item = button.closest('.list-group-item');
     const title = item.querySelector('h6').textContent;
     const period = item.querySelector('small').textContent;
-    
+
     // 수정 기능 구현 예정
     alert('이력 수정 기능은 현재 구현 중입니다.');
 }

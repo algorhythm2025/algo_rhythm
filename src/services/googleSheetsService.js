@@ -18,22 +18,22 @@ class GoogleSheetsService {
   async createSpreadsheet(title, parentId = null) {
     try {
       await this.ensureAuthenticated();
-      
+
       const gapiClient = this.authService.getAuthenticatedGapiClient();
-      
+
       // Sheets API가 로드되었는지 확인
       if (!gapiClient.sheets) {
         throw new Error('구글 시트 API가 로드되지 않았습니다. 페이지를 새로고침해주세요.');
       }
-      
+
       console.log('Sheets API 로드 확인됨, 스프레드시트 생성 시작...');
-      
+
       const response = await gapiClient.sheets.spreadsheets.create({
         properties: {
           title: title || '포트폴리오 이력'
         }
       });
-      
+
       // 부모 폴더가 지정된 경우 파일을 해당 폴더로 이동
       if (parentId && response.result.spreadsheetId) {
         try {
@@ -48,7 +48,7 @@ class GoogleSheetsService {
           // 폴더 이동 실패해도 시트 생성은 성공으로 처리
         }
       }
-      
+
       return response.result;
     } catch (error) {
       console.error('스프레드시트 생성 오류:', error);
@@ -63,9 +63,9 @@ class GoogleSheetsService {
   async appendData(spreadsheetId, range, values) {
     try {
       await this.ensureAuthenticated();
-      
+
       const gapiClient = this.authService.getAuthenticatedGapiClient();
-      
+
       const response = await gapiClient.sheets.spreadsheets.values.append({
         spreadsheetId: spreadsheetId,
         range: range,
@@ -86,30 +86,30 @@ class GoogleSheetsService {
   async readData(spreadsheetId, range) {
     try {
       console.log('시트 데이터 읽기 시작:', { spreadsheetId, range });
-      
+
       await this.ensureAuthenticated();
-      
+
       const gapiClient = this.authService.getAuthenticatedGapiClient();
-      
+
       // Sheets API가 로드되었는지 확인
       if (!gapiClient.sheets) {
         throw new Error('구글 시트 API가 로드되지 않았습니다. 페이지를 새로고침해주세요.');
       }
-      
+
       console.log('Sheets API 로드 확인됨, 데이터 읽기 시작...');
-      
+
       const response = await gapiClient.sheets.spreadsheets.values.get({
         spreadsheetId: spreadsheetId,
         range: range,
       });
-      
+
       console.log('시트 API 응답:', response);
-      
+
       if (!response.result.values) {
         console.log('시트에 데이터가 없습니다.');
         return [];
       }
-      
+
       console.log('읽어온 데이터:', response.result.values);
       return response.result.values;
     } catch (error) {
@@ -117,7 +117,7 @@ class GoogleSheetsService {
       console.error('오류 메시지:', error.message);
       console.error('오류 코드:', error.code);
       console.error('오류 상태:', error.status);
-      
+
       if (error.status === 403) {
         throw new Error('구글 시트 접근 권한이 없습니다. 스프레드시트 권한을 확인해주세요.');
       } else if (error.status === 404) {
@@ -136,9 +136,9 @@ class GoogleSheetsService {
   async updateData(spreadsheetId, range, values) {
     try {
       await this.ensureAuthenticated();
-      
+
       const gapiClient = this.authService.getAuthenticatedGapiClient();
-      
+
       const response = await gapiClient.sheets.spreadsheets.values.update({
         spreadsheetId: spreadsheetId,
         range: range,
@@ -158,9 +158,9 @@ class GoogleSheetsService {
   async deleteData(spreadsheetId, range) {
     try {
       await this.ensureAuthenticated();
-      
+
       const gapiClient = this.authService.getAuthenticatedGapiClient();
-      
+
       const response = await gapiClient.sheets.spreadsheets.values.clear({
         spreadsheetId: spreadsheetId,
         range: range
@@ -186,10 +186,10 @@ class GoogleSheetsService {
   // 시트 데이터를 이력 형식으로 변환
   formatSheetToExperience(sheetData) {
     if (!sheetData || sheetData.length === 0) return [];
-    
+
     // 헤더 제거 (첫 번째 행)
     const dataRows = sheetData.slice(1);
-    
+
     return dataRows.map(row => ({
       title: row[0] || '',
       period: row[1] || '',
@@ -209,21 +209,21 @@ class GoogleSheetsService {
   async checkSpreadsheetExists(spreadsheetId) {
     try {
       await this.ensureAuthenticated();
-      
+
       const gapiClient = this.authService.getAuthenticatedGapiClient();
-      
+
       // Sheets API가 로드되었는지 확인
       if (!gapiClient.sheets) {
         throw new Error('구글 시트 API가 로드되지 않았습니다.');
       }
-      
+
       // 스프레드시트 메타데이터만 가져와서 존재 여부 확인
       const response = await gapiClient.sheets.spreadsheets.get({
         spreadsheetId: spreadsheetId,
         ranges: [],
         includeGridData: false
       });
-      
+
       return response.result && response.result.spreadsheetId === spreadsheetId;
     } catch (error) {
       console.log('스프레드시트 존재 여부 확인 실패:', error.message);
@@ -244,10 +244,10 @@ class GoogleSheetsService {
   // 에러 메시지 포맷팅
   formatErrorMessage(error) {
     const errorMessage = error?.message || error?.toString() || '알 수 없는 오류';
-    
+
     console.error('구글 시트 오류 상세:', error);
     console.error('오류 메시지:', errorMessage);
-    
+
     if (errorMessage.includes('권한') || errorMessage.includes('permission')) {
       return '구글 시트 접근 권한이 없습니다. 구글 계정을 다시 로그인해주세요.';
     } else if (errorMessage.includes('API') || errorMessage.includes('key') || errorMessage.includes('403')) {
