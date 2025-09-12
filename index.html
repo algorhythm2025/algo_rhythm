@@ -118,83 +118,77 @@
                     </div>
                 </div>
             </div>
-                <!-- PPT 제작 섹션 -->
-                <div id="pptMakerSection" class="content-section d-none">
-                    <div class="mac-window">
-                        <h2>포트폴리오 내용 선택</h2>
-                        <div class="mac-window-content">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <div>
-                                    <button class="btn btn-outline-dark me-2" onclick="selectAllExperiences(true)">전체 선택</button>
-                                    <button class="btn btn-outline-dark" onclick="selectAllExperiences(false)">전체 해제</button>
-                                </div>
-                                <button class="btn btn-dark" onclick="showTemplateSelection()" id="nextButton" disabled>다음</button>
+            <!-- PPT 제작 섹션 -->
+            <div id="pptMakerSection" class="content-section d-none">
+                <div class="mac-window">
+                    <h2>포트폴리오 내용 선택</h2>
+                    <div class="mac-window-content">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <button class="btn btn-outline-dark me-2" onclick="selectAllExperiences(true)">전체 선택</button>
+                                <button class="btn btn-outline-dark" onclick="selectAllExperiences(false)">전체 해제</button>
                             </div>
-                            <div id="experienceList" class="mac-list">
-                                <!-- 이력 목록이 여기에 동적으로 추가됩니다 -->
-                                <div class="empty-state">
-                                    <i class="fas fa-clipboard-list fa-3x mb-3"></i>
-                                    <p>등록된 이력이 없습니다.</p>
-                                </div>
-                            </div>
+                            <button class="btn btn-dark" onclick="showTemplateSelection()" id="nextButton" disabled>다음</button>
                         </div>
-                    </div>
-
-                    <!-- 템플릿 선택 영역 (처음에는 숨겨져 있음) -->
-                    <div id="templateSelection" class="mac-window d-none">
-                        <h2>템플릿 선택</h2>
-                        <div class="mac-window-content">
-                            <div class="template-grid">
-                                <!-- 템플릿 옵션들이 여기에 추가됩니다 -->
+                        <div id="experienceList" class="mac-list">
+                            <!-- 이력 목록이 여기에 동적으로 추가됩니다 -->
+                            <div class="empty-state">
+                                <i class="fas fa-clipboard-list fa-3x mb-3"></i>
+                                <p>등록된 이력이 없습니다.</p>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- 구글 드라이브 섹션 -->
-                <div id="driveSection" class="content-section d-none">
-                    <div class="mac-window">
-                        <h2>구글 드라이브</h2>
-                        <div class="mac-window-content text-center p-5">
-                            <i class="fab fa-google-drive fa-3x mb-3 text-primary"></i>
-                            <h3 class="mb-3">구글 드라이브로 이동</h3>
-                            <p class="mb-4">구글 드라이브에서 파일을 관리하세요.</p>
-                            <a href="https://drive.google.com" target="_blank" class="btn btn-primary">구글 드라이브 열기</a>
+                <!-- 템플릿 선택 영역 (처음에는 숨겨져 있음) -->
+                <div id="templateSelection" class="mac-window d-none">
+                    <h2>템플릿 선택</h2>
+                    <div class="mac-window-content">
+                        <div class="template-grid">
+                            <!-- 템플릿 옵션들이 여기에 추가됩니다 -->
                         </div>
                     </div>
                 </div>
+            </div>
 
-                <!-- 학교 포털 섹션 -->
-                <div id="portalSection" class="content-section d-none">
-                    <div class="mac-window">
-                        <h2>학교 포털</h2>
-                        <div class="mac-window-content text-center p-5">
-                            <i class="fas fa-university fa-3x mb-3 text-primary"></i>
-                            <h3 class="mb-3">학교 포털로 이동</h3>
-                            <p class="mb-4">학교 포털에서 학사 정보를 확인하세요.</p>
-                            <a href="#" class="btn btn-primary">학교 포털 열기</a>
-                        </div>
+            <!-- 구글 드라이브 섹션 -->
+            <div id="driveSection" class="content-section d-none">
+                <div class="mac-window">
+                    <h2>구글 드라이브</h2>
+
+                </div>
+            </div>
+
+            <!-- 학교 포털 섹션 -->
+            <div id="portalSection" class="content-section d-none">
+                <div class="mac-window">
+                    <h2>학교 포털</h2>
+                    <div class="mac-window-content text-center p-5">
+                        <i class="fas fa-university fa-3x mb-3 text-primary"></i>
+                        <h3 class="mb-3">학교 포털로 이동</h3>
+                        <p class="mb-4">학교 포털에서 학사 정보를 확인하세요.</p>
+                        <a href="#" class="btn btn-primary">학교 포털 열기</a>
                     </div>
                 </div>
+            </div>
 
-                <div id="myPageSection" class="content-section d-none">
-                    <div class="mac-grid">
-                        <div class="mac-window">
-                            <h2>PPT 기록</h2>
-                            <div id="pptHistory" class="mac-list">
-                                <div class="empty-state">
-                                    <i class="fas fa-history fa-3x mb-3"></i>
-                                    <p>아직 제작한 PPT가 없습니다.</p>
-                                </div>
+            <div id="myPageSection" class="content-section d-none">
+                <div class="mac-grid">
+                    <div class="mac-window">
+                        <h2>PPT 기록</h2>
+                        <div id="pptHistory" class="mac-list">
+                            <div class="empty-state">
+                                <i class="fas fa-history fa-3x mb-3"></i>
+                                <p>아직 제작한 PPT가 없습니다.</p>
                             </div>
                         </div>
-                        <div class="mac-window">
-                            <h2>이력 관리</h2>
-                            <div id="experienceManagement" class="mac-list">
-                                <div class="empty-state">
-                                    <i class="fas fa-clipboard-list fa-3x mb-3"></i>
-                                    <p>등록된 이력이 없습니다.</p>
-                                </div>
+                    </div>
+                    <div class="mac-window">
+                        <h2>이력 관리</h2>
+                        <div id="experienceManagement" class="mac-list">
+                            <div class="empty-state">
+                                <i class="fas fa-clipboard-list fa-3x mb-3"></i>
+                                <p>등록된 이력이 없습니다.</p>
                             </div>
                         </div>
                     </div>
@@ -202,56 +196,58 @@
             </div>
         </div>
     </div>
+</div>
 
-    <!-- 이력 추가 모달 -->
-    <div class="modal fade" id="addExperienceModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content mac-modal">
-                <div class="modal-header">
-                    <h5 class="modal-title">새 이력 추가</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="experienceForm">
-                        <div class="mb-3">
-                            <label class="form-label">제목</label>
-                            <input type="text" class="form-control" required>
+<!-- 이력 추가 모달 -->
+<div class="modal fade" id="addExperienceModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content mac-modal">
+            <div class="modal-header">
+                <h5 class="modal-title">새 이력 추가</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="experienceForm">
+                    <div class="mb-3">
+                        <label class="form-label">제목</label>
+                        <input type="text" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">기간</label>
+                        <input type="text" class="form-control" placeholder="예: 2023.03 - 2023.12" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">설명</label>
+                        <textarea class="form-control" rows="3" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">이미지 첨부</label>
+                        <div class="image-upload-container" onclick="document.getElementById('imageInput').click()">
+                            <input type="file" id="imageInput" class="file-input" accept="image/*">
+                            <i class="fas fa-cloud-upload-alt image-upload-icon"></i>
+                            <div class="image-upload-text">클릭하여 이미지 선택</div>
+                            <div class="image-upload-subtext">또는 이미지를 여기로 드래그하세요</div>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label">기간</label>
-                            <input type="text" class="form-control" placeholder="예: 2023.03 - 2023.12" required>
+                        <div id="imagePreview" class="image-preview d-none">
+                            <img src="" alt="이미지 미리보기">
+                            <button type="button" class="remove-image" onclick="removeImage()">
+                                <i class="fas fa-times"></i>
+                            </button>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label">설명</label>
-                            <textarea class="form-control" rows="3" required></textarea>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">이미지 첨부</label>
-                            <div class="image-upload-container" onclick="document.getElementById('imageInput').click()">
-                                <input type="file" id="imageInput" class="file-input" accept="image/*">
-                                <i class="fas fa-cloud-upload-alt image-upload-icon"></i>
-                                <div class="image-upload-text">클릭하여 이미지 선택</div>
-                                <div class="image-upload-subtext">또는 이미지를 여기로 드래그하세요</div>
-                            </div>
-                            <div id="imagePreview" class="image-preview d-none">
-                                <img src="" alt="이미지 미리보기">
-                                <button type="button" class="remove-image" onclick="removeImage()">
-                                    <i class="fas fa-times"></i>
-                                </button>
-                            </div>
-                            <div class="image-size-info">최대 파일 크기: 5MB, 지원 형식: JPG, PNG, GIF</div>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
-                    <button type="button" class="btn btn-primary" onclick="saveExperience()">저장</button>
-                </div>
+                        <div class="image-size-info">최대 파일 크기: 5MB, 지원 형식: JPG, PNG, GIF</div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                <button type="button" class="btn btn-primary" onclick="saveExperience()">저장</button>
             </div>
         </div>
     </div>
+</div>
 <script>
-    function handleCredentialResponse(response) {
+    function handleCredentialResponse(response)
+    {
         console.log("JWT Token:", response.credential);
         document.getElementById("loginPage").classList.add("d-none");
         document.getElementById("mainPage").classList.remove("d-none");
