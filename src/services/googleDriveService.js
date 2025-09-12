@@ -343,4 +343,4 @@ class GoogleDriveService {
   }
 }
 
-export default GoogleDriveService; 
+export default GoogleDriveService;
