@@ -125,6 +125,11 @@ class GoogleDriveService {
         // 폴더가 없으면 생성
         portfolioFolder = await this.createFolder('포트폴리오 이력');
         console.log('포트폴리오 이력 폴더 생성됨:', portfolioFolder.id);
+        
+        // 포트폴리오 폴더 생성 시 하위 폴더들도 함께 생성
+        await this.createFolder('image', portfolioFolder.id);
+        await this.createFolder('PPT', portfolioFolder.id);
+        console.log('포트폴리오 하위 폴더들 생성됨: image, PPT');
       } else {
         console.log('기존 포트폴리오 이력 폴더 발견:', portfolioFolder.id);
       }
@@ -154,6 +159,27 @@ class GoogleDriveService {
     } catch (error) {
       console.error('이미지 폴더 확인/생성 오류:', error);
       throw new Error('이미지 폴더를 확인하거나 생성하는데 실패했습니다.');
+    }
+  }
+
+  // PPT 폴더 생성 또는 찾기
+  async ensurePptFolder(portfolioFolderId) {
+    try {
+      // 먼저 기존 PPT 폴더가 있는지 확인
+      let pptFolder = await this.findFolder('PPT', portfolioFolderId);
+
+      if (!pptFolder) {
+        // 폴더가 없으면 생성
+        pptFolder = await this.createFolder('PPT', portfolioFolderId);
+        console.log('PPT 폴더 생성됨:', pptFolder.id);
+      } else {
+        console.log('기존 PPT 폴더 발견:', pptFolder.id);
+      }
+
+      return pptFolder;
+    } catch (error) {
+      console.error('PPT 폴더 확인/생성 오류:', error);
+      throw new Error('PPT 폴더를 확인하거나 생성하는데 실패했습니다.');
     }
   }
 
@@ -233,6 +259,52 @@ class GoogleDriveService {
       console.error('파일 삭제 오류:', error);
       throw new Error('파일 삭제에 실패했습니다.');
     }
+  }
+
+  // 특정 폴더의 파일 목록 가져오기
+  async getFilesInFolder(folderId) {
+    try {
+      await this.ensureAuthenticated();
+
+      const gapiClient = this.authService.getAuthenticatedGapiClient();
+
+      const response = await gapiClient.drive.files.list({
+        q: `'${folderId}' in parents and trashed=false`,
+        fields: 'files(id, name, mimeType, createdTime, modifiedTime, size)',
+      });
+
+      return response.result.files || [];
+    } catch (error) {
+      console.error('폴더 내 파일 목록 가져오기 오류:', error);
+      throw new Error('폴더 내 파일 목록을 가져오는데 실패했습니다.');
+    }
+  }
+
+  // 파일명에서 순차적 번호 생성
+  generateSequentialFileName(originalName, existingFiles) {
+    // 파일명과 확장자 분리
+    const lastDotIndex = originalName.lastIndexOf('.');
+    const nameWithoutExt = lastDotIndex > 0 ? originalName.substring(0, lastDotIndex) : originalName;
+    const extension = lastDotIndex > 0 ? originalName.substring(lastDotIndex) : '';
+
+    // 같은 이름으로 시작하는 파일들 찾기 (원본 이름과 _숫자 패턴 모두 포함)
+    const sameNameFiles = existingFiles.filter(file => 
+      file.name.startsWith(nameWithoutExt) && 
+      (file.name === originalName || file.name.match(new RegExp(`^${nameWithoutExt}_\\d+${extension.replace('.', '\\.')}$`)))
+    );
+
+    // 기존 파일들에서 번호 추출
+    const numbers = sameNameFiles.map(file => {
+      if (file.name === originalName) {
+        return 1;
+      }
+      const match = file.name.match(new RegExp(`^${nameWithoutExt}_(\\d+)${extension.replace('.', '\\.')}$`));
+      return match ? parseInt(match[1]) : 1;
+    });
+
+    // 다음 번호 계산
+    const nextNumber = sameNameFiles.length > 0 ? Math.max(...numbers) + 1 : 1;
+    return `${nameWithoutExt}_${nextNumber}${extension}`;
   }
 
   // 파일 정보 가져오기
