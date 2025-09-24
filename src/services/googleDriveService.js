@@ -180,6 +180,34 @@ class GoogleDriveService {
       throw new Error('이력 이미지 폴더를 확인하거나 생성하는데 실패했습니다.');
     }
   }
+  // 파일을 지정한 폴더로 이동 (기존 부모 폴더 제거 포함)
+  async moveFileToFolder(fileId, targetFolderId) {
+    try {
+      await this.ensureAuthenticated();
+
+      const gapiClient = this.authService.getAuthenticatedGapiClient();
+
+      // 현재 부모 폴더 조회
+      const fileMeta = await gapiClient.drive.files.get({
+        fileId,
+        fields: 'id, parents'
+      });
+
+      const currentParents = (fileMeta.result.parents || []).join(',');
+
+      await gapiClient.drive.files.update({
+        fileId,
+        addParents: targetFolderId,
+        removeParents: currentParents || 'root',
+        fields: 'id, parents'
+      });
+
+      return true;
+    } catch (error) {
+      console.error('파일 이동 오류:', error);
+      throw new Error('파일을 대상 폴더로 이동하는 데 실패했습니다.');
+    }
+  }
 
   // 파일 업로드
   async uploadFile(name, file, mimeType = 'application/octet-stream', parentId = null) {

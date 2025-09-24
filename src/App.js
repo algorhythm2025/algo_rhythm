@@ -258,7 +258,7 @@ function App() {
       const sheetData = await sheetsService.current.readData(targetSpreadsheetId, 'A:E');
       const experiences = sheetsService.current.formatSheetToExperience(sheetData);
       setExperiences(experiences);
-      
+
       // 이미지 프리로딩 (백그라운드에서 미리 로딩)
       experiences.forEach(exp => {
         if (exp.imageUrls && exp.imageUrls.length > 0) {
@@ -584,16 +584,16 @@ function App() {
 
   // 이미지 URL 변환 캐시 (무한 재귀 방지)
   const imageUrlCache = new Map();
-  
+
   // 이미지 프리로딩 캐시 (이미 로딩된 이미지 추적)
   const preloadedImages = new Set();
-  
+
   // 이미지 프리로딩 함수 (백그라운드에서 미리 로딩)
   function preloadImage(imageUrl) {
     if (preloadedImages.has(imageUrl)) {
       return Promise.resolve();
     }
-    
+
     return new Promise((resolve, reject) => {
       const img = new Image();
       img.onload = () => {
@@ -604,7 +604,7 @@ function App() {
       img.src = imageUrl;
     });
   }
-  
+
   // 이미지 로딩 상태 관리 함수들
   function setImageLoadingState(imageKey, isLoading) {
     setImageLoadingStates(prev => {
@@ -630,61 +630,61 @@ function App() {
   async function retryImageLoad(imgElement, originalUrl, retryCount = 0) {
     const maxRetries = 2; // 재시도 횟수 감소
     const imageKey = `${originalUrl}_${imgElement.alt}`;
-    
+
     // 이미 프리로딩된 이미지인지 확인
     if (preloadedImages.has(originalUrl)) {
       imgElement.src = originalUrl;
       return;
     }
-    
+
     const fileId = originalUrl.match(/[-\w]{25,}/)?.[0];
     const alternativeUrls = [
       `https://drive.google.com/thumbnail?id=${fileId}&sz=w400`, // 가장 빠른 썸네일
       `https://drive.google.com/thumbnail?id=${fileId}&sz=w200`, // 더 작은 썸네일
       `https://drive.google.com/uc?export=view&id=${fileId}`
     ];
-    
+
     if (retryCount >= maxRetries) {
       console.error('이미지 로딩 실패 - 모든 재시도 소진:', originalUrl);
       setImageErrorState(imageKey);
       imgElement.style.display = 'none';
       return;
     }
-    
+
     const currentUrl = retryCount === 0 ? originalUrl : alternativeUrls[retryCount - 1];
     console.log(`이미지 로딩 재시도 ${retryCount + 1}/${maxRetries + 1}:`, currentUrl);
-    
+
     // 로딩 상태 설정
     setImageLoadingState(imageKey, true);
-    
+
     // 새로운 이미지 객체로 테스트 (타임아웃 설정)
     const testImg = new Image();
     let timeoutId;
-    
+
     const cleanup = () => {
       if (timeoutId) clearTimeout(timeoutId);
       setImageLoadingState(imageKey, false);
     };
-    
+
     // 3초 타임아웃 설정 (더 빠른 응답)
     timeoutId = setTimeout(() => {
       console.log('이미지 로딩 타임아웃:', currentUrl);
       cleanup();
       setTimeout(() => retryImageLoad(imgElement, originalUrl, retryCount + 1), 300); // 더 빠른 재시도
     }, 3000);
-    
+
     testImg.onload = () => {
       cleanup();
       preloadedImages.add(currentUrl); // 성공한 URL을 캐시에 추가
       imgElement.src = currentUrl;
       console.log('이미지 로딩 성공:', currentUrl);
     };
-    
+
     testImg.onerror = () => {
       cleanup();
       setTimeout(() => retryImageLoad(imgElement, originalUrl, retryCount + 1), 300); // 더 빠른 재시도
     };
-    
+
     testImg.src = currentUrl;
   }
 
@@ -710,7 +710,7 @@ function App() {
     }
 
     const fileId = fileIdMatch[0];
-    
+
     // 썸네일 크기로 최적화된 URL 우선 사용 (로딩 속도 향상)
     const possibleUrls = [
       `https://drive.google.com/thumbnail?id=${fileId}&sz=w400`, // 썸네일 크기로 최적화
@@ -719,11 +719,11 @@ function App() {
       `https://lh3.googleusercontent.com/d/${fileId}`,
       `https://drive.google.com/file/d/${fileId}/view?usp=sharing`
     ];
-    
+
     // 첫 번째 URL을 기본으로 사용 (썸네일 크기로 빠른 로딩)
     const directUrl = possibleUrls[0];
     console.log('이미지 URL 변환 (최적화):', imageUrl, '→', directUrl);
-    
+
     imageUrlCache.set(imageUrl, directUrl);
     return directUrl;
   }
@@ -1277,7 +1277,7 @@ function App() {
         Authorization: `Bearer ${token}`
       }
     });
-    
+
     if (!res.ok) {
       const text = await res.text();
       throw new Error('Export 실패: ' + text);
@@ -1314,7 +1314,11 @@ function App() {
     }
     return '';
   }
-
+  const now = new Date();
+  const year = now.getFullYear().toString().slice(-2); // 2자리 연도
+  const month = (now.getMonth() + 1).toString().padStart(2, '0'); // 2자리 월
+  const day = now.getDate().toString().padStart(2, '0'); // 2자리 일
+  const dateString = `${year}.${month}.${day}`;
   // 템플릿 선택 → 프레젠테이션 생성 + 이력 반영
   async function handleTemplateSelect(templateName) {
     const title = prompt('슬라이드 제목을 입력하세요:', '나의 포트폴리오');
@@ -1322,7 +1326,7 @@ function App() {
       alert('제목이 없습니다.');
       return;
     }
-
+    const finalTitle = `${title} (${dateString})`;
     // 토큰 확보 보장
     if (!accessToken) {
       try {
@@ -1339,8 +1343,22 @@ function App() {
 
     try {
       // 1) 프레젠테이션 생성
-      const presId = await createPresentation(title, accessToken);
+      const presId = await createPresentation(finalTitle, accessToken);
       setPresentationId(presId);
+
+
+      // 생성 직후 포트폴리오 폴더가 있다면 그 폴더로 이동
+
+      try {
+        if (portfolioFolderId && driveService.current?.moveFileToFolder) {
+          await driveService.current.moveFileToFolder(presId, portfolioFolderId);
+          console.log('프레젠테이션을 포트폴리오 이력 폴더로 이동 완료:', portfolioFolderId);
+        } else {
+          console.log('포트폴리오 폴더 ID가 없거나 이동 함수가 없습니다. 이동을 건너뜁니다.');
+        }
+      } catch (moveErr) {
+        console.warn('프레젠테이션 폴더 이동 실패(슬라이드 생성은 계속 진행):', moveErr);
+      }
 
       // 2) 첫 슬라이드 레이아웃 보정
       let data = await getPresentationData(presId, accessToken);
@@ -1393,7 +1411,7 @@ function App() {
 
         if (titleShapeId) await updateElementText(presId, titleShapeId, exp.title, accessToken);
         if (bodyShapeId)  await updateElementText(presId, bodyShapeId, `${exp.period}\n\n${exp.description}`, accessToken);
-        
+
         // 이미지가 있는 경우 슬라이드에 추가
         if (exp.imageUrls && exp.imageUrls.length > 0) {
           try {
@@ -1404,10 +1422,10 @@ function App() {
             const imageSpacing = 20;
             const startX = 400; // 텍스트 영역 오른쪽
             const startY = 100; // 상단에서 100pt
-            
+
             for (let i = 0; i < imageCount; i++) {
               const imageUrl = exp.imageUrls[i];
-              
+
               // 이미지 위치 계산 (세로로 일렬 배치)
               const imagePosition = {
                 x: startX,
@@ -1415,7 +1433,7 @@ function App() {
                 width: imageWidth,
                 height: imageHeight
               };
-              
+
               await addImageToSlide(presId, s.objectId, imageUrl, accessToken, imagePosition);
               console.log(`이미지 ${i + 1}/${imageCount}가 슬라이드 ${idx}에 추가되었습니다:`, imageUrl);
             }
@@ -1424,7 +1442,7 @@ function App() {
             // 이미지 추가 실패해도 PPT 생성은 계속 진행
           }
         }
-        
+
         idx++;
       }
 
@@ -1936,37 +1954,37 @@ function App() {
                                                           onClick={() => openImageModal(imageUrl, `${exp.title} - 이미지 ${imgIdx + 1}`)}
                                                       >
                                                         {imageLoadingStates.get(`${imageUrl}_${exp.title} 이미지 ${imgIdx + 1}`) === 'loading' && (
-                                                          <div style={{
-                                                            position: 'absolute',
-                                                            top: '50%',
-                                                            left: '50%',
-                                                            transform: 'translate(-50%, -50%)',
-                                                            color: '#007bff',
-                                                            fontSize: '12px'
-                                                          }}>
-                                                            <i className="fas fa-spinner fa-spin"></i>
-                                                          </div>
+                                                            <div style={{
+                                                              position: 'absolute',
+                                                              top: '50%',
+                                                              left: '50%',
+                                                              transform: 'translate(-50%, -50%)',
+                                                              color: '#007bff',
+                                                              fontSize: '12px'
+                                                            }}>
+                                                              <i className="fas fa-spinner fa-spin"></i>
+                                                            </div>
                                                         )}
                                                         {imageLoadingStates.get(`${imageUrl}_${exp.title} 이미지 ${imgIdx + 1}`) === 'error' && (
-                                                          <div style={{
-                                                            position: 'absolute',
-                                                            top: '50%',
-                                                            left: '50%',
-                                                            transform: 'translate(-50%, -50%)',
-                                                            color: '#dc3545',
-                                                            fontSize: '12px'
-                                                          }}>
-                                                            <i className="fas fa-exclamation-triangle"></i>
-                                                          </div>
+                                                            <div style={{
+                                                              position: 'absolute',
+                                                              top: '50%',
+                                                              left: '50%',
+                                                              transform: 'translate(-50%, -50%)',
+                                                              color: '#dc3545',
+                                                              fontSize: '12px'
+                                                            }}>
+                                                              <i className="fas fa-exclamation-triangle"></i>
+                                                            </div>
                                                         )}
                                                         <img
                                                             src={imageUrl}
                                                             alt={`${exp.title} 이미지 ${imgIdx + 1}`}
                                                             loading="lazy"
                                                             decoding="async"
-                                                            style={{ 
-                                                              width: '100%', 
-                                                              height: '100%', 
+                                                            style={{
+                                                              width: '100%',
+                                                              height: '100%',
                                                               objectFit: 'cover',
                                                               opacity: imageLoadingStates.get(`${imageUrl}_${exp.title} 이미지 ${imgIdx + 1}`) === 'loading' ? 0.5 : 1
                                                             }}
@@ -1976,7 +1994,7 @@ function App() {
                                                               if (e.target.dataset.converting === 'true') {
                                                                 return;
                                                               }
-                                                              
+
                                                               try {
                                                                 e.target.dataset.converting = 'true';
                                                                 console.log('이미지 로딩 실패, 재시도 시작:', imageUrl);
@@ -2555,37 +2573,37 @@ function App() {
                                                           onClick={() => openImageModal(imageUrl, `${exp.title} - 이미지 ${imgIdx + 1}`)}
                                                       >
                                                         {imageLoadingStates.get(`${imageUrl}_${exp.title} 이미지 ${imgIdx + 1}`) === 'loading' && (
-                                                          <div style={{
-                                                            position: 'absolute',
-                                                            top: '50%',
-                                                            left: '50%',
-                                                            transform: 'translate(-50%, -50%)',
-                                                            color: '#007bff',
-                                                            fontSize: '10px'
-                                                          }}>
-                                                            <i className="fas fa-spinner fa-spin"></i>
-                                                          </div>
+                                                            <div style={{
+                                                              position: 'absolute',
+                                                              top: '50%',
+                                                              left: '50%',
+                                                              transform: 'translate(-50%, -50%)',
+                                                              color: '#007bff',
+                                                              fontSize: '10px'
+                                                            }}>
+                                                              <i className="fas fa-spinner fa-spin"></i>
+                                                            </div>
                                                         )}
                                                         {imageLoadingStates.get(`${imageUrl}_${exp.title} 이미지 ${imgIdx + 1}`) === 'error' && (
-                                                          <div style={{
-                                                            position: 'absolute',
-                                                            top: '50%',
-                                                            left: '50%',
-                                                            transform: 'translate(-50%, -50%)',
-                                                            color: '#dc3545',
-                                                            fontSize: '10px'
-                                                          }}>
-                                                            <i className="fas fa-exclamation-triangle"></i>
-                                                          </div>
+                                                            <div style={{
+                                                              position: 'absolute',
+                                                              top: '50%',
+                                                              left: '50%',
+                                                              transform: 'translate(-50%, -50%)',
+                                                              color: '#dc3545',
+                                                              fontSize: '10px'
+                                                            }}>
+                                                              <i className="fas fa-exclamation-triangle"></i>
+                                                            </div>
                                                         )}
                                                         <img
                                                             src={imageUrl}
                                                             alt={`${exp.title} 이미지 ${imgIdx + 1}`}
                                                             loading="lazy"
                                                             decoding="async"
-                                                            style={{ 
-                                                              width: '100%', 
-                                                              height: '100%', 
+                                                            style={{
+                                                              width: '100%',
+                                                              height: '100%',
                                                               objectFit: 'cover',
                                                               opacity: imageLoadingStates.get(`${imageUrl}_${exp.title} 이미지 ${imgIdx + 1}`) === 'loading' ? 0.5 : 1
                                                             }}
@@ -2595,7 +2613,7 @@ function App() {
                                                               if (e.target.dataset.converting === 'true') {
                                                                 return;
                                                               }
-                                                              
+
                                                               try {
                                                                 e.target.dataset.converting = 'true';
                                                                 console.log('이미지 로딩 실패, 재시도 시작:', imageUrl);
@@ -2825,32 +2843,32 @@ function App() {
                   </div>
                   <div className="modal-body text-center p-0" style={{ position: 'relative' }}>
                     {imageLoadingStates.get(`${selectedImageForModal.url}_${selectedImageForModal.title}`) === 'loading' && (
-                      <div style={{
-                        position: 'absolute',
-                        top: '50%',
-                        left: '50%',
-                        transform: 'translate(-50%, -50%)',
-                        color: '#007bff',
-                        fontSize: '24px',
-                        zIndex: 10
-                      }}>
-                        <i className="fas fa-spinner fa-spin"></i>
-                        <div style={{ fontSize: '14px', marginTop: '10px' }}>이미지 로딩 중...</div>
-                      </div>
+                        <div style={{
+                          position: 'absolute',
+                          top: '50%',
+                          left: '50%',
+                          transform: 'translate(-50%, -50%)',
+                          color: '#007bff',
+                          fontSize: '24px',
+                          zIndex: 10
+                        }}>
+                          <i className="fas fa-spinner fa-spin"></i>
+                          <div style={{ fontSize: '14px', marginTop: '10px' }}>이미지 로딩 중...</div>
+                        </div>
                     )}
                     {imageLoadingStates.get(`${selectedImageForModal.url}_${selectedImageForModal.title}`) === 'error' && (
-                      <div style={{
-                        position: 'absolute',
-                        top: '50%',
-                        left: '50%',
-                        transform: 'translate(-50%, -50%)',
-                        color: '#dc3545',
-                        fontSize: '24px',
-                        zIndex: 10
-                      }}>
-                        <i className="fas fa-exclamation-triangle"></i>
-                        <div style={{ fontSize: '14px', marginTop: '10px' }}>이미지를 불러올 수 없습니다</div>
-                      </div>
+                        <div style={{
+                          position: 'absolute',
+                          top: '50%',
+                          left: '50%',
+                          transform: 'translate(-50%, -50%)',
+                          color: '#dc3545',
+                          fontSize: '24px',
+                          zIndex: 10
+                        }}>
+                          <i className="fas fa-exclamation-triangle"></i>
+                          <div style={{ fontSize: '14px', marginTop: '10px' }}>이미지를 불러올 수 없습니다</div>
+                        </div>
                     )}
                     <img
                         src={selectedImageForModal.url}
@@ -2858,8 +2876,8 @@ function App() {
                         className="img-fluid"
                         loading="eager"
                         decoding="async"
-                        style={{ 
-                          maxHeight: '80vh', 
+                        style={{
+                          maxHeight: '80vh',
                           maxWidth: '100%',
                           opacity: imageLoadingStates.get(`${selectedImageForModal.url}_${selectedImageForModal.title}`) === 'loading' ? 0.5 : 1
                         }}
@@ -2869,7 +2887,7 @@ function App() {
                           if (e.target.dataset.converting === 'true') {
                             return;
                           }
-                          
+
                           try {
                             e.target.dataset.converting = 'true';
                             console.log('모달 이미지 로딩 실패, 재시도 시작:', selectedImageForModal.url);
