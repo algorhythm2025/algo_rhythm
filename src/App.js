@@ -32,14 +32,19 @@ function App() {
   const [isUploadLoading, setIsUploadLoading] = useState(false);
   const [isRefreshLoading, setIsRefreshLoading] = useState(false);
   const [isDeleteLoading, setIsDeleteLoading] = useState(false);
+  const [deletingFileIds, setDeletingFileIds] = useState(new Set()); // 삭제 중인 파일 ID들
   const [isViewModeLoading, setIsViewModeLoading] = useState(false);
+  const [isPptCreating, setIsPptCreating] = useState(false); // PPT 생성 로딩 상태
   const [currentPath, setCurrentPath] = useState([]); // 현재 경로 추적
   const [authStatus, setAuthStatus] = useState('disconnected');
   const [selectedImages, setSelectedImages] = useState([]); // 선택된 이미지 파일들
   const [imagePreviews, setImagePreviews] = useState([]); // 이미지 미리보기 URL들
-  const [showImageModal, setShowImageModal] = useState(false); // 이미지 확대 모달
+  const [showImageModal, setShowImageModal] = useState(false);
+  const [pptHistory, setPptHistory] = useState([]); // PPT 생성 기록 // 이미지 확대 모달
   const [selectedImageForModal, setSelectedImageForModal] = useState(null); // 모달에 표시할 이미지
   const [imageLoadingStates, setImageLoadingStates] = useState(new Map()); // 이미지 로딩 상태 추적
+  const [selectedExperience, setSelectedExperience] = useState(null); // 선택된 이력
+  const [showExperienceModal, setShowExperienceModal] = useState(false); // 이력 상세 모달 표시 여부
   const [accessToken, setAccessToken] = useState('');
   const [slides, setSlides] = useState([]);
   const [presentationId, setPresentationId] = useState(null);
@@ -285,6 +290,7 @@ function App() {
     if (!driveService.current) return;
 
     try {
+      setIsDriveLoading(true);
       console.log('드라이브 파일 불러오기 시작, 뷰 모드:', driveViewMode, '부모 ID:', parentId);
 
       // 시트가 있다면 실제로 존재하는지 확인
@@ -321,6 +327,8 @@ function App() {
       setDriveFiles(files);
     } catch (error) {
       console.error('드라이브 파일 로드 오류:', error);
+    } finally {
+      setIsDriveLoading(false);
     }
   }
 
@@ -576,6 +584,18 @@ function App() {
     setShowImageModal(true);
   }
 
+  // 이력 상세 모달 열기
+  function openExperienceModal(experience) {
+    setSelectedExperience(experience);
+    setShowExperienceModal(true);
+  }
+
+  // 이력 상세 모달 닫기
+  function closeExperienceModal() {
+    setSelectedExperience(null);
+    setShowExperienceModal(false);
+  }
+
   // 이미지 확대 모달 닫기
   function closeImageModal() {
     setShowImageModal(false);
@@ -728,6 +748,73 @@ function App() {
     return directUrl;
   }
 
+  // 구글 계정 이름 가져오기
+  async function getGoogleAccountName() {
+    try {
+      const gapiClient = authService.current.getAuthenticatedGapiClient();
+      
+      // Google People API를 사용하여 사용자 정보 가져오기
+      const response = await gapiClient.people.people.get({
+        resourceName: 'people/me',
+        personFields: 'names'
+      });
+      
+      const names = response.result.names;
+      if (names && names.length > 0) {
+        // 첫 번째 이름 반환 (일반적으로 주 이름)
+        return names[0].displayName || names[0].givenName || '사용자';
+      }
+      
+      return '사용자';
+    } catch (error) {
+      console.error('구글 계정 이름 가져오기 실패:', error);
+      return '사용자';
+    }
+  }
+
+  // PPT 기록 조회
+  async function loadPptHistory() {
+    if (!driveService.current) return;
+    
+    try {
+      setIsLoading(true);
+      
+      // 포트폴리오 폴더 확인/생성
+      const portfolioFolder = await driveService.current.ensurePortfolioFolder();
+      
+      // PPT 폴더 찾기
+      const pptFolder = await driveService.current.findFolder('PPT', portfolioFolder.id);
+      
+      if (!pptFolder) {
+        console.log('PPT 폴더가 없습니다.');
+        setPptHistory([]);
+        return;
+      }
+      
+      // PPT 폴더에서 PPT 파일들 조회
+      const files = await driveService.current.getFilesInFolder(pptFolder.id);
+      
+      // PPT 파일만 필터링 (Google Slides 파일)
+      const pptFiles = files.filter(file => 
+        file.mimeType === 'application/vnd.google-apps.presentation'
+      );
+      
+      // 생성일 기준으로 최신순 정렬
+      const sortedPptFiles = pptFiles.sort((a, b) => 
+        new Date(b.createdTime) - new Date(a.createdTime)
+      );
+      
+      setPptHistory(sortedPptFiles);
+      console.log('PPT 기록 로드됨:', sortedPptFiles);
+      
+    } catch (error) {
+      console.error('PPT 기록 조회 오류:', error);
+      alert('PPT 기록을 불러오는데 실패했습니다.');
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   // 드롭된 파일 처리
   function handleDroppedFiles(files) {
     files.forEach(file => {
@@ -767,9 +854,16 @@ function App() {
       // 이력별 이미지 폴더 생성 또는 찾기
       const experienceFolder = await driveService.current.ensureExperienceImageFolder(experienceTitle, imageFolder.id);
 
+      // 해당 이력 폴더의 기존 파일 목록 가져오기
+      const existingFiles = await driveService.current.getFilesInFolder(experienceFolder.id);
+      
+      // 순차적 번호가 포함된 파일명 생성
+      const finalFileName = driveService.current.generateSequentialFileName(imageFile.name, existingFiles);
+      console.log(`원본 파일명: ${imageFile.name} → 최종 파일명: ${finalFileName}`);
+
       // 이미지 파일을 해당 이력 폴더에 업로드
       const uploadResult = await driveService.current.uploadFile(
-          `portfolio_${Date.now()}_${imageFile.name}`,
+          finalFileName,
           imageFile,
           imageFile.type,
           experienceFolder.id
@@ -912,7 +1006,8 @@ function App() {
     if (!window.confirm('정말로 이 파일을 삭제하시겠습니까?') || !driveService.current) return;
 
     try {
-      setIsDeleteLoading(true);
+      // 해당 파일 ID를 삭제 중 상태에 추가
+      setDeletingFileIds(prev => new Set([...prev, fileId]));
       await driveService.current.deleteFile(fileId);
       await loadDriveFiles();
       alert('파일이 삭제되었습니다!');
@@ -920,7 +1015,12 @@ function App() {
       const errorMessage = driveService.current?.formatErrorMessage(error) || '파일 삭제에 실패했습니다.';
       alert(errorMessage);
     } finally {
-      setIsDeleteLoading(false);
+      // 해당 파일 ID를 삭제 중 상태에서 제거
+      setDeletingFileIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(fileId);
+        return newSet;
+      });
     }
   }
 
@@ -929,7 +1029,6 @@ function App() {
     try {
       setIsExperienceLoading(true);
       await loadExperiencesFromSheets();
-      alert('구글 시트 데이터가 새로고침되었습니다!');
     } catch (error) {
       console.error('시트 데이터 새로고침 오류:', error);
       alert('데이터 새로고침에 실패했습니다: ' + (error?.message || error));
@@ -1323,6 +1422,40 @@ function App() {
       return;
     }
 
+    // 현재 날짜를 YYYY-MM-DD 형식으로 생성
+    const currentDate = new Date();
+    const year = currentDate.getFullYear();
+    const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+    const day = String(currentDate.getDate()).padStart(2, '0');
+    const dateString = `${year}-${month}-${day}`;
+    
+    // 기본 파일명 생성 (날짜 포함)
+    const baseFileName = `${title} ${dateString}`;
+    
+    // PPT 폴더에서 기존 PPT 파일들 조회하여 중복 확인
+    let finalFileName = baseFileName;
+    try {
+      const portfolioFolder = await driveService.current.ensurePortfolioFolder();
+      const pptFolder = await driveService.current.findFolder('PPT', portfolioFolder.id);
+      
+      if (pptFolder) {
+        const existingFiles = await driveService.current.getFilesInFolder(pptFolder.id);
+        
+        // PPT 파일만 필터링 (Google Slides 파일)
+        const pptFiles = existingFiles.filter(file => 
+          file.mimeType === 'application/vnd.google-apps.presentation'
+        );
+        
+        // 순차적 번호가 포함된 파일명 생성
+        finalFileName = driveService.current.generateSequentialFileName(baseFileName, pptFiles);
+        console.log(`원본 PPT 파일명: ${baseFileName} → 최종 파일명: ${finalFileName}`);
+      } else {
+        console.log('PPT 폴더가 없어서 기본 파일명 사용');
+      }
+    } catch (error) {
+      console.warn('PPT 파일명 중복 확인 실패, 기본 파일명 사용:', error);
+    }
+
     // 토큰 확보 보장
     if (!accessToken) {
       try {
@@ -1336,11 +1469,35 @@ function App() {
     }
 
     setSelectedTemplate(templateName);
+    setIsPptCreating(true); // PPT 생성 시작
 
     try {
-      // 1) 프레젠테이션 생성
-      const presId = await createPresentation(title, accessToken);
+      // 1) 프레젠테이션 생성 (중복 확인된 최종 파일명으로)
+      const presId = await createPresentation(finalFileName, accessToken);
       setPresentationId(presId);
+
+      // 1-1) PPT 파일을 PPT 폴더로 이동
+      try {
+        const portfolioFolder = await driveService.current.ensurePortfolioFolder();
+        const pptFolder = await driveService.current.findFolder('PPT', portfolioFolder.id);
+        
+        if (pptFolder) {
+          const gapiClient = authService.current.getAuthenticatedGapiClient();
+          
+          // PPT 파일을 PPT 폴더로 이동
+          await gapiClient.drive.files.update({
+            fileId: presId,
+            addParents: pptFolder.id,
+            removeParents: 'root'
+          });
+          console.log('PPT 파일이 PPT 폴더로 이동되었습니다.');
+        } else {
+          console.warn('PPT 폴더를 찾을 수 없습니다. 포트폴리오 폴더에 저장됩니다.');
+        }
+      } catch (moveError) {
+        console.warn('PPT 파일 폴더 이동 실패:', moveError);
+        // 폴더 이동 실패해도 PPT 생성은 성공으로 처리
+      }
 
       // 2) 첫 슬라이드 레이아웃 보정
       let data = await getPresentationData(presId, accessToken);
@@ -1374,13 +1531,13 @@ function App() {
         const titleShapeId = findFirstPlaceholder(s0.pageElements, 'TITLE');
         const bodyShapeId  = findFirstPlaceholder(s0.pageElements, 'BODY');
 
+        // 표지 제목: 원본 제목 (날짜 제외)
         if (titleShapeId) await updateElementText(presId, titleShapeId, title, accessToken);
+        
+        // 표지 본문: 구글 계정 이름
         if (bodyShapeId) {
-          const firstTwo = selectedExperiences
-              .slice(0, 2)
-              .map(e => `• ${e.title} (${e.period})`)
-              .join('\n');
-          await updateElementText(presId, bodyShapeId, firstTwo || '포트폴리오', accessToken);
+          const userName = await getGoogleAccountName();
+          await updateElementText(presId, bodyShapeId, userName, accessToken);
         }
       }
 
@@ -1431,11 +1588,17 @@ function App() {
       // 6) 최종 상태 반영
       const refreshed = await getPresentationData(presId, accessToken);
       setSlides(refreshed.slides || []);
+      
+      // 7) PPT 기록 새로고침
+      await loadPptHistory();
+      
       alert('PPT가 생성되었습니다.');
       setActiveSection('editor');
     } catch (error) {
       console.error('PPT 생성 오류:', error);
       alert('PPT 생성에 실패했습니다: ' + (error?.message || error));
+    } finally {
+      setIsPptCreating(false); // PPT 생성 완료 (성공/실패 관계없이)
     }
   }
 
@@ -1443,8 +1606,29 @@ function App() {
   async function enterFolder(folderId, folderName) {
     try {
       setIsViewModeLoading(true);
-      setCurrentPath(prev => [...prev, { id: folderId, name: folderName }]);
-      await loadDriveFiles(folderId);
+      
+      // 포트폴리오 폴더인지 확인
+      if (folderName === '포트폴리오 이력') {
+        // 포트폴리오 폴더 ID가 설정되어 있으면 해당 ID와 비교
+        if (portfolioFolderId && folderId === portfolioFolderId) {
+          // 포트폴리오 폴더인 경우 작업영역을 포트폴리오 폴더로 전환
+          setDriveViewMode('portfolio');
+          setCurrentPath([]); // 경로 초기화
+          await loadDriveFiles(); // 포트폴리오 폴더 내용 로드
+        } else {
+          // 포트폴리오 폴더 ID가 설정되지 않은 경우, 폴더 이름으로만 확인
+          // 이 경우 포트폴리오 폴더 ID를 설정하고 작업영역 전환
+          setPortfolioFolderId(folderId);
+          localStorage.setItem('portfolioFolderId', folderId);
+          setDriveViewMode('portfolio');
+          setCurrentPath([]); // 경로 초기화
+          await loadDriveFiles(); // 포트폴리오 폴더 내용 로드
+        }
+      } else {
+        // 일반 폴더인 경우 기존 로직 유지
+        setCurrentPath(prev => [...prev, { id: folderId, name: folderName }]);
+        await loadDriveFiles(folderId);
+      }
     } finally {
       setIsViewModeLoading(false);
     }
@@ -1637,6 +1821,17 @@ function App() {
     }
   }, [portfolioFolderId]);
 
+  // 마이페이지 섹션이 활성화될 때 PPT 기록과 이력 목록 로드
+  useEffect(() => {
+    if (activeSection === 'myPage' && isDriveInitialized) {
+      loadPptHistory();
+      // 이력 목록도 자동으로 새로고침
+      if (isSheetsInitialized) {
+        loadExperiencesFromSheets();
+      }
+    }
+  }, [activeSection, isDriveInitialized, isSheetsInitialized]);
+
   // 페이지 로드 시 로그인 상태 복원 및 초기화
   useEffect(() => {
     const initializeApp = async () => {
@@ -1716,6 +1911,37 @@ function App() {
     }
   }, [isLoggedIn]);
 
+  // 로딩 상태에 따른 버튼 업데이트
+  useEffect(() => {
+    const loginBtn = document.getElementById('gisLoginBtn');
+    if (loginBtn) {
+      if (isLoading) {
+        loginBtn.innerHTML = `
+          <div class="spinner-border spinner-border-sm" role="status" style="width: 18px; height: 18px;">
+            <span class="visually-hidden">로딩중...</span>
+          </div>
+          로그인 중...
+        `;
+        loginBtn.disabled = true;
+        loginBtn.style.cursor = 'not-allowed';
+        loginBtn.style.opacity = '0.7';
+      } else {
+        loginBtn.innerHTML = `
+          <svg width="18" height="18" viewBox="0 0 24 24">
+            <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+            <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+            <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+            <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+          </svg>
+          구글로 로그인
+        `;
+        loginBtn.disabled = false;
+        loginBtn.style.cursor = 'pointer';
+        loginBtn.style.opacity = '1';
+      }
+    }
+  }, [isLoading]);
+
   // ESC 키로 이미지 모달 닫기
   useEffect(() => {
     const handleEscKey = (event) => {
@@ -1767,14 +1993,6 @@ function App() {
                     <div className="login-box text-center">
                       <h2 className="mb-4">시작하기</h2>
                       <div id="googleSignInDiv"></div>
-                      {isLoading && (
-                          <div className="mt-3">
-                            <div className="spinner-border text-primary" role="status">
-                              <span className="visually-hidden">로그인 중...</span>
-                            </div>
-                            <p className="mt-2" style={{ color: 'white' }}>로그인 중...</p>
-                          </div>
-                      )}
                     </div>
                   </div>
                 </div>
@@ -1913,7 +2131,7 @@ function App() {
                                   </div>
                               ) : (
                                   experiences.map((exp, idx) => (
-                                      <div className="list-group-item" key={idx}>
+                                      <div className="list-group-item" key={idx} style={{ cursor: 'pointer' }} onClick={() => openExperienceModal(exp)}>
                                         <div className="d-flex align-items-center">
                                           <div className="me-3 d-flex flex-column" style={{ gap: '5px' }}>
                                             {(exp.imageUrls && exp.imageUrls.length > 0) ? (
@@ -2021,7 +2239,7 @@ function App() {
                                             <p className="mb-1"><small>{exp.period}</small></p>
                                             <p className="mb-0">{exp.description}</p>
                                           </div>
-                                          <div className="form-check ms-3">
+                                          <div className="form-check ms-3" onClick={(e) => e.stopPropagation()}>
                                             <input className="form-check-input" type="checkbox" checked={selected.includes(idx)} onChange={() => toggleSelect(idx)} />
                                           </div>
                                         </div>
@@ -2037,21 +2255,30 @@ function App() {
                   {/* 템플릿 선택 섹션 */}
                   {activeSection === 'templateSelection' && (
                       <div id="templateSelection" className="mac-content">
-                        <h2>템플릿을 선택하세요</h2>
-                        <div className="template-grid">
-                          <div className="mac-card" onClick={() => handleTemplateSelect('basic')}>
-                            <h3>기본 템플릿</h3>
-                            <p>깔끔하고 전문적인 레이아웃</p>
+                        <h2>{isPptCreating ? '포트폴리오 생성중입니다' : '템플릿을 선택하세요'}</h2>
+                        {isPptCreating ? (
+                          <div className="text-center p-5">
+                            <div className="spinner-border text-primary mb-3" role="status" style={{width: '3rem', height: '3rem'}}>
+                              <span className="visually-hidden">로딩중...</span>
+                            </div>
+                            <p className="text-muted">잠시만 기다려주세요. 이력과 이미지를 슬라이드에 추가하고 있습니다.</p>
                           </div>
-                          <div className="mac-card" onClick={() => handleTemplateSelect('timeline')}>
-                            <h3>타임라인 템플릿</h3>
-                            <p>시간 흐름에 따른 구성</p>
+                        ) : (
+                          <div className="template-grid">
+                            <div className="mac-card" onClick={() => handleTemplateSelect('basic')}>
+                              <h3>기본 템플릿</h3>
+                              <p>깔끔하고 전문적인 레이아웃</p>
+                            </div>
+                            <div className="mac-card" onClick={() => handleTemplateSelect('timeline')}>
+                              <h3>타임라인 템플릿</h3>
+                              <p>시간 흐름에 따른 구성</p>
+                            </div>
+                            <div className="mac-card" onClick={() => handleTemplateSelect('grid')}>
+                              <h3>그리드 템플릿</h3>
+                              <p>균형 잡힌 구성</p>
+                            </div>
                           </div>
-                          <div className="mac-card" onClick={() => handleTemplateSelect('grid')}>
-                            <h3>그리드 템플릿</h3>
-                            <p>균형 잡힌 구성</p>
-                          </div>
-                        </div>
+                        )}
                       </div>
                   )}
 
@@ -2346,7 +2573,14 @@ function App() {
                                     </div>
                                   </div>
                                   <div className="file-list">
-                                    {driveFiles.length === 0 ? (
+                                    {isDriveLoading ? (
+                                        <div className="text-center p-4">
+                                          <div className="spinner-border text-primary" role="status">
+                                            <span className="visually-hidden">로딩중...</span>
+                                          </div>
+                                          <p className="mt-2" style={{ color: 'white' }}>파일 목록을 불러오는 중...</p>
+                                        </div>
+                                    ) : driveFiles.length === 0 ? (
                                         <div className="empty-state">
                                           <i className="fas fa-folder-open fa-3x mb-3"></i>
                                           <p>
@@ -2451,9 +2685,9 @@ function App() {
                                                           <button
                                                               className="btn btn-sm btn-outline-danger"
                                                               onClick={() => handleDriveFileDelete(file.id)}
-                                                              disabled={isDeleteLoading}
+                                                              disabled={deletingFileIds.has(file.id)}
                                                           >
-                                                            {isDeleteLoading ? (
+                                                            {deletingFileIds.has(file.id) ? (
                                                                 <>
                                                                   <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
                                                                   삭제 중...
@@ -2506,23 +2740,79 @@ function App() {
                       <div id="myPageSection" className="content-section">
                         <div className="mac-grid">
                           <div className="mac-window">
-                            <h2>PPT 기록</h2>
+                            <div className="d-flex justify-content-between align-items-center mb-3">
+                              <h2>PPT 기록</h2>
+                              <button className="btn btn-outline-primary btn-sm" onClick={loadPptHistory}>
+                                <i className="fas fa-sync-alt"></i> 새로고침
+                              </button>
+                            </div>
                             <div id="pptHistory" className="mac-list">
-                              <div className="empty-state">
-                                <i className="fas fa-history fa-3x mb-3"></i>
-                                <p>아직 제작한 PPT가 없습니다.</p>
-                              </div>
+                              {isLoading ? (
+                                <div className="text-center p-4">
+                                  <div className="spinner-border text-primary" role="status">
+                                    <span className="visually-hidden">로딩중...</span>
+                                  </div>
+                                  <p className="mt-2">PPT 기록을 불러오는 중...</p>
+                                </div>
+                              ) : pptHistory.length === 0 ? (
+                                <div className="empty-state">
+                                  <i className="fas fa-history fa-3x mb-3"></i>
+                                  <p>아직 제작한 PPT가 없습니다.</p>
+                                </div>
+                              ) : (
+                                pptHistory.map((ppt, index) => (
+                                  <div key={ppt.id} className="list-group-item mac-list-item">
+                                    <div className="d-flex align-items-center">
+                                      <div className="me-3">
+                                        <i className="fas fa-file-powerpoint text-primary fa-2x"></i>
+                                      </div>
+                                      <div className="flex-grow-1">
+                                        <h6 className="mb-1 text-white">{ppt.name}</h6>
+                                        <small className="text-white-50">
+                                          생성일: {new Date(ppt.createdTime).toLocaleDateString('ko-KR')}
+                                        </small>
+                                      </div>
+                                      <div className="ms-3">
+                                        <a 
+                                          href={`https://docs.google.com/presentation/d/${ppt.id}/edit`}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="btn btn-outline-primary btn-sm"
+                                        >
+                                          <i className="fas fa-external-link-alt"></i> 열기
+                                        </a>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))
+                              )}
                             </div>
                           </div>
                           <div className="mac-window">
                             <div className="d-flex justify-content-between align-items-center mb-3">
                               <h2>이력 관리</h2>
-                              <button className="btn btn-outline-primary btn-sm" onClick={refreshSheetsData}>
-                                <i className="fas fa-sync-alt"></i> 시트 새로고침
+                              <button className="btn btn-outline-primary btn-sm" onClick={refreshSheetsData} disabled={isExperienceLoading}>
+                                {isExperienceLoading ? (
+                                  <>
+                                    <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                    새로고침 중...
+                                  </>
+                                ) : (
+                                  <>
+                                    <i className="fas fa-sync-alt"></i> 시트 새로고침
+                                  </>
+                                )}
                               </button>
                             </div>
                             <div id="experienceManagement" className="mac-list">
-                              {experiences.length === 0 ? (
+                              {isExperienceLoading ? (
+                                <div className="text-center p-4">
+                                  <div className="spinner-border text-primary" role="status">
+                                    <span className="visually-hidden">로딩중...</span>
+                                  </div>
+                                  <p className="mt-2">이력 목록을 불러오는 중...</p>
+                                </div>
+                              ) : experiences.length === 0 ? (
                                   <div className="empty-state">
                                     <i className="fas fa-clipboard-list fa-3x mb-3"></i>
                                     <p>등록된 이력이 없습니다.</p>
@@ -2532,7 +2822,7 @@ function App() {
                                   </div>
                               ) : (
                                   experiences.map((exp, idx) => (
-                                      <div className="list-group-item" key={idx}>
+                                      <div className="list-group-item" key={idx} style={{ cursor: 'pointer' }} onClick={() => openExperienceModal(exp)}>
                                         <div className="d-flex align-items-center">
                                           <div className="me-3 d-flex flex-column" style={{ gap: '5px' }}>
                                             {(exp.imageUrls && exp.imageUrls.length > 0) ? (
@@ -2552,7 +2842,10 @@ function App() {
                                                           }}
                                                           onMouseEnter={(e) => e.currentTarget.style.borderColor = '#007bff'}
                                                           onMouseLeave={(e) => e.currentTarget.style.borderColor = 'transparent'}
-                                                          onClick={() => openImageModal(imageUrl, `${exp.title} - 이미지 ${imgIdx + 1}`)}
+                                                          onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            openImageModal(imageUrl, `${exp.title} - 이미지 ${imgIdx + 1}`);
+                                                          }}
                                                       >
                                                         {imageLoadingStates.get(`${imageUrl}_${exp.title} 이미지 ${imgIdx + 1}`) === 'loading' && (
                                                           <div style={{
@@ -2887,6 +3180,140 @@ function App() {
                 </div>
               </div>
             </div>
+        )}
+
+        {/* 이력 상세 모달 */}
+        {showExperienceModal && selectedExperience && (
+          <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+            <div className="modal-dialog modal-lg modal-dialog-centered">
+              <div className="modal-content mac-modal">
+                <div className="modal-header">
+                  <h5 className="modal-title">
+                    <i className="fas fa-clipboard-list me-2"></i>
+                    {selectedExperience.title}
+                  </h5>
+                  <button type="button" className="btn-close" onClick={closeExperienceModal}></button>
+                </div>
+                <div className="modal-body">
+                  <div className="row">
+                    <div className="col-md-6">
+                      <h6 className="text-muted mb-3">기본 정보</h6>
+                      <div className="mb-3">
+                        <strong>제목:</strong>
+                        <p className="mt-1">{selectedExperience.title}</p>
+                      </div>
+                      <div className="mb-3">
+                        <strong>기간:</strong>
+                        <p className="mt-1">{selectedExperience.period}</p>
+                      </div>
+                      <div className="mb-3">
+                        <strong>설명:</strong>
+                        <p className="mt-1" style={{ whiteSpace: 'pre-wrap' }}>{selectedExperience.description}</p>
+                      </div>
+                    </div>
+                    <div className="col-md-6">
+                      <h6 className="text-muted mb-3">첨부 이미지</h6>
+                      {selectedExperience.imageUrls && selectedExperience.imageUrls.length > 0 ? (
+                        <div className="experience-images">
+                          <div className="row g-2">
+                            {selectedExperience.imageUrls.map((imageUrl, imgIdx) => (
+                              <div key={imgIdx} className="col-6">
+                                <div
+                                  className="image-thumbnail"
+                                  style={{
+                                    width: '100%',
+                                    height: '150px',
+                                    overflow: 'hidden',
+                                    borderRadius: '8px',
+                                    cursor: 'pointer',
+                                    border: '2px solid transparent',
+                                    transition: 'border-color 0.2s',
+                                    position: 'relative'
+                                  }}
+                                  onMouseEnter={(e) => e.currentTarget.style.borderColor = '#007bff'}
+                                  onMouseLeave={(e) => e.currentTarget.style.borderColor = 'transparent'}
+                                  onClick={() => openImageModal(imageUrl, `${selectedExperience.title} - 이미지 ${imgIdx + 1}`)}
+                                >
+                                  {imageLoadingStates.get(`${imageUrl}_${selectedExperience.title} 이미지 ${imgIdx + 1}`) === 'loading' && (
+                                    <div style={{
+                                      position: 'absolute',
+                                      top: '50%',
+                                      left: '50%',
+                                      transform: 'translate(-50%, -50%)',
+                                      color: '#007bff',
+                                      fontSize: '16px'
+                                    }}>
+                                      <i className="fas fa-spinner fa-spin"></i>
+                                    </div>
+                                  )}
+                                  {imageLoadingStates.get(`${imageUrl}_${selectedExperience.title} 이미지 ${imgIdx + 1}`) === 'error' && (
+                                    <div style={{
+                                      position: 'absolute',
+                                      top: '50%',
+                                      left: '50%',
+                                      transform: 'translate(-50%, -50%)',
+                                      color: '#dc3545',
+                                      fontSize: '16px'
+                                    }}>
+                                      <i className="fas fa-exclamation-triangle"></i>
+                                    </div>
+                                  )}
+                                  <img
+                                    src={imageUrl}
+                                    alt={`${selectedExperience.title} 이미지 ${imgIdx + 1}`}
+                                    loading="lazy"
+                                    decoding="async"
+                                    style={{ 
+                                      width: '100%', 
+                                      height: '100%', 
+                                      objectFit: 'cover',
+                                      opacity: imageLoadingStates.get(`${imageUrl}_${selectedExperience.title} 이미지 ${imgIdx + 1}`) === 'loading' ? 0.5 : 1
+                                    }}
+                                    onLoad={() => setImageLoadingState(`${imageUrl}_${selectedExperience.title} 이미지 ${imgIdx + 1}`, false)}
+                                    onError={async (e) => {
+                                      if (e.target.dataset.converting === 'true') {
+                                        return;
+                                      }
+                                      
+                                      try {
+                                        e.target.dataset.converting = 'true';
+                                        console.log('이력 모달 이미지 로딩 실패, 재시도 시작:', imageUrl);
+                                        await retryImageLoad(e.target, imageUrl);
+                                      } catch (error) {
+                                        console.error('이력 모달 이미지 로딩 재시도 실패:', error);
+                                        e.target.style.display = 'none';
+                                      } finally {
+                                        e.target.dataset.converting = 'false';
+                                      }
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="mt-2 text-center">
+                            <small className="text-muted">
+                              총 {selectedExperience.imageUrls.length}개의 이미지
+                            </small>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-center p-4" style={{ backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
+                          <i className="fas fa-image fa-3x text-muted mb-3"></i>
+                          <p className="text-muted mb-0">첨부된 이미지가 없습니다</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className="modal-footer">
+                  <button type="button" className="btn btn-secondary" onClick={closeExperienceModal}>
+                    닫기
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
       </div>
   );
