@@ -128,10 +128,11 @@ class GoogleAuthService {
             apiKey: this.apiKey,
           });
 
-          // Google Sheets, Drive, Slides API 로드
+          // Google Sheets, Drive, Slides, People API 로드
           await window.gapi.client.load('sheets', 'v4');
           await window.gapi.client.load('drive', 'v3');
           await window.gapi.client.load('slides', 'v1');
+          await window.gapi.client.load('people', 'v1');
 
           console.log('GAPI 클라이언트 초기화 완료 (Sheets, Drive, Slides API 로드됨)');
           this.gapiInited = true;
@@ -180,7 +181,7 @@ class GoogleAuthService {
     try {
       this.tokenClient = window.google.accounts.oauth2.initTokenClient({
         client_id: this.clientId,
-        scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/presentations',
+        scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/presentations https://www.googleapis.com/auth/userinfo.profile',
         callback: (tokenResponse) => {
           if (tokenResponse && tokenResponse.access_token) {
             this.accessToken = tokenResponse.access_token;
@@ -499,6 +500,33 @@ class GoogleAuthService {
       isAuthenticated: this.isAuthenticated(),
       isInitializing: this.isInitializing
     };
+  }
+
+  // 구글 계정 사용자 정보 가져오기
+  async getUserInfo() {
+    try {
+      if (!this.isAuthenticated()) {
+        throw new Error('인증이 필요합니다.');
+      }
+
+      const gapiClient = this.getAuthenticatedGapiClient();
+      
+      // Google People API를 사용하여 사용자 정보 가져오기
+      const response = await gapiClient.people.people.get({
+        resourceName: 'people/me',
+        personFields: 'names,emailAddresses'
+      });
+
+      const person = response.result;
+      const name = person.names && person.names[0] ? person.names[0].displayName : '사용자';
+      
+      console.log('사용자 정보 가져오기 성공:', name);
+      return name;
+    } catch (error) {
+      console.error('사용자 정보 가져오기 실패:', error);
+      // People API가 실패하면 기본값 반환
+      return '사용자';
+    }
   }
 }
 

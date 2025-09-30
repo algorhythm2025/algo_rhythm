@@ -1183,26 +1183,108 @@ function App() {
     });
   }
 
-  // 첫 슬라이드를 TITLE_AND_BODY로 변환
-  async function makeTitleAndBody(presId, slideId, token) {
-    await fetch(`https://slides.googleapis.com/v1/presentations/${presId}:batchUpdate`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        requests: [
-          {
-            updatePageProperties: {
-              objectId: slideId,
-              pageProperties: { layoutProperties: { name: 'TITLE_AND_BODY' } },
-              fields: 'pageProperties.layoutProperties'
-            }
+  // 첫 슬라이드를 TITLE_AND_BODY로 변환하고 제목/부제목 설정
+  async function makeTitleAndBody(presId, slideId, token, title, subtitle) {
+    try {
+      // 먼저 슬라이드 데이터를 가져와서 텍스트 요소들을 찾기
+      const slideData = await getPresentationData(presId, token);
+      const slide = slideData.slides.find(s => s.objectId === slideId);
+      
+      if (!slide || !slide.pageElements) {
+        console.error('슬라이드 또는 페이지 요소를 찾을 수 없습니다.');
+        return;
+      }
+
+      console.log('슬라이드 요소들:', slide.pageElements);
+
+      const requests = [
+        {
+          updatePageProperties: {
+            objectId: slideId,
+            pageProperties: { layoutProperties: { name: 'TITLE_AND_BODY' } },
+            fields: 'pageProperties.layoutProperties'
           }
-        ]
-      })
-    });
+        }
+      ];
+
+      // TITLE_AND_BODY 레이아웃으로 변경 후 다시 슬라이드 데이터 가져오기
+      await fetch(`https://slides.googleapis.com/v1/presentations/${presId}:batchUpdate`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ requests })
+      });
+
+      // 잠시 대기 후 업데이트된 슬라이드 데이터 가져오기
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      const updatedSlideData = await getPresentationData(presId, token);
+      const updatedSlide = updatedSlideData.slides.find(s => s.objectId === slideId);
+
+      if (!updatedSlide || !updatedSlide.pageElements) {
+        console.error('업데이트된 슬라이드 데이터를 가져올 수 없습니다.');
+        return;
+      }
+
+      console.log('업데이트된 슬라이드 요소들:', updatedSlide.pageElements);
+
+      // 제목과 부제목 요소 찾기 (더 간단한 방식)
+      let titleElement = null;
+      let subtitleElement = null;
+
+      for (const element of updatedSlide.pageElements) {
+        if (element.shape && element.shape.shapeType === 'TEXT_BOX') {
+          // 첫 번째 텍스트 박스를 제목으로, 두 번째를 부제목으로 사용
+          if (!titleElement) {
+            titleElement = element;
+          } else if (!subtitleElement) {
+            subtitleElement = element;
+          }
+        }
+      }
+
+      const textRequests = [];
+
+      // 제목 설정
+      if (titleElement && title) {
+        console.log('제목 설정:', title, '요소 ID:', titleElement.objectId);
+        textRequests.push({
+          insertText: {
+            objectId: titleElement.objectId,
+            insertionIndex: 0,
+            text: title
+          }
+        });
+      }
+
+      // 부제목 설정
+      if (subtitleElement && subtitle) {
+        console.log('부제목 설정:', subtitle, '요소 ID:', subtitleElement.objectId);
+        textRequests.push({
+          insertText: {
+            objectId: subtitleElement.objectId,
+            insertionIndex: 0,
+            text: subtitle
+          }
+        });
+      }
+
+      if (textRequests.length > 0) {
+        await fetch(`https://slides.googleapis.com/v1/presentations/${presId}:batchUpdate`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ requests: textRequests })
+        });
+        console.log('제목과 부제목이 성공적으로 설정되었습니다.');
+      }
+
+    } catch (error) {
+      console.error('makeTitleAndBody 오류:', error);
+    }
   }
 
   async function getPresentationData(presentationId, token) {
@@ -1429,6 +1511,9 @@ function App() {
     const day = String(currentDate.getDate()).padStart(2, '0');
     const dateString = `${year}-${month}-${day}`;
     
+    // PPT 표지용 제목 (날짜와 중복표시 제거)
+    const cleanTitle = title.replace(/\s+\d{4}-\d{2}-\d{2}$/, '').replace(/_\d+$/, '');
+    
     // 기본 파일명 생성 (날짜 포함)
     const baseFileName = `${title} ${dateString}`;
     
@@ -1499,10 +1584,18 @@ function App() {
         // 폴더 이동 실패해도 PPT 생성은 성공으로 처리
       }
 
-      // 2) 첫 슬라이드 레이아웃 보정
+      // 2) 첫 슬라이드 레이아웃 보정 및 제목/부제목 설정
       let data = await getPresentationData(presId, accessToken);
       if (data.slides?.length > 0) {
-        await makeTitleAndBody(presId, data.slides[0].objectId, accessToken);
+        // 구글 계정에서 사용자 이름 가져오기
+        let userName = '사용자';
+        try {
+          userName = await authService.current.getUserInfo();
+        } catch (error) {
+          console.warn('사용자 이름 가져오기 실패, 기본값 사용:', error);
+        }
+        
+        await makeTitleAndBody(presId, data.slides[0].objectId, accessToken, cleanTitle, userName);
       }
 
       // 3) 템플릿별 슬라이드 추가
