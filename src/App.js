@@ -42,6 +42,8 @@ function App() {
   const [pptHistory, setPptHistory] = useState([]); // PPT 생성 기록 // 이미지 확대 모달
   const [selectedImageForModal, setSelectedImageForModal] = useState(null); // 모달에 표시할 이미지
   const [imageLoadingStates, setImageLoadingStates] = useState(new Map()); // 이미지 로딩 상태 추적
+  const [selectedExperience, setSelectedExperience] = useState(null); // 선택된 이력
+  const [showExperienceModal, setShowExperienceModal] = useState(false); // 이력 상세 모달 표시 여부
   const [accessToken, setAccessToken] = useState('');
   const [slides, setSlides] = useState([]);
   const [presentationId, setPresentationId] = useState(null);
@@ -576,6 +578,18 @@ function App() {
   function openImageModal(imageUrl, title) {
     setSelectedImageForModal({ url: imageUrl, title });
     setShowImageModal(true);
+  }
+
+  // 이력 상세 모달 열기
+  function openExperienceModal(experience) {
+    setSelectedExperience(experience);
+    setShowExperienceModal(true);
+  }
+
+  // 이력 상세 모달 닫기
+  function closeExperienceModal() {
+    setSelectedExperience(null);
+    setShowExperienceModal(false);
   }
 
   // 이미지 확대 모달 닫기
@@ -2063,7 +2077,7 @@ function App() {
                                   </div>
                               ) : (
                                   experiences.map((exp, idx) => (
-                                      <div className="list-group-item" key={idx}>
+                                      <div className="list-group-item" key={idx} style={{ cursor: 'pointer' }} onClick={() => openExperienceModal(exp)}>
                                         <div className="d-flex align-items-center">
                                           <div className="me-3 d-flex flex-column" style={{ gap: '5px' }}>
                                             {(exp.imageUrls && exp.imageUrls.length > 0) ? (
@@ -2171,7 +2185,7 @@ function App() {
                                             <p className="mb-1"><small>{exp.period}</small></p>
                                             <p className="mb-0">{exp.description}</p>
                                           </div>
-                                          <div className="form-check ms-3">
+                                          <div className="form-check ms-3" onClick={(e) => e.stopPropagation()}>
                                             <input className="form-check-input" type="checkbox" checked={selected.includes(idx)} onChange={() => toggleSelect(idx)} />
                                           </div>
                                         </div>
@@ -2747,7 +2761,7 @@ function App() {
                                   </div>
                               ) : (
                                   experiences.map((exp, idx) => (
-                                      <div className="list-group-item" key={idx}>
+                                      <div className="list-group-item" key={idx} style={{ cursor: 'pointer' }} onClick={() => openExperienceModal(exp)}>
                                         <div className="d-flex align-items-center">
                                           <div className="me-3 d-flex flex-column" style={{ gap: '5px' }}>
                                             {(exp.imageUrls && exp.imageUrls.length > 0) ? (
@@ -2767,7 +2781,10 @@ function App() {
                                                           }}
                                                           onMouseEnter={(e) => e.currentTarget.style.borderColor = '#007bff'}
                                                           onMouseLeave={(e) => e.currentTarget.style.borderColor = 'transparent'}
-                                                          onClick={() => openImageModal(imageUrl, `${exp.title} - 이미지 ${imgIdx + 1}`)}
+                                                          onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            openImageModal(imageUrl, `${exp.title} - 이미지 ${imgIdx + 1}`);
+                                                          }}
                                                       >
                                                         {imageLoadingStates.get(`${imageUrl}_${exp.title} 이미지 ${imgIdx + 1}`) === 'loading' && (
                                                           <div style={{
@@ -3102,6 +3119,140 @@ function App() {
                 </div>
               </div>
             </div>
+        )}
+
+        {/* 이력 상세 모달 */}
+        {showExperienceModal && selectedExperience && (
+          <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+            <div className="modal-dialog modal-lg modal-dialog-centered">
+              <div className="modal-content mac-modal">
+                <div className="modal-header">
+                  <h5 className="modal-title">
+                    <i className="fas fa-clipboard-list me-2"></i>
+                    {selectedExperience.title}
+                  </h5>
+                  <button type="button" className="btn-close" onClick={closeExperienceModal}></button>
+                </div>
+                <div className="modal-body">
+                  <div className="row">
+                    <div className="col-md-6">
+                      <h6 className="text-muted mb-3">기본 정보</h6>
+                      <div className="mb-3">
+                        <strong>제목:</strong>
+                        <p className="mt-1">{selectedExperience.title}</p>
+                      </div>
+                      <div className="mb-3">
+                        <strong>기간:</strong>
+                        <p className="mt-1">{selectedExperience.period}</p>
+                      </div>
+                      <div className="mb-3">
+                        <strong>설명:</strong>
+                        <p className="mt-1" style={{ whiteSpace: 'pre-wrap' }}>{selectedExperience.description}</p>
+                      </div>
+                    </div>
+                    <div className="col-md-6">
+                      <h6 className="text-muted mb-3">첨부 이미지</h6>
+                      {selectedExperience.imageUrls && selectedExperience.imageUrls.length > 0 ? (
+                        <div className="experience-images">
+                          <div className="row g-2">
+                            {selectedExperience.imageUrls.map((imageUrl, imgIdx) => (
+                              <div key={imgIdx} className="col-6">
+                                <div
+                                  className="image-thumbnail"
+                                  style={{
+                                    width: '100%',
+                                    height: '150px',
+                                    overflow: 'hidden',
+                                    borderRadius: '8px',
+                                    cursor: 'pointer',
+                                    border: '2px solid transparent',
+                                    transition: 'border-color 0.2s',
+                                    position: 'relative'
+                                  }}
+                                  onMouseEnter={(e) => e.currentTarget.style.borderColor = '#007bff'}
+                                  onMouseLeave={(e) => e.currentTarget.style.borderColor = 'transparent'}
+                                  onClick={() => openImageModal(imageUrl, `${selectedExperience.title} - 이미지 ${imgIdx + 1}`)}
+                                >
+                                  {imageLoadingStates.get(`${imageUrl}_${selectedExperience.title} 이미지 ${imgIdx + 1}`) === 'loading' && (
+                                    <div style={{
+                                      position: 'absolute',
+                                      top: '50%',
+                                      left: '50%',
+                                      transform: 'translate(-50%, -50%)',
+                                      color: '#007bff',
+                                      fontSize: '16px'
+                                    }}>
+                                      <i className="fas fa-spinner fa-spin"></i>
+                                    </div>
+                                  )}
+                                  {imageLoadingStates.get(`${imageUrl}_${selectedExperience.title} 이미지 ${imgIdx + 1}`) === 'error' && (
+                                    <div style={{
+                                      position: 'absolute',
+                                      top: '50%',
+                                      left: '50%',
+                                      transform: 'translate(-50%, -50%)',
+                                      color: '#dc3545',
+                                      fontSize: '16px'
+                                    }}>
+                                      <i className="fas fa-exclamation-triangle"></i>
+                                    </div>
+                                  )}
+                                  <img
+                                    src={imageUrl}
+                                    alt={`${selectedExperience.title} 이미지 ${imgIdx + 1}`}
+                                    loading="lazy"
+                                    decoding="async"
+                                    style={{ 
+                                      width: '100%', 
+                                      height: '100%', 
+                                      objectFit: 'cover',
+                                      opacity: imageLoadingStates.get(`${imageUrl}_${selectedExperience.title} 이미지 ${imgIdx + 1}`) === 'loading' ? 0.5 : 1
+                                    }}
+                                    onLoad={() => setImageLoadingState(`${imageUrl}_${selectedExperience.title} 이미지 ${imgIdx + 1}`, false)}
+                                    onError={async (e) => {
+                                      if (e.target.dataset.converting === 'true') {
+                                        return;
+                                      }
+                                      
+                                      try {
+                                        e.target.dataset.converting = 'true';
+                                        console.log('이력 모달 이미지 로딩 실패, 재시도 시작:', imageUrl);
+                                        await retryImageLoad(e.target, imageUrl);
+                                      } catch (error) {
+                                        console.error('이력 모달 이미지 로딩 재시도 실패:', error);
+                                        e.target.style.display = 'none';
+                                      } finally {
+                                        e.target.dataset.converting = 'false';
+                                      }
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="mt-2 text-center">
+                            <small className="text-muted">
+                              총 {selectedExperience.imageUrls.length}개의 이미지
+                            </small>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-center p-4" style={{ backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
+                          <i className="fas fa-image fa-3x text-muted mb-3"></i>
+                          <p className="text-muted mb-0">첨부된 이미지가 없습니다</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className="modal-footer">
+                  <button type="button" className="btn btn-secondary" onClick={closeExperienceModal}>
+                    닫기
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
       </div>
   );

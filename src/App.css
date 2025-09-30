@@ -267,6 +267,66 @@
 .fa-file-image { color: #6f42c1 !important; }
 .fa-folder { color: #ffc107 !important; }
 
+/* 이력 상세 모달 스타일 */
+.experience-images .image-thumbnail {
+  transition: all 0.3s ease;
+}
+
+.experience-images .image-thumbnail:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+}
+
+.mac-modal {
+  background: linear-gradient(135deg, #1e1e1e 0%, #2d2d2d 100%);
+  border: 1px solid #404040;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.mac-modal .modal-header {
+  border-bottom: 1px solid #404040;
+  background: linear-gradient(135deg, #2d2d2d 0%, #1e1e1e 100%);
+  border-radius: 12px 12px 0 0;
+}
+
+.mac-modal .modal-title {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.mac-modal .modal-body {
+  color: #ffffff;
+  background: transparent;
+}
+
+.mac-modal .modal-footer {
+  border-top: 1px solid #404040;
+  background: linear-gradient(135deg, #1e1e1e 0%, #2d2d2d 100%);
+  border-radius: 0 0 12px 12px;
+}
+
+.mac-modal .btn-close {
+  filter: invert(1);
+}
+
+.mac-modal .text-muted {
+  color: #adb5bd !important;
+}
+
+.mac-modal .form-control {
+  background-color: #2d2d2d;
+  border-color: #404040;
+  color: #ffffff;
+}
+
+.mac-modal .form-control:focus {
+  background-color: #2d2d2d;
+  border-color: #007bff;
+  color: #ffffff;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
 /* 반응형 디자인 */
 @media (max-width: 768px) {
   .file-actions {
@@ -286,5 +346,27 @@
   .btn-group .btn {
     margin-bottom: 4px;
     margin-right: 0;
+  }
+
+  /* 이력 모달 모바일 반응형 */
+  .experience-images .col-6 {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+
+  .experience-images .image-thumbnail {
+    height: 200px;
+  }
+
+  .mac-modal .modal-dialog {
+    margin: 0.5rem;
+  }
+
+  .mac-modal .row {
+    flex-direction: column;
+  }
+
+  .mac-modal .col-md-6 {
+    margin-bottom: 1rem;
   }
 }
