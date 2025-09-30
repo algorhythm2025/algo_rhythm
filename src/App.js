@@ -1586,17 +1586,24 @@ function App() {
     basic: {
       name: '기본 템플릿',
       description: '깔끔하고 전문적인 레이아웃으로 구성된 템플릿입니다. 각 이력사항을 개별 슬라이드로 구성하여 명확하고 간결하게 표현할 수 있습니다.',
-      features: ['깔끔한 디자인', '이력별 개별 슬라이드', '전문적인 레이아웃', '이미지와 텍스트 조화']
+      features: ['깔끔한 디자인', '이력별 개별 슬라이드', '전문적인 레이아웃', '이미지와 텍스트 조화'],
+      previewImages: [
+        '/template/img/sample1.png',
+        '/template/img/sample2.png',
+        '/template/img/sample3.png'
+      ]
     },
     timeline: {
       name: '타임라인 템플릿',
       description: '시간의 흐름에 따라 이력사항을 구성하는 템플릿입니다. 연도별로 정리된 타임라인과 함께 각 이력의 상세 내용을 보여줍니다.',
-      features: ['시간순 구성', '타임라인 시각화', '연도별 정리', '발전 과정 표현']
+      features: ['시간순 구성', '타임라인 시각화', '연도별 정리', '발전 과정 표현'],
+      previewImages: []
     },
     grid: {
       name: '그리드 템플릿',
       description: '격자 형태로 이력사항을 배치하는 템플릿입니다. 여러 이력을 한눈에 볼 수 있어 비교하기 쉽고 시각적으로 정리된 느낌을 줍니다.',
-      features: ['격자형 레이아웃', '한눈에 보기', '비교 용이', '시각적 정리']
+      features: ['격자형 레이아웃', '한눈에 보기', '비교 용이', '시각적 정리'],
+      previewImages: []
     }
   };
 
@@ -3541,6 +3548,49 @@ function App() {
                       <p className="mb-4" style={{ whiteSpace: 'pre-wrap', color: 'white' }}>
                         {templateDescriptions[selectedTemplateForModal]?.description}
                       </p>
+                      
+                      {/* 템플릿 미리보기 이미지 */}
+                      {templateDescriptions[selectedTemplateForModal]?.previewImages && 
+                       templateDescriptions[selectedTemplateForModal].previewImages.length > 0 && (
+                        <div className="mb-4">
+                          <h6 className="mb-3" style={{ color: 'white' }}>템플릿 미리보기</h6>
+                          <div className="template-preview-container">
+                            <div className="row g-3">
+                              {templateDescriptions[selectedTemplateForModal].previewImages.map((imagePath, index) => (
+                                <div key={index} className="col-md-4">
+                                  <div className="template-preview-item">
+                                    <img 
+                                      src={imagePath} 
+                                      alt={`템플릿 미리보기 ${index + 1}`}
+                                      className="img-fluid rounded"
+                                      style={{
+                                        width: '100%',
+                                        height: '200px',
+                                        objectFit: 'cover',
+                                        border: '2px solid #007bff',
+                                        cursor: 'pointer',
+                                        transition: 'transform 0.2s ease'
+                                      }}
+                                      onMouseOver={(e) => e.target.style.transform = 'scale(1.05)'}
+                                      onMouseOut={(e) => e.target.style.transform = 'scale(1)'}
+                                      onClick={() => {
+                                        setSelectedImageForModal({
+                                          url: imagePath,
+                                          title: `템플릿 미리보기 ${index + 1}`
+                                        });
+                                        setShowImageModal(true);
+                                      }}
+                                    />
+                                    <div className="text-center mt-2">
+                                      <small style={{ color: '#ccc' }}>미리보기 {index + 1}</small>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
                       
                       <h6 className="mb-3" style={{ color: 'white' }}>주요 특징</h6>
                       <div className="template-features">
