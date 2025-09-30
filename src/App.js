@@ -45,6 +45,8 @@ function App() {
   const [selectedImageForModal, setSelectedImageForModal] = useState(null); // 모달에 표시할 이미지
   const [imageLoadingStates, setImageLoadingStates] = useState(new Map()); // 이미지 로딩 상태 추적
   const [selectedExperience, setSelectedExperience] = useState(null); // 선택된 이력
+  const [showTemplateModal, setShowTemplateModal] = useState(false); // 템플릿 모달 표시 상태
+  const [selectedTemplateForModal, setSelectedTemplateForModal] = useState(null); // 모달에서 선택된 템플릿
   const [showExperienceModal, setShowExperienceModal] = useState(false); // 이력 상세 모달 표시 여부
   const [accessToken, setAccessToken] = useState('');
   const [slides, setSlides] = useState([]);
@@ -1075,7 +1077,11 @@ function App() {
     try {
       setIsUploadLoading(true);
       await driveService.current.uploadFile(file.name, file, file.type);
-      await loadDriveFiles();
+      
+      // 현재 경로를 유지하면서 파일 목록 새로고침
+      const currentParentId = currentPath.length > 0 ? currentPath[currentPath.length - 1].id : null;
+      await loadDriveFiles(currentParentId);
+      
       alert('파일이 업로드되었습니다!');
     } catch (error) {
       const errorMessage = driveService.current?.formatErrorMessage(error) || '파일 업로드에 실패했습니다.';
@@ -1093,7 +1099,11 @@ function App() {
       // 해당 파일 ID를 삭제 중 상태에 추가
       setDeletingFileIds(prev => new Set([...prev, fileId]));
       await driveService.current.deleteFile(fileId);
-      await loadDriveFiles();
+      
+      // 현재 경로를 유지하면서 파일 목록 새로고침
+      const currentParentId = currentPath.length > 0 ? currentPath[currentPath.length - 1].id : null;
+      await loadDriveFiles(currentParentId);
+      
       alert('파일이 삭제되었습니다!');
     } catch (error) {
       const errorMessage = driveService.current?.formatErrorMessage(error) || '파일 삭제에 실패했습니다.';
@@ -1223,7 +1233,10 @@ function App() {
   async function handleDriveRefresh() {
     try {
       setIsRefreshLoading(true);
-      await loadDriveFiles();
+      
+      // 현재 경로를 유지하면서 파일 목록 새로고침
+      const currentParentId = currentPath.length > 0 ? currentPath[currentPath.length - 1].id : null;
+      await loadDriveFiles(currentParentId);
     } finally {
       setIsRefreshLoading(false);
     }
@@ -1549,6 +1562,50 @@ function App() {
     }
     return '';
   }
+
+  // 템플릿 모달 표시
+  function openTemplateModal(templateName) {
+    setSelectedTemplateForModal(templateName);
+    setShowTemplateModal(true);
+  }
+
+  // 템플릿 모달에서 사용 버튼 클릭
+  async function handleTemplateUse() {
+    setShowTemplateModal(false);
+    await handleTemplateSelect(selectedTemplateForModal);
+  }
+
+  // 템플릿 모달에서 취소 버튼 클릭
+  function handleTemplateCancel() {
+    setShowTemplateModal(false);
+    setSelectedTemplateForModal(null);
+  }
+
+  // 템플릿 설명 객체
+  const templateDescriptions = {
+    basic: {
+      name: '기본 템플릿',
+      description: '깔끔하고 전문적인 레이아웃으로 구성된 템플릿입니다. 각 이력사항을 개별 슬라이드로 구성하여 명확하고 간결하게 표현할 수 있습니다.',
+      features: ['깔끔한 디자인', '이력별 개별 슬라이드', '전문적인 레이아웃', '이미지와 텍스트 조화'],
+      previewImages: [
+        `${process.env.PUBLIC_URL}/template/img/sample1.png`,
+        `${process.env.PUBLIC_URL}/template/img/sample2.png`,
+        `${process.env.PUBLIC_URL}/template/img/sample3.png`
+      ]
+    },
+    timeline: {
+      name: '타임라인 템플릿',
+      description: '시간의 흐름에 따라 이력사항을 구성하는 템플릿입니다. 연도별로 정리된 타임라인과 함께 각 이력의 상세 내용을 보여줍니다.',
+      features: ['시간순 구성', '타임라인 시각화', '연도별 정리', '발전 과정 표현'],
+      previewImages: []
+    },
+    grid: {
+      name: '그리드 템플릿',
+      description: '격자 형태로 이력사항을 배치하는 템플릿입니다. 여러 이력을 한눈에 볼 수 있어 비교하기 쉽고 시각적으로 정리된 느낌을 줍니다.',
+      features: ['격자형 레이아웃', '한눈에 보기', '비교 용이', '시각적 정리'],
+      previewImages: []
+    }
+  };
 
   // 템플릿 선택 → 프레젠테이션 생성 + 이력 반영
   async function handleTemplateSelect(templateName) {
@@ -2402,15 +2459,15 @@ function App() {
                           </div>
                         ) : (
                           <div className="template-grid">
-                            <div className="mac-card" onClick={() => handleTemplateSelect('basic')}>
+                            <div className="mac-card" onClick={() => openTemplateModal('basic')}>
                               <h3>기본 템플릿</h3>
                               <p>깔끔하고 전문적인 레이아웃</p>
                             </div>
-                            <div className="mac-card" onClick={() => handleTemplateSelect('timeline')}>
+                            <div className="mac-card" onClick={() => openTemplateModal('timeline')}>
                               <h3>타임라인 템플릿</h3>
                               <p>시간 흐름에 따른 구성</p>
                             </div>
-                            <div className="mac-card" onClick={() => handleTemplateSelect('grid')}>
+                            <div className="mac-card" onClick={() => openTemplateModal('grid')}>
                               <h3>그리드 템플릿</h3>
                               <p>균형 잡힌 구성</p>
                             </div>
@@ -3353,22 +3410,22 @@ function App() {
                 <div className="modal-body">
                   <div className="row">
                     <div className="col-md-6">
-                      <h6 className="text-muted mb-3">기본 정보</h6>
+                      <h6 className="mb-3" style={{ color: 'white' }}>기본 정보</h6>
                       <div className="mb-3">
-                        <strong>제목:</strong>
-                        <p className="mt-1">{selectedExperience.title}</p>
+                        <strong style={{ color: 'white' }}>제목:</strong>
+                        <p className="mt-1" style={{ color: 'white' }}>{selectedExperience.title}</p>
                       </div>
                       <div className="mb-3">
-                        <strong>기간:</strong>
-                        <p className="mt-1">{selectedExperience.period}</p>
+                        <strong style={{ color: 'white' }}>기간:</strong>
+                        <p className="mt-1" style={{ color: 'white' }}>{selectedExperience.period}</p>
                       </div>
                       <div className="mb-3">
-                        <strong>설명:</strong>
-                        <p className="mt-1" style={{ whiteSpace: 'pre-wrap' }}>{selectedExperience.description}</p>
+                        <strong style={{ color: 'white' }}>설명:</strong>
+                        <p className="mt-1" style={{ whiteSpace: 'pre-wrap', color: 'white' }}>{selectedExperience.description}</p>
                       </div>
                     </div>
                     <div className="col-md-6">
-                      <h6 className="text-muted mb-3">첨부 이미지</h6>
+                      <h6 className="mb-3" style={{ color: 'white' }}>첨부 이미지</h6>
                       {selectedExperience.imageUrls && selectedExperience.imageUrls.length > 0 ? (
                         <div className="experience-images">
                           <div className="row g-2">
@@ -3448,15 +3505,15 @@ function App() {
                             ))}
                           </div>
                           <div className="mt-2 text-center">
-                            <small className="text-muted">
+                            <small style={{ color: 'white' }}>
                               총 {selectedExperience.imageUrls.length}개의 이미지
                             </small>
                           </div>
                         </div>
                       ) : (
                         <div className="text-center p-4" style={{ backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
-                          <i className="fas fa-image fa-3x text-muted mb-3"></i>
-                          <p className="text-muted mb-0">첨부된 이미지가 없습니다</p>
+                          <i className="fas fa-image fa-3x mb-3" style={{ color: '#6c757d' }}></i>
+                          <p className="mb-0" style={{ color: '#6c757d' }}>첨부된 이미지가 없습니다</p>
                         </div>
                       )}
                     </div>
@@ -3465,6 +3522,94 @@ function App() {
                 <div className="modal-footer">
                   <button type="button" className="btn btn-secondary" onClick={closeExperienceModal}>
                     닫기
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 템플릿 선택 모달 */}
+        {showTemplateModal && selectedTemplateForModal && (
+          <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+            <div className="modal-dialog modal-lg modal-dialog-centered">
+              <div className="modal-content mac-modal">
+                <div className="modal-header">
+                  <h5 className="modal-title">
+                    <i className="fas fa-file-powerpoint me-2"></i>
+                    {templateDescriptions[selectedTemplateForModal]?.name}
+                  </h5>
+                  <button type="button" className="btn-close" onClick={handleTemplateCancel}></button>
+                </div>
+                <div className="modal-body">
+                  <div className="row">
+                    <div className="col-12">
+                      <h6 className="mb-3" style={{ color: 'white' }}>템플릿 설명</h6>
+                      <p className="mb-4" style={{ whiteSpace: 'pre-wrap', color: 'white' }}>
+                        {templateDescriptions[selectedTemplateForModal]?.description}
+                      </p>
+                      
+                      {/* 템플릿 미리보기 이미지 */}
+                      {templateDescriptions[selectedTemplateForModal]?.previewImages && 
+                       templateDescriptions[selectedTemplateForModal].previewImages.length > 0 && (
+                        <div className="mb-4">
+                          <h6 className="mb-3" style={{ color: 'white' }}>템플릿 미리보기</h6>
+                          <div className="template-preview-container">
+                            <div className="row g-3">
+                              {templateDescriptions[selectedTemplateForModal].previewImages.map((imagePath, index) => (
+                                <div key={index} className="col-md-4">
+                                  <div className="template-preview-item">
+                                    <img 
+                                      src={imagePath} 
+                                      alt={`템플릿 미리보기 ${index + 1}`}
+                                      className="img-fluid rounded"
+                                      style={{
+                                        width: '100%',
+                                        height: '200px',
+                                        objectFit: 'cover',
+                                        border: '2px solid #007bff',
+                                        cursor: 'pointer',
+                                        transition: 'transform 0.2s ease'
+                                      }}
+                                      onMouseOver={(e) => e.target.style.transform = 'scale(1.05)'}
+                                      onMouseOut={(e) => e.target.style.transform = 'scale(1)'}
+                                      onClick={() => {
+                                        setSelectedImageForModal({
+                                          url: imagePath,
+                                          title: `템플릿 미리보기 ${index + 1}`
+                                        });
+                                        setShowImageModal(true);
+                                      }}
+                                    />
+                                    <div className="text-center mt-2">
+                                      <small style={{ color: '#ccc' }}>미리보기 {index + 1}</small>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      
+                      <h6 className="mb-3" style={{ color: 'white' }}>주요 특징</h6>
+                      <div className="template-features">
+                        {templateDescriptions[selectedTemplateForModal]?.features.map((feature, index) => (
+                          <div key={index} className="feature-item mb-2 d-flex align-items-center">
+                            <i className="fas fa-check-circle text-success me-2"></i>
+                            <span style={{ color: 'white' }}>{feature}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="modal-footer">
+                  <button type="button" className="btn btn-secondary" onClick={handleTemplateCancel}>
+                    취소
+                  </button>
+                  <button type="button" className="btn btn-primary" onClick={handleTemplateUse}>
+                    템플릿 사용
                   </button>
                 </div>
               </div>
