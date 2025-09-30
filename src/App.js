@@ -32,6 +32,9 @@ function App() {
   const [isUploadLoading, setIsUploadLoading] = useState(false);
   const [isRefreshLoading, setIsRefreshLoading] = useState(false);
   const [isDeleteLoading, setIsDeleteLoading] = useState(false);
+  const [editingIndex, setEditingIndex] = useState(null);
+
+  const [deletingFileIds, setDeletingFileIds] = useState([]);
   const [isViewModeLoading, setIsViewModeLoading] = useState(false);
   const [isPptCreating, setIsPptCreating] = useState(false); // PPT 생성 로딩 상태
   const [currentPath, setCurrentPath] = useState([]); // 현재 경로 추적
@@ -408,14 +411,46 @@ function App() {
   }
 
   // 이력 추가 모달
-  function showAddExperienceModal() {
+
+  function showEditExperienceModal(index) {
+    const expToEdit = experiences[index];
+
+    // 폼 상태를 선택된 이력 데이터로 채웁니다.
+    setForm({
+      title: expToEdit.title,
+      startDate: expToEdit.startDate,
+      endDate: expToEdit.endDate,
+      description: expToEdit.description
+    });
+
+    // 이미지 처리는 더 복잡하므로 여기서는 폼 데이터만 채웁니다.
+    // 실제 구현에서는 이미지 URL을 preview 상태로 변환하는 로직이 필요합니다.
+
+    setEditingIndex(index); // 수정 모드임을 표시
     setShowModal(true);
   }
-  function closeModal() {
-    setShowModal(false);
+  function showAddExperienceModal() {
+    // 1. 상태를 완전히 초기화하여 '등록' 모드(editingIndex = null)를 보장합니다.
+    //    closeModal에서 setShowModal(false)를 호출했다면, 그 부분은 주석 처리합니다.
+
+    // 상태 초기화 (폼, 이미지, 편집 인덱스 등)
     setForm({ title: '', startDate: '', endDate: '', description: '' });
     setSelectedImages([]);
     setImagePreviews([]);
+    setEditingIndex(null); // 수정 모드 아님을 확실히 지정
+
+    // 2. 모달을 엽니다. (딱 한 번 호출)
+    setShowModal(true);
+  }
+  function closeModal() {
+    // 1. 모달 닫기
+    setShowModal(false);
+
+    // 2. 폼 및 상태 초기화 (editingIndex 초기화 포함)
+    setForm({ title: '', startDate: '', endDate: '', description: '' });
+    setSelectedImages([]);
+    setImagePreviews([]);
+    setEditingIndex(null);
   }
 
   // 기간 포맷팅 함수
@@ -466,57 +501,190 @@ function App() {
 
     return true;
   }
+// App.js 내부 - saveExperience 함수 수정
 
-  // 이력 저장
   async function saveExperience(e) {
     e.preventDefault();
     if (form.title && form.startDate && form.endDate && form.description) {
-      // 날짜 유효성 검사
       if (!validateDates(form.startDate, form.endDate)) {
         return;
       }
 
-      try
-      {
+      try {
         setIsExperienceLoading(true);
 
-        let imageUrls = [];
-
-        // 이미지들이 선택된 경우 구글 드라이브에 업로드
+        let newImageUrls = [];
+        // 1. 새 이미지가 있다면 드라이브에 업로드
         if (selectedImages.length > 0) {
           for (const imageFile of selectedImages) {
             const imageUrl = await uploadImageToDrive(imageFile, form.title);
-            imageUrls.push(imageUrl);
+            newImageUrls.push(imageUrl);
           }
         }
 
-        // 기간 포맷팅
         const period = formatPeriod(form.startDate, form.endDate);
+        let experienceToSave;
 
-        // 로컬 상태 업데이트 (기간 포함)
-        const newExperience = {
-          ...form,
-          period, // 포맷팅된 기간 추가
-          imageUrls
-        };
-        setExperiences([...experiences, newExperience]);
+        if (editingIndex !== null) {
+          // ⭐ 수정 모드 (Editing Mode)
+          const existingImageUrls = experiences[editingIndex].imageUrls || [];
 
-        // 구글 시트에 저장
-        if (spreadsheetId && sheetsService.current) {
-          const sheetData = sheetsService.current.formatExperienceForSheet(newExperience);
-          await sheetsService.current.appendData(spreadsheetId, 'A:E', [sheetData]);
+          experienceToSave = {
+            ...form,
+            period,
+            // 기존 이미지 URL에 새로 업로드한 이미지 URL을 합칩니다.
+            imageUrls: existingImageUrls.concat(newImageUrls)
+          };
+
+          const rowNumber = editingIndex + 2;
+          if (spreadsheetId && sheetsService.current) {
+            const sheetData = sheetsService.current.formatExperienceForSheet(experienceToSave);
+            await sheetsService.current.updateData(spreadsheetId, `A${rowNumber}:E${rowNumber}`, [sheetData]);
+          }
+          setExperiences(prev => prev.map((exp, i) => i === editingIndex ? experienceToSave : exp));
+
+        } else {
+          // ⭐ 등록 모드 (Creation Mode)
+          experienceToSave = {
+            ...form,
+            period,
+            imageUrls: newImageUrls // 새 이력은 새로 업로드한 이미지 URL만 가집니다.
+          };
+
+          // 1. 구글 시트 추가
+          if (spreadsheetId && sheetsService.current) {
+            const sheetData = sheetsService.current.formatExperienceForSheet(experienceToSave);
+            await sheetsService.current.appendData(spreadsheetId, 'A:E', [sheetData]);
+          }
+
+          // 2. ⭐ 로컬 상태에 새 이력 추가 (정확히 새 이력 객체만 추가) ⭐
+          // 이 코드가 이력을 성공적으로 추가하고 화면에 남아있도록 보장합니다.
+          setExperiences(prev => [...prev, experienceToSave]);
         }
 
         closeModal();
-      }catch (error) {
-        console.error('이력 저장 오류:', error);
-        const errorMessage = sheetsService.current?.formatErrorMessage(error) || '이력 저장에 실패했습니다.';
+      } catch (error) {
+        console.error('이력 저장/수정 오류:', error);
+        const errorMessage = sheetsService.current?.formatErrorMessage(error) || '이력 저장/수정에 실패했습니다.';
         alert(errorMessage);
       } finally {
         setIsExperienceLoading(false);
       }
     }
   }
+//   async function saveExperience(e) {
+//     e.preventDefault();
+//     if (form.title && form.startDate && form.endDate && form.description) {
+//       if (!validateDates(form.startDate, form.endDate)) {
+//         return;
+//       }
+//
+//       try {
+//         setIsExperienceLoading(true);
+//
+//         let imageUrls = [];
+//         // (기존 이미지 업로드 로직은 그대로 유지)
+//         if (selectedImages.length > 0) {
+//           for (const imageFile of selectedImages) {
+//             // 참고: 이미지 수정 시에는 기존 이미지 삭제 및 새 이미지 업로드 로직이 필요합니다.
+//             const imageUrl = await uploadImageToDrive(imageFile, form.title);
+//             imageUrls.push(imageUrl);
+//           }
+//         }
+//
+//         const period = formatPeriod(form.startDate, form.endDate);
+//         const updatedExperience = {
+//           ...form,
+//           period,
+//           imageUrls
+//         };
+//
+//         if (editingIndex !== null) {
+//           // ⭐ 수정 모드 (Editing Mode)
+//           const rowNumber = editingIndex + 2; // 시트 행 번호 (헤더 + 0번 인덱스 + 1)
+//
+//           // 1. 구글 시트 업데이트
+//           if (spreadsheetId && sheetsService.current) {
+//             const sheetData = sheetsService.current.formatExperienceForSheet(updatedExperience);
+//             // updateData는 SheetsService에 정의되어 있어야 합니다. (없다면 추가 필요)
+//             await sheetsService.current.updateData(spreadsheetId, `A${rowNumber}:E${rowNumber}`, [sheetData]);
+//           }
+//
+//           // 2. 로컬 상태 업데이트
+//           setExperiences(prev => prev.map((exp, i) => i === editingIndex ? updatedExperience : exp));
+//
+//         } else {
+//           // ⭐ 등록 모드 (Creation Mode)
+//           // 1. 구글 시트 추가
+//           if (spreadsheetId && sheetsService.current) {
+//             const sheetData = sheetsService.current.formatExperienceForSheet(updatedExperience);
+//             await sheetsService.current.appendData(spreadsheetId, 'A:E', [sheetData]);
+//           }
+//
+//           // 2. 로컬 상태 추가
+//           setExperiences(prev => [...prev, updatedExperience]);
+//         }
+//
+//         closeModal();
+//       } catch (error) {
+//         console.error('이력 저장/수정 오류:', error);
+//         const errorMessage = sheetsService.current?.formatErrorMessage(error) || '이력 저장/수정에 실패했습니다.';
+//         alert(errorMessage);
+//       } finally {
+//         setIsExperienceLoading(false);
+//       }
+//     }
+//   }
+  // 이력 저장
+  // async function saveExperience(e) {
+  //   e.preventDefault();
+  //   if (form.title && form.startDate && form.endDate && form.description) {
+  //     // 날짜 유효성 검사
+  //     if (!validateDates(form.startDate, form.endDate)) {
+  //       return;
+  //     }
+  //
+  //     try
+  //     {
+  //       setIsExperienceLoading(true);
+  //
+  //       let imageUrls = [];
+  //
+  //       // 이미지들이 선택된 경우 구글 드라이브에 업로드
+  //       if (selectedImages.length > 0) {
+  //         for (const imageFile of selectedImages) {
+  //           const imageUrl = await uploadImageToDrive(imageFile, form.title);
+  //           imageUrls.push(imageUrl);
+  //         }
+  //       }
+  //
+  //       // 기간 포맷팅
+  //       const period = formatPeriod(form.startDate, form.endDate);
+  //
+  //       // 로컬 상태 업데이트 (기간 포함)
+  //       const newExperience = {
+  //         ...form,
+  //         period, // 포맷팅된 기간 추가
+  //         imageUrls
+  //       };
+  //       setExperiences([...experiences, newExperience]);
+  //
+  //       // 구글 시트에 저장
+  //       if (spreadsheetId && sheetsService.current) {
+  //         const sheetData = sheetsService.current.formatExperienceForSheet(newExperience);
+  //         await sheetsService.current.appendData(spreadsheetId, 'A:E', [sheetData]);
+  //       }
+  //
+  //       closeModal();
+  //     }catch (error) {
+  //       console.error('이력 저장 오류:', error);
+  //       const errorMessage = sheetsService.current?.formatErrorMessage(error) || '이력 저장에 실패했습니다.';
+  //       alert(errorMessage);
+  //     } finally {
+  //       setIsExperienceLoading(false);
+  //     }
+  //   }
+  // }
 
   // 전체 선택/해제
   function selectAllExperiences(select) {
@@ -912,6 +1080,41 @@ function App() {
       setIsExperienceLoading(false);
     }
   }
+  async function deleteIndividualExperience(indexToDelete) {
+    const expToDelete = experiences[indexToDelete];
+
+    if (!window.confirm(`"${expToDelete.title}" 이력을 정말로 삭제하시겠습니까?`)) {
+      return;
+    }
+
+    try {
+      setIsExperienceLoading(true);
+
+      if (spreadsheetId && sheetsService.current) {
+        // 헤더(1행) + 인덱스(0부터 시작) + 1 = 실제 시트 행 번호
+        const rowNumber = indexToDelete + 2;
+
+        // 시트에서 해당 행 삭제
+        await sheetsService.current.deleteData(spreadsheetId, `A${rowNumber}:E${rowNumber}`);
+      }
+
+      // 로컬 상태에서도 삭제
+      const newExperiences = experiences.filter((_, idx) => idx !== indexToDelete);
+      setExperiences(newExperiences);
+
+      // 선택된 목록도 갱신 (선택된 이력이 삭제되었을 경우를 대비)
+      setSelected([]);
+
+      alert('이력이 삭제되었습니다!');
+
+    } catch (error) {
+      console.error('개별 이력 삭제 오류:', error);
+      const errorMessage = sheetsService.current?.formatErrorMessage(error) || '이력 삭제에 실패했습니다.';
+      alert(errorMessage);
+    } finally {
+      setIsExperienceLoading(false);
+    }
+  }
 
   // 파일 다운로드 (Access Token 사용)
   async function handleDriveFileDownload(file) {
@@ -984,19 +1187,55 @@ function App() {
   }
 
   // 파일 삭제 핸들러
+  // async function handleDriveFileDelete(fileId) {
+  //   if (!window.confirm('정말로 이 파일을 삭제하시겠습니까?') || !driveService.current) return;
+  //
+  //   try {
+  //     setIsDeleteLoading(true);
+  //     await driveService.current.deleteFile(fileId);
+  //     await loadDriveFiles();
+  //     alert('파일이 삭제되었습니다!');
+  //   } catch (error) {
+  //     const errorMessage = driveService.current?.formatErrorMessage(error) || '파일 삭제에 실패했습니다.';
+  //     alert(errorMessage);
+  //   } finally {
+  //     setIsDeleteLoading(false);
+  //   }
+  // }
+
+
+
   async function handleDriveFileDelete(fileId) {
-    if (!window.confirm('정말로 이 파일을 삭제하시겠습니까?') || !driveService.current) return;
+    if (!window.confirm('정말로 이 파일을 삭제하시겠습니까?')) return;
+
+    // 1. 현재 머물고 있는 폴더의 ID를 확인합니다.
+    // currentPath 배열의 마지막 요소가 현재 폴더 ID입니다. 배열이 비어있다면 null입니다.
+    const currentFolderId = currentPath.length > 0
+        ? currentPath[currentPath.length - 1].id
+        : null; // 루트 폴더를 나타냄
+
+    // 삭제 시작: 해당 파일의 ID를 배열에 추가
+    setDeletingFileIds(prevIds => [...prevIds, fileId]);
 
     try {
-      setIsDeleteLoading(true);
+      if (!driveService.current) {
+        throw new Error('Drive 서비스가 초기화되지 않았습니다.');
+      }
+
+      // 2. 파일 삭제 실행
       await driveService.current.deleteFile(fileId);
-      await loadDriveFiles();
+
+      // 3.  현재 폴더 ID(currentFolderId)를 인자로 전달하여 목록 재로드
+
+      await loadDriveFiles(currentFolderId);
+
       alert('파일이 삭제되었습니다!');
     } catch (error) {
       const errorMessage = driveService.current?.formatErrorMessage(error) || '파일 삭제에 실패했습니다.';
       alert(errorMessage);
     } finally {
-      setIsDeleteLoading(false);
+      // 삭제 완료: 해당 파일의 ID를 배열에서 제거
+      setDeletingFileIds(prevIds => prevIds.filter(id => id !== fileId));
     }
   }
 
@@ -2284,7 +2523,7 @@ function App() {
                                                 >
                                                   <option value="">글꼴</option>
                                                   <option value="Arial">Arial</option>
-                                                  <option value="Noto Sans KR">Noto Sans KR</option>
+                                                  <option value="Noto Sans KR">나눔고딕</option>
                                                   <option value="Roboto">Roboto</option>
                                                   <option value="Times New Roman">Times New Roman</option>
                                                 </select>
@@ -2610,9 +2849,10 @@ function App() {
                                                           <button
                                                               className="btn btn-sm btn-outline-danger"
                                                               onClick={() => handleDriveFileDelete(file.id)}
-                                                              disabled={isDeleteLoading}
+                                                              // 삭제 중인 파일의 ID가 배열에 있는지 확인
+                                                              disabled={deletingFileIds.includes(file.id)}
                                                           >
-                                                            {isDeleteLoading ? (
+                                                            {deletingFileIds.includes(file.id) ? (
                                                                 <>
                                                                   <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
                                                                   삭제 중...
@@ -2855,8 +3095,28 @@ function App() {
                                             <p className="mb-1"><small>{exp.period}</small></p>
                                             <p className="mb-0">{exp.description}</p>
                                           </div>
+                                          {/* 1. 이력 수정 버튼 (이전 요청에서 추가) */}
+                                          <button
+                                              className="btn btn-outline-secondary btn-sm"
+                                              onClick={() => showEditExperienceModal(idx)}
+                                              disabled={isExperienceLoading}
+                                          >
+                                            <i className="fas fa-edit"></i> 수정
+                                          </button>
+
+                                          {/* 2. ⭐ 이력 개별 삭제 버튼 (추가) ⭐ */}
+                                          <button
+                                              className="btn btn-outline-danger btn-sm" // 삭제 버튼은 보통 danger(빨간색)
+                                              onClick={() => deleteIndividualExperience(idx)} // 현재 인덱스를 인자로 전달
+                                              disabled={isExperienceLoading}
+                                          >
+                                            <i className="fas fa-trash-alt"></i> 삭제
+                                          </button>
                                           <div style={{ color: 'white' }}>
                                             <small>구글 시트에서 로드됨</small>
+
+
+
                                           </div>
                                         </div>
                                       </div>
