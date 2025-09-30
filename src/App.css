@@ -1,38 +1,1357 @@
-.App {
-  text-align: center;
+/* ===== Base reset ===== */
+html, body, #root { height: 100%; }
+body { margin: 0; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility; }
+
+/* ===== Tokens ===== */
+:root{
+    --ink:#EEF3FF;
+    --muted:#A8B6D6;
+    --violet:#8D7BFF;
+    --blue:#3AA8FF;
+    --magenta:#FF5AD1;
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
+/* ===== Hero (로그인 전 시작 페이지) ===== */
+.start-hero{
+    position: relative;
+    min-height: 100svh;
+    display: grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    align-items: center;
+    padding: clamp(36px, 6vw, 72px);
+    color: #EEF3FF;
+    overflow: hidden;
+
+    background:
+            radial-gradient(900px 700px at 20% 25%, rgba(181,123,255,0.45), transparent 70%),
+            radial-gradient(1000px 800px at 80% 80%, rgba(255,105,180,0.35), transparent 70%),
+            linear-gradient(135deg, #1a0b2e 0%, #2c1547 50%, #1d0f3a 100%);
+    background-blend-mode: lighten, lighten, screen, normal;
+}
+@keyframes auroraShift {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 100% 50%; }
+}
+/* === THEMES === */
+/* 공통: start-hero는 아래 변수로 배경을 그립니다 */
+.start-hero{
+    /* 기본 변수(네이비) – 테마가 없을 때 쓰임 */
+    --base0:#0A0F1E;
+    --base1:#101830;
+    --base2:#0A1328;
+    --accent1: rgba(141,123,255,.35);
+    --accent2: rgba(255,90,209,.25);
+    --accent3: rgba(58,168,255,.25);
+
+    position: relative;
+    min-height: 100svh;
+    display: grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    align-items: center;
+    padding: clamp(36px, 6vw, 72px);
+    color: #EEF3FF;
+    overflow: hidden;
+
+    /* ▼ 이제 고정 색상 대신 변수 사용 */
+    background:
+            radial-gradient(800px 600px at 20% 25%, var(--accent1), transparent 70%),
+            radial-gradient(900px 700px at 85% 75%, var(--accent2), transparent 70%),
+            radial-gradient(1000px 800px at 50% 120%, var(--accent3), transparent 70%),
+            linear-gradient(135deg, var(--base0) 0%, var(--base1) 55%, var(--base2) 100%) !important;
+    background-blend-mode: lighten, lighten, screen, normal;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
+.theme-silver.start-hero {
+    background: linear-gradient(135deg, #F3F4F6 0%, #D9DDE2 100%) !important;
+    color: #111;
 }
 
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
+/* (옵션) 아주 은은한 그레인/비네트 */
+.start-hero::before{
+    content:""; position:absolute; inset:0; pointer-events:none;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='160' height='160' filter='url(%23n)' opacity='0.04'/></svg>");
+    mix-blend-mode: overlay;
+}
+.start-hero::after{
+    content:""; position:absolute; inset:0; pointer-events:none;
+    background: radial-gradient(1200px 600px at 50% 120%, transparent 60%, rgba(0,0,0,.32));
 }
 
-.App-link {
-  color: #61dafb;
+/* 데코 블롭 */
+.hero-blob{ position:absolute; filter: blur(90px); opacity:.5; mix-blend-mode: screen; border-radius: 50%; pointer-events:none; }
+.hero-blob.a{ width:560px; height:560px; left:-180px; top:-160px; background: radial-gradient(circle at 40% 40%, rgba(141,123,255,.55), transparent 62%); }
+.hero-blob.b{ width:620px; height:620px; right:-200px; bottom:-200px; background: radial-gradient(circle at 60% 60%, rgba(58,168,255,.45), transparent 64%); }
+
+/* 좌측 카피 */
+.hero-left{ z-index:1; }
+.brand{ max-width: 680px; }
+.brand-title{
+    font-family: "SUIT Variable", system-ui, -apple-system, Segoe UI, Roboto, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+    margin: 0 0 8px;
+    font-weight: 900;
+    font-size: clamp(52px, 8.2vw, 96px);
+    letter-spacing: -0.02em;
+    color: #fff;
+    text-shadow: 0 1px 0 rgba(255,255,255,.15), 0 6px 18px rgba(0,0,0,.18);
+}
+.brand-title::after{
+    content:""; display:block; width: clamp(120px, 14vw, 200px); height: 2px;
+    margin-top: 12px; border-radius: 999px;
+    background: linear-gradient(90deg, rgba(141,123,255,.7), rgba(58,168,255,.7));
+    box-shadow: 0 0 16px rgba(141,123,255,.35);
+}
+.brand-sub{ margin:14px 0 22px 2px; color: #9AA3AE; font-size: clamp(15px, 2.2vw, 18px); }
+
+.feature-list{ list-style:none; padding:0; margin:0; display:grid; gap:10px; max-width:520px; }
+.feature-list li{ display:flex; align-items:center; gap:12px; color:#D5DFFF; font-size: clamp(15px, 2.1vw, 18px); }
+.feature-list i{ background:none; text-shadow:none; color: currentColor; opacity:.6; }
+
+/* 우측 로그인 카드 */
+.hero-right{ z-index:1; display:flex; justify-content:center; align-items:center; }
+.login-card{
+    display: inline-block;
+    width: clamp(320px, 36vw, 440px);
+    max-width: 460px;
+    box-sizing: border-box;
+    padding: 28px;
+    border-radius: 20px;
+    backdrop-filter: blur(16px);
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.14);
+    box-shadow: 0 12px 40px rgba(0,0,0,.45);
+    position: relative;
+}
+.theme-paper .login-card{
+    background: rgba(255,255,255,.55);
+    border: 1px solid rgba(0,0,0,.06);
+    box-shadow: 0 16px 36px rgba(17,23,33,.12);
+}
+.login-title{ font-size: 24px; font-weight: 800; letter-spacing:-0.01em; margin: 2px 0 14px; }
+.gsi-anchor{ width:100%; display:flex; justify-content:center; margin: 8px 0 10px; }
+.login-hint{ margin-top:10px; font-size:14px; line-height:1.55; color: #9AA3AE; text-align:center; }
+
+/* 반응형 */
+@media (max-width: 1024px){
+    .start-hero{ grid-template-columns: 1fr; row-gap: 28px; padding: 32px 24px 48px; }
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+/* 폰트(선택): Inter 사용 — 이미 추가했다면 이 줄은 생략해도 OK */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* ===== Base Theme ===== */
+#loginPage.start-hero.theme-apple{
+    /* 무채색 그라디언트 + 아주 은은한 비네팅 */
+    background:
+            radial-gradient(1200px 800px at 80% 110%, rgba(255,255,255,.03), transparent 60%),
+            linear-gradient(180deg, #111213 0%, #17191c 100%) !important;
+    color: #f5f5f7;
+    position: relative;
+    overflow: hidden;
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
+
+/* 기존 컬러 블롭/장식 제거 */
+.theme-apple .hero-blob{ display:none !important; }
+
+/* ===== Typography ===== */
+.theme-apple .brand-title{
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.02;
+    font-size: clamp(48px, 8vw, 88px); /* ✅ 과하지 않게 ‘적당히 크게’ */
+    color:#fff;
+    text-shadow: 0 2px 6px rgba(0,0,0,.45);
+    margin: 0 0 10px 0;
+}
+
+/* 포인트 라인: 무채색 그라디언트(과한 색감 제거) */
+.theme-apple .hero-left::after{
+    content:"";
+    display:block;
+    width: 190px; height: 2px;
+    margin: 16px 0 14px;
+    border-radius: 2px;
+    background: linear-gradient(90deg, rgba(255,255,255,.38), rgba(255,255,255,.08));
+    box-shadow: 0 0 10px rgba(255,255,255,.06);
+}
+
+/* 서브/리스트 — 톤 다운 */
+.theme-apple .brand-sub{
+    font-size: 15px;
+    color:#B2B6BE;
+    margin: 2px 0 18px;
+    letter-spacing:-0.005em;
+}
+.theme-apple .feature-list{ gap: 10px; }
+.theme-apple .feature-list li{
+    font-size: 15px;
+    color:#C7CBD3;
+    font-weight: 400;
+}
+.theme-apple .feature-list i{
+    color:#9AA1AB;
+    margin-right:10px;
+}
+
+/* ===== Login Card (Glass + 자연스러운 연결감) ===== */
+.theme-apple .login-card{
+    position: relative;
+    background: rgba(24,24,26,.62) !important;
+    border: 1px solid rgba(255,255,255,.08);
+    backdrop-filter: blur(16px) saturate(160%);
+    border-radius: 16px;
+    box-shadow: 0 10px 34px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.06);
+    padding: 22px 24px;
+    max-width: 420px; /* ✅ 과하게 크지 않게 */
+    color:#EDEEF1;
+    transition: transform .25s ease;
+}
+.theme-apple .login-card:hover{ transform: translateY(-3px); }
+
+/* 카드 뒤 스팟라이트 — 화면과 카드가 ‘어울리게’ 보임 */
+.theme-apple .login-card::before{
+    content:"";
+    position:absolute; z-index:-1;
+    left:50%; top:50%; transform:translate(-50%,-50%);
+    width: 640px; height: 420px;
+    background: radial-gradient(closest-side, rgba(255,255,255,.06), transparent 70%);
+    filter: blur(42px);
+}
+
+/* 로그인 카드 타이틀/힌트 */
+.theme-apple .login-title{ color:#fff; font-weight:700; letter-spacing:-.01em; }
+.theme-apple .login-hint{ color:#A7ADB7; }
+
+/* ===== Layout polish ===== */
+/* 카드가 덩그러니 보이지 않게 살짝 왼쪽으로 (좌측 헤더와 시각적 균형) */
+.theme-apple .hero-right{ transform: translateX(-1.2vw); }
+
+/* 좁은 화면에서는 여백·폰트 축소 */
+@media (max-width: 1024px){
+    .theme-apple .brand-title{ font-size: clamp(40px, 7.5vw, 64px); }
+    .theme-apple .brand-sub{ font-size:14px; }
+    .theme-apple .login-card{ max-width: 380px; padding: 18px 20px; }
+}
+
+/* 브랜드 영역 확대 */
+.hero-left {
+    transform: scale(1.1);  /* 1.0 → 1.1 정도로 살짝 확대 */
+    transform-origin: left center; /* 왼쪽 기준으로 커지게 */
+}
+
+/* 타이틀 */
+.brand-title {
+    font-size: 4.2rem;   /* 기존보다 약간 키움 */
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    margin-bottom: 1rem;
+}
+
+/* 서브텍스트 */
+.brand-sub {
+    font-size: 1.2rem;
+    font-weight: 500;
+    color: #aaa;
+    margin-bottom: 2rem;
+}
+
+/* 리스트 */
+.feature-list li {
+    font-size: 1rem;
+    line-height: 1.8;
+    color: #ccc;
+}
+/* ===== Force Override for Apple Style ===== */
+
+/* 배경 */
+#loginPage.start-hero.theme-apple{
+    background:
+            radial-gradient(1200px 900px at 85% 120%, rgba(255,255,255,.03), transparent 60%),
+            linear-gradient(180deg, #111213 0%, #17191c 100%) !important;
+    color:#f5f5f7 !important;
+}
+
+/* 혹시 남아있는 블롭/색상 장식 제거 */
+#loginPage.start-hero.theme-apple .hero-blob{ display:none !important; }
+
+/* 좌측 블록 살짝 확대 */
+#loginPage.start-hero.theme-apple .hero-left{
+    transform: scale(1.06) !important;
+    transform-origin: left center !important;
+}
+
+/* 타이틀 */
+#loginPage.start-hero.theme-apple .brand-title{
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.02em !important;
+    line-height: 1.02 !important;
+    font-size: clamp(52px, 8vw, 86px) !important; /* 적당히 크게 */
+    color:#ffffff !important;
+    text-shadow: 0 2px 6px rgba(0,0,0,.42) !important;
+    margin: 0 0 12px !important;
+}
+
+/* 타이틀 밑 라인 */
+#loginPage.start-hero.theme-apple .hero-left::after{
+    content:"" !important;
+    display:block !important;
+    width: 200px !important; height: 2px !important;
+    margin: 16px 0 18px !important;
+    border-radius: 2px !important;
+    background: linear-gradient(90deg, rgba(255,255,255,.36), rgba(255,255,255,.08)) !important;
+    box-shadow: 0 0 10px rgba(255,255,255,.06) !important;
+}
+
+/* 서브/리스트 톤 */
+#loginPage.start-hero.theme-apple .brand-sub{
+    font-size: 15px !important;
+    color:#A8ADB6 !important;
+    margin: 2px 0 20px !important;
+    letter-spacing:-0.005em !important;
+}
+#loginPage.start-hero.theme-apple .feature-list{ gap: 10px !important; }
+#loginPage.start-hero.theme-apple .feature-list li{
+    font-size: 15px !important;
+    color:#cdd1d8 !important;
+    font-weight: 400 !important;
+    line-height: 1.8 !important;
+}
+#loginPage.start-hero.theme-apple .feature-list i{
+    color:#d0d3da !important;
+    margin-right:10px !important;
+}
+
+/* 로그인 카드 (글래스+쉐도우) */
+#loginPage.start-hero.theme-apple .login-card{
+    position: relative !important;
+    background: rgba(24,24,26,.60) !important;
+    border: 1px solid rgba(255,255,255,.08) !important;
+    backdrop-filter: blur(16px) saturate(160%) !important;
+    border-radius: 16px !important;
+    box-shadow: 0 18px 50px rgba(0,0,0,.55) !important;
+    color:#EDEEF1 !important;
+    padding: 22px 24px !important;
+    max-width: 420px !important;
+    transition: transform .25s ease, box-shadow .25s ease !important;
+}
+#loginPage.start-hero.theme-apple .login-card:hover{
+    transform: translateY(-3px) !important;
+}
+
+/* 카드 뒤 스팟라이트 */
+#loginPage.start-hero.theme-apple .login-card::before{
+    content:"" !important;
+    position:absolute !important; z-index:-1 !important;
+    left:50% !important; top:50% !important;
+    transform:translate(-50%,-50%) !important;
+    width:640px !important; height:420px !important;
+    background: radial-gradient(closest-side, rgba(255,255,255,.06), transparent 70%) !important;
+    filter: blur(42px) !important;
+}
+
+/* 카드 약간 왼쪽으로 (균형) */
+#loginPage.start-hero.theme-apple .hero-right{
+    transform: translateX(-1vw) !important;
+}
+
+/* ==== Full-bleed Hero Carousel ==== */
+.hero-carousel{
+    position: relative;
+    width: 100%;
+    height: clamp(380px, 58vh, 640px);
+    overflow: hidden;
+    background: #0f1113;
+    border-bottom: 1px solid rgba(255,255,255,.06);
+}
+.hero-slide{
+    position:absolute; inset:0;
+    background-size: cover;
+    background-position: center center;
+    opacity:0; transform: scale(1.02);
+    transition: opacity .8s ease, transform 1.2s ease;
+}
+.hero-slide.active{ opacity:1; transform: scale(1); }
+.hero-scrim{
+    position:absolute; inset:0;
+    background:
+            linear-gradient(180deg, rgba(0,0,0,.35) 0%, rgba(0,0,0,.55) 60%, rgba(0,0,0,.75) 100%),
+            radial-gradient(1200px 600px at 15% 20%, rgba(255,255,255,.08), transparent 60%);
+}
+.hero-content{
+    position:absolute; left: 7vw; bottom: clamp(36px, 12vh, 120px);
+    color:#fff; max-width: 720px;
+}
+.hero-title{
+    font-family: "Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    font-weight: 800; letter-spacing: -0.02em;
+    line-height: 1.04;
+    font-size: clamp(28px, 5vw, 56px);
+    margin: 0 0 10px;
+    text-shadow: 0 10px 28px rgba(0,0,0,.42);
+}
+.hero-sub{ color:#e9ecf2; opacity:.9; font-size: clamp(14px, 2.1vw, 18px); margin: 0 0 18px; }
+.hero-actions .btn-cta{
+    display:inline-flex; align-items:center; justify-content:center;
+    height: 42px; padding: 0 18px; border-radius: 999px;
+    background: rgba(255,255,255,.9); color:#111; font-weight:600;
+    border: 1px solid rgba(255,255,255,.85); backdrop-filter: blur(8px);
+    transition: transform .15s ease, box-shadow .25s ease, background .25s ease;
+}
+.hero-actions .btn-cta:hover{
+    transform: translateY(-1px);
+    background: #fff;
+    box-shadow: 0 10px 28px rgba(0,0,0,.35);
+}
+.hero-dots{
+    position:absolute; left: 50%; transform: translateX(-50%);
+    bottom: 18px; display:flex; gap:10px;
+}
+.hero-dots .dot{
+    width:10px; height:10px; border-radius:50%;
+    border: 1px solid rgba(255,255,255,.75);
+    background: transparent; opacity:.6;
+    transition: opacity .2s ease, background .2s ease;
+}
+.hero-dots .dot.is-active{ background: #fff; opacity:1; }
+
+/* 레이아웃 보정: 사이드바 제거 후 너비 확장 */
+.mac-sidebar{ display: none !important; }
+.mac-container{ display:block; } /* 혹시 좌/우 그리드였다면 단일 컬럼화 */
+
+/* ===== Apple-like neutral UI polish ===== */
+:root{
+    --bg:#0b0c0f;
+    --panel:#111317;
+    --panel-border:rgba(255,255,255,.06);
+    --text:#E7ECF3;
+    --muted:#A8B0BC;
+}
+
+body{
+    background:
+            radial-gradient(1200px 700px at 15% 0%, rgba(120,130,255,.06), transparent 70%),
+            radial-gradient(1000px 600px at 85% 100%, rgba(120,200,255,.05), transparent 70%),
+            var(--bg);
+    color: var(--text);
+}
+
+/* 상단바를 더 심플하게 */
+.mac-titlebar{
+    height: 64px;
+    background: rgba(14,15,19,.6);
+    border-bottom: 1px solid var(--panel-border);
+    backdrop-filter: saturate(160%) blur(10px);
+}
+.mac-title{
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+/* 메인 섹션 여백/폭 */
+.container-xl{ max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+.content-main{ padding-block: 24px; display: grid; gap: 24px; }
+
+/* 캐러셀은 조금 더 조용하게 */
+.hero-carousel{ border-radius: 18px; }
+.hero-slide{ border-radius: 18px; }
+@media (max-width: 920px){
+    .hero-slide{ grid-template-columns: 1fr !important; row-gap: 16px; }
+}
+
+/* 카드(이력 등록/PPT 제작) – 미니멀 + 미묘한 호버 */
+.mac-grid{ gap: 24px; }
+.mac-grid-2{ grid-template-columns: repeat(2, 1fr); }
+@media (max-width: 920px){
+    .mac-grid-2{ grid-template-columns: 1fr; }
+}
+.mac-card{
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 16px;
+    padding: 28px;
+    text-align: center;
+    transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+}
+.mac-card:hover{
+    transform: translateY(-2px);
+    box-shadow: 0 14px 32px rgba(0,0,0,.35);
+    border-color: rgba(255,255,255,.12);
+}
+.mac-card h3{ margin: 14px 0 6px; font-weight: 700; letter-spacing: -.01em; }
+.mac-card p{ color: var(--muted); margin: 0; }
+
+/* 버튼(로그아웃 등) 깔끔하게 */
+.btn{ border-radius: 12px; }
+.btn.btn-outline-light{
+    border-color: rgba(255,255,255,.22);
+    color: #fff;
+}
+.btn.btn-outline-light:hover{
+    background: rgba(255,255,255,.08);
+    border-color: rgba(255,255,255,.3);
+}
+
+/* 섀도우 톤 다운 */
+.mac-window{
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 16px;
+}
+
+/* ============ System Dark (Apple-like) ============ */
+:root{
+    --bg:#0B0C0F;
+    --bg-2:#0E1014;
+    --panel:#0E1116;
+    --text:#E8EAEE;
+    --muted:#9AA3B2;
+    --border:rgba(255,255,255,.08);
+    --ring:rgba(255,255,255,.12);
+}
+
+#mainPage{
+    background:
+            radial-gradient(1200px 800px at 70% 10%, rgba(255,255,255,.04), transparent 60%),
+            radial-gradient(900px 600px at 10% 90%, rgba(255,255,255,.03), transparent 60%),
+            linear-gradient(#0A0B0E, #0C0D11 30%, #0B0C10);
+    color:var(--text);
+    min-height:100svh;
+}
+
+/* Top bar – 투명 유리 느낌으로, 보라색 헤더 감추기/덮어쓰기 */
+.mac-titlebar{
+    position: sticky; top:0; z-index:30;
+    height:56px;
+    display:flex; align-items:center;
+    padding:0 20px;
+    background:rgba(10,12,14,.55);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    border-bottom:1px solid var(--border);
+    box-shadow: inset 0 -1px 0 rgba(255,255,255,.04);
+}
+.mac-titlebar .mac-title{
+    font-weight:600; letter-spacing:.2px;
+    color:var(--text);
+}
+
+/* 페이지 컨테이너 여백/폭 */
+.mac-container{
+    max-width:1280px;
+    margin:0 auto;
+    padding:28px 20px 56px;
+}
+
+/* ============ HERO CAROUSEL (상단 슬라이더) ============ */
+.hero-carousel{
+    position:relative;
+    margin: 8px auto 28px;
+    max-width:1280px;
+    height:clamp(320px, 46vh, 520px);   /* ← 높이 살짝 줄임 */
+    border-radius:24px;
+    overflow:hidden;
+    background:linear-gradient(180deg,#0F1218,#0C0F15);
+    box-shadow:
+            0 0 0 1px var(--border),
+            0 30px 80px rgba(0,0,0,.55);
+}
+.hero-slide{
+    position:absolute; inset:0;
+    opacity:0; transition:opacity .6s ease, transform .6s ease;
+    transform:scale(1.01);
+    background-size:cover; background-position:center;
+    filter:saturate(.15) contrast(1.05) brightness(.92); /* 무채색 느낌 */
+}
+.hero-slide.active{ opacity:1; transform:scale(1); }
+
+.hero-scrim{
+    position:absolute; inset:0;
+    background: radial-gradient(60% 60% at 25% 40%, rgba(0,0,0,.55), transparent 60%),
+    linear-gradient(180deg, rgba(0,0,0,.45), rgba(0,0,0,.55));
+}
+
+.hero-content{
+    position:absolute; inset:0;
+    display:flex; flex-direction:column; justify-content:center;
+    padding: clamp(20px, 4vw, 48px);
+    max-width:680px;
+    color:var(--text);
+}
+.hero-title{
+    font-size:clamp(26px, 4.4vw, 44px);
+    line-height:1.15; font-weight:700; letter-spacing:-.02em;
+    margin:0 0 12px;
+}
+.hero-sub{
+    color:var(--muted);
+    font-size:clamp(14px, 1.6vw, 17px);
+    margin:0 0 20px;
+}
+.hero-actions .btn-cta{
+    display:inline-block;
+    padding:12px 18px;
+    font-weight:600;
+    border-radius:14px;
+    color:#111;
+    background:#F2F3F6;           /* 무채색 버튼 */
+    border:1px solid rgba(255,255,255,.18);
+    box-shadow:0 8px 24px rgba(0,0,0,.35);
+    transition:transform .15s ease, box-shadow .2s ease, background .2s ease;
+}
+.hero-actions .btn-cta:hover{ transform:translateY(-1px); background:#FFF; }
+.hero-actions .btn-cta:active{ transform:translateY(0); }
+
+/* 하단 도트 – 미니멀 */
+.hero-dots{
+    position:absolute; left:50%; bottom:16px; transform:translateX(-50%);
+    display:flex; gap:8px;
+}
+.hero-dots .dot{
+    width:7px; height:7px; border-radius:999px;
+    background:rgba(255,255,255,.28);
+    border:none; cursor:pointer;
+    transition:width .25s ease, background .25s ease;
+}
+.hero-dots .dot.is-active{
+    width:24px; background:#FFF;
+}
+
+/* ============ FEATURE CARDS (하단 두 카드) ============ */
+.mac-grid{
+    display:grid; gap:24px;
+    grid-template-columns: repeat(2, minmax(0,1fr));
+}
+@media (max-width: 960px){
+    .mac-grid{ grid-template-columns: 1fr; }
+}
+
+.mac-card{
+    background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+    border:1px solid var(--border);
+    border-radius:20px;
+    padding:34px 28px;
+    text-align:center;
+    color:var(--text);
+    box-shadow: 0 10px 26px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.04);
+    transition: transform .18s ease, box-shadow .22s ease, border-color .22s ease;
+}
+.mac-card:hover{
+    transform: translateY(-2px);
+    box-shadow: 0 16px 48px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.04);
+    border-color: var(--ring);
+}
+.mac-card i{ font-size:42px; margin-bottom:10px; color:#EAECEF; opacity:.9; }
+.mac-card h3{ font-size:20px; margin:6px 0 6px; letter-spacing:-.01em; }
+.mac-card p{ color:var(--muted); margin:0; }
+
+/* 비고: 기존 사이드바가 남아 있으면 숨김 */
+.mac-sidebar{ display:none !important; }
+
+/* 공통 버튼/폼 디폴트 */
+.btn, .btn-primary, .btn-dark, .btn-outline-dark{
+    border-radius:12px;
+    border:1px solid var(--border) !important;
+    background:linear-gradient(180deg,#14171C,#101318) !important;
+    color:var(--text) !important;
+}
+.btn:hover{ border-color:var(--ring) !important; }
+
+/* 모달(이력 추가) – 어두운 유리 느낌 */
+.mac-modal{
+    background: rgba(18,20,24,.85);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    border:1px solid var(--border);
+    color:var(--text);
+}
+.mac-modal .modal-header, .mac-modal .modal-footer{
+    border-color:var(--border);
+}
+
+/* ====== Minimal Top Bar (Apple-like) ====== */
+.mac-titlebar{
+    position: sticky; top:0; z-index:40;
+    height:56px;
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 0 20px;
+    background: transparent;               /* 배경은 투명 */
+    border-bottom: 1px solid transparent;  /* 보더도 기본은 없음 */
+    box-shadow: none;
+}
+
+/* 아주 옅은 유리 한 줄 느낌 */
+.mac-titlebar.is-minimal{
+    background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,0));
+    border-bottom: 1px solid rgba(255,255,255,.06);
+}
+
+.mac-titlebar .brand-logo{
+    font-weight: 700;
+    letter-spacing: .1px;
+    color: var(--text);
+    opacity: .96;
+}
+
+/* 로그아웃 버튼: 고스트 스타일(군더더기 X) */
+.btn-logout{
+    display: inline-flex; gap: 8px; align-items: center;
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-weight: 600;
+    line-height: 1;
+    transition: background .18s ease, border-color .18s ease, color .18s ease, transform .12s ease;
+}
+.btn-logout:hover{
+    background: rgba(255,255,255,.06);
+    border-color: var(--ring);
+    color: var(--text);
+    transform: translateY(-1px);
+}
+.btn-logout:active{ transform: translateY(0); }
+.btn-logout i{ font-size: 14px; opacity: .9; }
+
+/* 혹시 기존 상단 그라디언트/보라 헤더가 남아 있다면 강제 제거 */
+.App-header, .site-header, .topbar, .navbar, header.navbar {
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+}
+
+/* =============================== */
+/* Global type / tone (Apple-like) */
+/* =============================== */
+:root{
+    --font-ui: "Pretendard Variable", -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, "Noto Sans KR", "Apple SD Gothic Neo",
+    "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji";
+    --text: #e7e9ee;
+    --muted:#b9c0cc;
+    --border: rgba(255,255,255,.10);
+    --ring: rgba(124, 146, 255, .55);
+}
+
+html, body, #root{
+    font-family: var(--font-ui);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    letter-spacing: -0.01em;
+}
+
+h1,h2,h3,h4{
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+.brand-title,
+.hero-title{
+    font-weight: 800;
+    letter-spacing: -0.02em;
+}
+
+/* 리스트/설명 텍스트 살짝 밝기 조정 */
+.mac-card p,
+.login-hint,
+.brand-sub,
+.feature-list li{ color: var(--muted); }
+
+/* ================================== */
+/* Topbar + Logout : 미니멀·유리 버튼   */
+/* ================================== */
+
+/* 기존 .mac-titlebar가 있다면 추가 클래스 없이도 적용됨 */
+.mac-titlebar{
+    position: sticky; top: 0; z-index: 40;
+    height: 56px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 16px;
+    background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,0));
+    border-bottom: 1px solid rgba(255,255,255,.06);
+    backdrop-filter: saturate(180%) blur(10px);
+}
+
+/* 로고/브랜드 타이포 */
+.mac-titlebar .brand,
+.mac-titlebar .brand-logo{
+    font-weight: 700;
+    letter-spacing: .1px;
+    color: var(--text);
+    opacity: .96;
+}
+
+/* 접근성용 스크린리더 전용 */
+.sr-only{
+    position:absolute !important; width:1px; height:1px; padding:0; margin:-1px;
+    overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
+}
+
+/* 고스트(유리) 스타일의 미니멀 로그아웃 버튼 */
+.btn-logout, .btn-ghost{
+    display:inline-flex; align-items:center; gap:8px;
+    height: 36px; padding: 0 12px;
+    border-radius: 999px;
+    background: rgba(255,255,255,.02);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-weight: 600;
+    line-height: 1;
+    transition: background .18s ease, border-color .18s ease, color .18s ease, transform .12s ease;
+    backdrop-filter: saturate(180%) blur(8px);
+}
+.btn-logout:hover, .btn-ghost:hover{
+    background: rgba(255,255,255,.06);
+    border-color: var(--ring);
+    color: var(--text);
+    transform: translateY(-1px);
+}
+.btn-logout:active, .btn-ghost:active{ transform: translateY(0); }
+.btn-logout i, .btn-ghost i{ font-size: 14px; opacity: .9; }
+
+/* 아이콘만 보이게 (폭 좁은 화면에서) */
+@media (max-width: 840px){
+    .btn-logout span{ display:none; }
+}
+
+/* ================================== */
+/* 메인 화면 요소들 살짝 정제(톤 맞춤)   */
+/* ================================== */
+
+/* 캐러셀 카드 안쪽 여백과 톤 */
+.hero-carousel{
+    border-radius: 16px;
+    overflow: hidden;
+}
+.hero-carousel .hero-content{
+    font-weight: 600;
+}
+.hero-carousel .btn-cta{
+    border-radius: 999px;
+}
+
+/* 메인 카드 살짝 더 세련되게 */
+.mac-card{
+    border-radius: 18px;
+    border: 1px solid rgba(255,255,255,.08);
+    background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01));
+    box-shadow: 0 12px 40px rgba(0,0,0,.35);
+    transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+}
+.mac-card:hover{
+    transform: translateY(-2px);
+    border-color: rgba(255,255,255,.16);
+    box-shadow: 0 18px 52px rgba(0,0,0,.45);
+}
+
+/* 캐러셀 네비 버튼/점도 미세 조정(더 미니멀) */
+.hero-dots .dot{
+    width: 7px; height: 7px; border-radius: 50%;
+    background: rgba(255,255,255,.28);
+}
+.hero-dots .dot.is-active{
+    background: rgba(255,255,255,.9);
+}
+/* ============================
+   Apple-like Monochrome (INK)
+   ============================ */
+
+.theme-ink {
+    --bg-0: #0c0d10;      /* 가장 깊은 배경 */
+    --bg-1: #0f1115;      /* 기본 배경 */
+    --bg-2: #12141a;      /* 섹션/컨테이너 */
+    --panel: #141821;     /* 패널/카드 바탕 */
+    --panel-2: #171b24;   /* 호버/딥 패널 */
+    --line: rgba(255,255,255,.08);
+    --line-strong: rgba(255,255,255,.14);
+    --text: #e9eef6;      /* 본문 텍스트 */
+    --muted: #b7bfcc;     /* 보조 텍스트 */
+    --hint: #8d96a5;      /* 플레이스홀더/힌트 */
+    --ring: rgba(124,146,255,.5); /* 포커스 링 */
+    --shadow: 0 20px 60px rgba(0,0,0,.55), inset 0 0 0 1px rgba(255,255,255,.04);
+}
+
+/* 페이지 바탕: 아주 은은한 라디얼 + 비네트 */
+.theme-ink,
+.theme-ink body {
+    color: var(--text);
+    background:
+            radial-gradient(1200px 800px at 15% 0%, rgba(255,255,255,.04), transparent 60%),
+            radial-gradient(900px 700px at 85% 100%, rgba(255,255,255,.035), transparent 55%),
+            linear-gradient(180deg, var(--bg-1), var(--bg-0));
+}
+
+/* 상단 바 최소화(유리 느낌) */
+.theme-ink .mac-titlebar{
+    height: 56px;
+    background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,0));
+    border-bottom: 1px solid var(--line);
+    backdrop-filter: saturate(180%) blur(10px);
+    color: var(--text);
+}
+
+/* 고스트/유리 버튼(로그아웃 등) */
+.theme-ink .btn-logout,
+.theme-ink .btn-ghost{
+    display:inline-flex; align-items:center; gap:8px;
+    height:36px; padding:0 12px; border-radius:999px;
+    background: rgba(255,255,255,.02);
+    border:1px solid var(--line);
+    color: var(--muted);
+    transition:.18s ease;
+    backdrop-filter: saturate(160%) blur(6px);
+}
+.theme-ink .btn-logout:hover,
+.theme-ink .btn-ghost:hover{
+    background:rgba(255,255,255,.06);
+    border-color:var(--line-strong);
+    color:var(--text);
+}
+
+/* 메인 컨테이너 깊이감 */
+.theme-ink .mac-container{
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.03);
+}
+
+/* 카드(이력 등록, PPT 제작 등) */
+.theme-ink .mac-card{
+    background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.012));
+    border:1px solid var(--line);
+    border-radius:18px;
+    box-shadow: var(--shadow);
+    transition: transform .14s ease, box-shadow .14s ease, border-color .14s ease, background .14s ease;
+}
+.theme-ink .mac-card:hover{
+    transform: translateY(-2px);
+    border-color: var(--line-strong);
+    background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
+    box-shadow: 0 26px 80px rgba(0,0,0,.6), inset 0 0 0 1px rgba(255,255,255,.05);
+}
+.theme-ink .mac-card h3{ color: var(--text); font-weight: 700; letter-spacing: -0.01em; }
+.theme-ink .mac-card p{ color: var(--muted); }
+
+/* 캐러셀(상단 슬라이드) */
+.theme-ink .hero-carousel{
+    border-radius:16px;
+    background: linear-gradient(180deg, var(--panel), var(--panel-2));
+    border:1px solid var(--line);
+    box-shadow: var(--shadow);
+}
+.theme-ink .hero-carousel .hero-scrim{
+    background: linear-gradient(180deg, rgba(10,11,12,.2) 0%, rgba(10,11,12,.55) 70%, rgba(10,11,12,.7) 100%);
+}
+.theme-ink .hero-carousel .hero-title{ color: var(--text); font-weight: 800; }
+.theme-ink .hero-carousel .hero-sub{ color: var(--muted); }
+
+/* 캐러셀 화살표/도트 미니멀 */
+.theme-ink .hero-arrow{
+    background: rgba(255,255,255,.06);
+    border:1px solid var(--line);
+    color: var(--text);
+}
+.theme-ink .hero-arrow:hover{ background: rgba(255,255,255,.12); }
+
+.theme-ink .hero-dots .dot{
+    width:7px; height:7px; border-radius:50%;
+    background: rgba(255,255,255,.28);
+    border:0;
+}
+.theme-ink .hero-dots .dot.is-active{ background: rgba(255,255,255,.92); }
+
+/* 텍스트 톤 재조정 */
+.theme-ink .brand-sub,
+.theme-ink .login-hint,
+.theme-ink .feature-list li{ color: var(--muted); }
+
+/* 테이블/리스트 등 라인 */
+.theme-ink .mac-list .list-group-item{
+    background: rgba(255,255,255,.015);
+    border:1px solid var(--line);
+    color: var(--text);
+}
+.theme-ink .mac-window{
+    background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.012));
+    border:1px solid var(--line);
+    border-radius:14px;
+    box-shadow: var(--shadow);
+}
+.theme-ink .mac-window h2{ color: var(--text); }
+
+/* 포커스/키보드 접근성 */
+.theme-ink :focus-visible{
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+    border-radius: 8px;
+}
+/* ===== 경계선(사이드바 자리) 없애기 패치 ===== */
+
+/* 혹시 남아 있는 사이드바 스타일은 강제로 숨김 */
+.theme-ink .mac-sidebar { display: none !important; }
+
+/* 기존 2열 그리드를 1열로, 컬럼 간격과 배경/테두리 제거 */
+.theme-ink .mac-container{
+    display: block !important;           /* grid -> block (또는 1열 grid도 OK) */
+    grid-template-columns: 1fr !important;
+    column-gap: 0 !important;
+
+    background: transparent !important;  /* 컨테이너 배경 제거(본문과 동일) */
+    border: none !important;
+    box-shadow: none !important;
+    padding-inline: clamp(16px, 4vw, 28px);  /* 좌우 여백만 부드럽게 */
+}
+
+/* 콘텐츠는 중앙 정렬 + 최대폭만 관리 */
+.theme-ink .mac-content{
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* (선택) 좌우 가장자리에 아주 미세한 비네트로 더 자연스럽게 */
+.theme-ink .mac-content::before{
+    content:"";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background:
+            radial-gradient(600px 70% at 0 50%, rgba(255,255,255,.035), transparent 60%),
+            radial-gradient(600px 70% at 100% 50%, rgba(255,255,255,.035), transparent 60%);
+    /* 너무 티나면 알파(.035) 더 낮추면 됨 */
+}
+/* ===== Flat 패치: 메인 화면의 네모 박스(패널) 제거 ===== */
+
+/* 컨테이너/랩퍼 계층: 배경·테두리·섀도 전부 제거 */
+.theme-ink .mac-container,
+.theme-ink .mac-surface,
+.theme-ink .mac-frame,
+.theme-ink .mac-content {
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    outline: none !important;
+    border-radius: 0 !important;
+}
+
+/* 패널 테두리를 만드는 의사요소도 비활성화 */
+.theme-ink .mac-container::before,
+.theme-ink .mac-container::after,
+.theme-ink .mac-content::before,
+.theme-ink .mac-content::after {
+    content: none !important;
+    display: none !important;
+}
+
+/* 레이아웃 여백만 부드럽게 유지 */
+.theme-ink .mac-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding-inline: clamp(16px, 4vw, 28px);
+    padding-block: clamp(12px, 2.5vw, 24px);
+}
+
+/* (선택) 섹션 자체에 남아 있을 수 있는 패널성 배경/섀도 제거 */
+.theme-ink #mainSection,
+.theme-ink .content-section {
+    background: transparent !important;
+    box-shadow: none !important;
+    border: 0 !important;
+}
+
+/* (선택) 좌우가 너무 뻥 뚫려 보이면 아주 미세한 비네트로만 통일감 추가 */
+.theme-ink .mac-content::before{
+    content:"";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background:
+            radial-gradient(600px 70% at 0 50%, rgba(255,255,255,.03), transparent 60%),
+            radial-gradient(600px 70% at 100% 50%, rgba(255,255,255,.03), transparent 60%);
+    /* 더 평평하게 보이고 싶으면 알파(.03)를 .02 ~ .015로 낮추세요 */
+}
+/* ----- 상단 헤더 / 네비게이션 ----- */
+.mac-titlebar.is-minimal{
+    position: sticky; top: 0; z-index: 1000;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 16px;
+    padding: 10px 20px;
+    background: linear-gradient(180deg, rgba(10,11,14,.9), rgba(10,11,14,.6) 60%, transparent);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(255,255,255,.06);
+}
+
+.brand-logo{
+    font-weight: 800; letter-spacing: -0.02em;
+    background: linear-gradient(90deg,#f0f3f7,#cfd6df);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    border: 0; background-color: transparent; cursor: pointer;
+    font-size: 18px; padding: 6px 8px; border-radius: 10px;
+}
+
+.mac-nav{ display:flex; align-items:center; gap:8px; }
+.mac-nav .nav-link{
+    display:flex; align-items:center; gap:8px;
+    padding: 8px 12px; border-radius: 12px;
+    background: rgba(255,255,255,.04);
+    border: 1px solid rgba(255,255,255,.08);
+    color: #d7dde6; font-weight: 600; cursor: pointer;
+    transition: .2s ease; backdrop-filter: blur(6px);
+}
+.mac-nav .nav-link:hover{ background: rgba(255,255,255,.08); }
+.mac-nav .nav-link.is-active{
+    background: rgba(255,255,255,.12);
+    border-color: rgba(255,255,255,.18);
+    color: #fff;
+}
+
+.btn-logout{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:36px; height:36px; border-radius: 10px;
+    border:1px solid rgba(255,255,255,.12);
+    background: rgba(255,255,255,.06); color:#e9edf3;
+    cursor:pointer; transition:.2s ease; backdrop-filter: blur(6px);
+}
+.btn-logout:hover{ background: rgba(255,255,255,.12); }
+
+/* ----- 페이지 베이스(애플 느낌 블랙톤) ----- */
+.theme-ink{
+    background:
+            radial-gradient(1000px 500px at 10% -20%, #12151b 0%, transparent 60%),
+            radial-gradient(1200px 600px at 100% -30%, #141821 0%, transparent 65%),
+            #0b0d11;
+    color:#e9edf2; min-height:100vh;
+}
+
+/* 컨테이너 & 그리드 */
+.container-xl{ max-width: 1100px; margin: 0 auto; padding: 20px; }
+.content-main .mac-grid-2{
+    display:grid; grid-template-columns: 1fr 1fr;
+    gap: 20px; margin-top: 24px;
+}
+
+/* 카드 */
+.mac-card{
+    background: linear-gradient(180deg,#12151a,#0f1116);
+    border:1px solid rgba(255,255,255,.06);
+    border-radius: 16px; padding: 28px; text-align:center;
+    box-shadow: 0 10px 30px rgba(0,0,0,.35);
+    transition: transform .15s ease, box-shadow .15s ease;
+}
+.mac-card:hover{ transform: translateY(-2px); box-shadow: 0 14px 36px rgba(0,0,0,.45); }
+.mac-card h3{ margin:12px 0 6px; font-weight:700; }
+.mac-card p{ color:#aeb6c2; }
+
+/* 히어로 캐러셀 화살표 버튼 재확인(여유) */
+.hero-carousel button{ outline:none; }
+
+/* 스크린리더용 숨김 텍스트 */
+.sr-only{
+    position:absolute; width:1px; height:1px; padding:0; margin:-1px;
+    overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
+}
+/* ───────────────── Global Nav (Apple-like) ───────────────── */
+.gn{
+    position: sticky; top:0; z-index: 1000;
+    height: 48px;
+    background: rgba(22,22,23,.72);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    backdrop-filter: saturate(180%) blur(20px);
+    border-bottom: 1px solid rgba(255,255,255,.06);
+}
+.gn__inner{
+    max-width: 1240px; margin: 0 auto; height: 48px;
+    padding: 0 16px;
+    display:flex; align-items:center; justify-content:space-between;
+}
+.gn__brand{
+    font-weight: 700; letter-spacing: -.02em; font-size: 14px;
+    color:#fff; background:none; border:0; cursor:pointer;
+    padding:6px 10px; border-radius: 10px;
+}
+.gn__brand:hover{ background: rgba(255,255,255,.06); }
+
+.gn__center{ flex:1; display:flex; justify-content:center; }
+.gn__menu{ display:flex; gap:18px; list-style:none; padding:0; margin:0; }
+.gn__link{
+    font-size:13px; color:rgba(255,255,255,.72); letter-spacing:.01em;
+    background:none; border:0; cursor:pointer;
+    padding: 8px 10px; border-radius: 10px; position:relative;
+    transition: color .2s ease, background .2s ease;
+}
+.gn__link:hover{ color:#fff; background: rgba(255,255,255,.06); }
+.gn__link.is-active{ color:#fff; }
+.gn__link.is-active::after{
+    content:""; position:absolute; left:10px; right:10px; bottom:5px;
+    height:2px; border-radius:2px;
+    background: linear-gradient(90deg, #fff, rgba(255,255,255,.5));
+}
+
+.gn__right{ display:flex; align-items:center; gap:10px; }
+.gn__logout{
+    width:32px; height:32px; border-radius:50%;
+    border:1px solid rgba(255,255,255,.18);
+    background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.04));
+    color:#fff; display:grid; place-items:center; cursor:pointer;
+    transition: transform .15s ease, border-color .2s ease, background .2s ease;
+}
+.gn__logout:hover{
+    transform: translateY(-1px);
+    border-color: rgba(255,255,255,.28);
+    background: linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.06));
+}
+
+/* 스크린리더 전용 */
+.sr-only{
+    position:absolute; width:1px; height:1px; padding:0; margin:-1px;
+    overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
+}
+
+/* 모바일 대응: 아이템 간격/폰트 크기 살짝 축소 */
+@media (max-width: 900px){
+    .gn__menu{ gap:12px; }
+    .gn__link{ font-size:12px; padding:6px 8px; }
+}
+/* ── Apple-style Top Navigation ───────────────────────────── */
+
+.mac-titlebar.is-minimal{
+    position: sticky; top: 0; z-index: 50;
+    height: 44px;
+    padding: 0 clamp(16px,4vw,28px);
+    display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+    background: linear-gradient(180deg, rgba(8,10,14,.86), rgba(8,10,14,.72));
+    backdrop-filter: saturate(180%) blur(12px);
+    border-bottom: 1px solid rgba(255,255,255,.04);
+}
+
+.brand-logo{
+    justify-self: start;
+    font-weight: 700; letter-spacing: .02em;
+    color: #fff; opacity: .9;
+    background: none; border: 0; cursor: pointer;
+}
+
+.mac-nav{ justify-self: center; display:flex; gap: clamp(10px,2vw,20px); }
+.mac-nav .nav-link{
+    display:inline-flex; align-items:center; gap:.5rem;
+    font-size:13px; color:rgba(255,255,255,.72);
+    padding:6px 10px; border-radius:10px;
+    background:transparent; border:0; cursor:pointer;
+    transition: color .2s ease, background .2s ease;
+}
+.mac-nav .nav-link:hover{ color:#fff; background:rgba(255,255,255,.06); }
+.mac-nav .nav-link.is-active{ color:#fff; background:rgba(255,255,255,.12); }
+
+.btn-logout{
+    justify-self:end; width:32px; height:32px; border-radius:10px;
+    border:1px solid rgba(255,255,255,.12);
+    background:rgba(255,255,255,.06); color:#fff; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+}
+.btn-logout:hover{ background:rgba(255,255,255,.12); }
+/* ====== Apple-ish Global ====== */
+html, body {
+    font-family: -apple-system, system-ui, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", "맑은 고딕", sans-serif;
+    text-rendering: optimizeLegibility;
+}
+
+/* 전체 배경에 은은한 라디얼 하이라이트 */
+.theme-ink {
+    background:
+            radial-gradient(1200px 600px at 50% -200px, rgba(255,255,255,.06), transparent 60%),
+            #0b0d11;
+}
+
+/* ====== Top bar (scroll reacting) ====== */
+.mac-titlebar.is-minimal {
+    position: sticky; top: 0; z-index: 50;
+    height: 44px;
+    padding: 0 clamp(16px,4vw,28px);
+    display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+    background: linear-gradient(180deg, rgba(8,10,14,.86), rgba(8,10,14,.72));
+    backdrop-filter: saturate(180%) blur(12px);
+    border-bottom: 1px solid rgba(255,255,255,.04);
+    transition: background .25s ease, border-color .25s ease, height .2s ease;
+}
+.mac-titlebar.is-minimal.is-scrolled{
+    background: rgba(12,14,18,.78);
+    border-bottom-color: rgba(255,255,255,.06);
+    height: 40px;
+}
+
+.brand-logo{
+    justify-self: start;
+    font-weight: 700; letter-spacing: .02em;
+    color: #fff; opacity: .9;
+    background: none; border: 0; cursor: pointer;
+}
+
+/* 중앙 메뉴 */
+.mac-nav{ justify-self: center; display:flex; gap: clamp(10px,2vw,20px); }
+.mac-nav .nav-link{
+    display:inline-flex; align-items:center; gap:.5rem;
+    font-size:13px; color:rgba(255,255,255,.72);
+    padding:6px 10px; border-radius:10px;
+    background:transparent; border:0; cursor:pointer;
+    transition: color .2s ease, background .2s ease, transform .2s ease;
+}
+.mac-nav .nav-link:hover{ color:#fff; background:rgba(255,255,255,.06); }
+.mac-nav .nav-link.is-active{ color:#fff; background:rgba(255,255,255,.12); }
+
+/* 우측 로그아웃 */
+.btn-logout{
+    justify-self:end; width:32px; height:32px; border-radius:10px;
+    border:1px solid rgba(255,255,255,.12);
+    background:rgba(255,255,255,.06); color:#fff; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    transition: background .2s ease, border-color .2s ease;
+}
+.btn-logout:hover{ background:rgba(255,255,255,.12); border-color:rgba(255,255,255,.18); }
+
+/* 포커스 접근성 */
+.nav-link:focus-visible, .btn-logout:focus-visible, .brand-logo:focus-visible {
+    outline: 2px solid rgba(255,255,255,.35);
+    outline-offset: 2px;
+    border-radius: 10px;
+}
+
+/* ====== Carousel Polish ====== */
+.hero-carousel {
+    border: 1px solid rgba(255,255,255,.08);
+    position: relative;
+}
+.hero-carousel::after{
+    content:""; position:absolute; inset:0;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
+    pointer-events:none;
+}
+.hero-slide{
+    min-height: clamp(320px, 56vh, 520px); /* 더 유연한 높이 */
+}
+
+/* 진행바 */
+.hero-progress{
+    position:absolute; bottom:0; left:0; right:0; height:2px;
+    background: rgba(255,255,255,.06);
+}
+.hero-progress span{
+    display:block; height:100%;
+    transform-origin: 0 0;
+    background: #fff;
+    transition: transform .4s ease;
+}
+
+/* ====== Cards Polish ====== */
+.mac-card{
+    background: linear-gradient(180deg,#161a22,#13161d);
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 18px;
+    box-shadow: 0 8px 30px rgba(0,0,0,.45);
+    transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+.mac-card:hover{
+    transform: translateY(-2px);
+    box-shadow: 0 16px 50px rgba(0,0,0,.55);
+    border-color: rgba(255,255,255,.12);
+}
+.mac-card:active{ transform: translateY(0); }
