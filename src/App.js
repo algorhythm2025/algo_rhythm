@@ -1588,9 +1588,9 @@ function App() {
       description: '깔끔하고 전문적인 레이아웃으로 구성된 템플릿입니다. 각 이력사항을 개별 슬라이드로 구성하여 명확하고 간결하게 표현할 수 있습니다.',
       features: ['깔끔한 디자인', '이력별 개별 슬라이드', '전문적인 레이아웃', '이미지와 텍스트 조화'],
       previewImages: [
-        '/template/img/sample1.png',
-        '/template/img/sample2.png',
-        '/template/img/sample3.png'
+        `${process.env.PUBLIC_URL}/template/img/sample1.png`,
+        `${process.env.PUBLIC_URL}/template/img/sample2.png`,
+        `${process.env.PUBLIC_URL}/template/img/sample3.png`
       ]
     },
     timeline: {
