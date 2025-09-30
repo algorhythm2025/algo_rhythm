@@ -190,13 +190,18 @@ class GoogleSheetsService {
     // 헤더 제거 (첫 번째 행)
     const dataRows = sheetData.slice(1);
 
-    return dataRows.map(row => ({
-      title: row[0] || '',
-      period: row[1] || '',
-      description: row[2] || '',
-      imageUrls: row[3] ? row[3].split(', ').filter(url => url.trim()) : [], // 여러 이미지 URL을 쉼표로 구분하여 배열로 변환
-      createdAt: row[4] || ''
-    }));
+    return dataRows
+      .map(row => ({
+        title: row[0] || '',
+        period: row[1] || '',
+        description: row[2] || '',
+        imageUrls: row[3] ? row[3].split(', ').filter(url => url.trim()) : [], // 여러 이미지 URL을 쉼표로 구분하여 배열로 변환
+        createdAt: row[4] || ''
+      }))
+      .filter(experience => {
+        // 제목이 있는 이력만 유지 (빈 이력 제거)
+        return experience.title && experience.title.trim() !== '';
+      });
   }
 
   // 초기 헤더 설정
