@@ -1075,7 +1075,11 @@ function App() {
     try {
       setIsUploadLoading(true);
       await driveService.current.uploadFile(file.name, file, file.type);
-      await loadDriveFiles();
+      
+      // 현재 경로를 유지하면서 파일 목록 새로고침
+      const currentParentId = currentPath.length > 0 ? currentPath[currentPath.length - 1].id : null;
+      await loadDriveFiles(currentParentId);
+      
       alert('파일이 업로드되었습니다!');
     } catch (error) {
       const errorMessage = driveService.current?.formatErrorMessage(error) || '파일 업로드에 실패했습니다.';
@@ -1093,7 +1097,11 @@ function App() {
       // 해당 파일 ID를 삭제 중 상태에 추가
       setDeletingFileIds(prev => new Set([...prev, fileId]));
       await driveService.current.deleteFile(fileId);
-      await loadDriveFiles();
+      
+      // 현재 경로를 유지하면서 파일 목록 새로고침
+      const currentParentId = currentPath.length > 0 ? currentPath[currentPath.length - 1].id : null;
+      await loadDriveFiles(currentParentId);
+      
       alert('파일이 삭제되었습니다!');
     } catch (error) {
       const errorMessage = driveService.current?.formatErrorMessage(error) || '파일 삭제에 실패했습니다.';
@@ -1223,7 +1231,10 @@ function App() {
   async function handleDriveRefresh() {
     try {
       setIsRefreshLoading(true);
-      await loadDriveFiles();
+      
+      // 현재 경로를 유지하면서 파일 목록 새로고침
+      const currentParentId = currentPath.length > 0 ? currentPath[currentPath.length - 1].id : null;
+      await loadDriveFiles(currentParentId);
     } finally {
       setIsRefreshLoading(false);
     }
