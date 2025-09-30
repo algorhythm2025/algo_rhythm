@@ -32,6 +32,7 @@ function App() {
   const [isUploadLoading, setIsUploadLoading] = useState(false);
   const [isRefreshLoading, setIsRefreshLoading] = useState(false);
   const [isDeleteLoading, setIsDeleteLoading] = useState(false);
+  const [editingIndex, setEditingIndex] = useState(null);
   const [deletingFileIds, setDeletingFileIds] = useState(new Set()); // 삭제 중인 파일 ID들
   const [isViewModeLoading, setIsViewModeLoading] = useState(false);
   const [isPptCreating, setIsPptCreating] = useState(false); // PPT 생성 로딩 상태
@@ -414,7 +415,31 @@ function App() {
   }
 
   // 이력 추가 모달
+  function showEditExperienceModal(index) {
+    const expToEdit = experiences[index];
+
+    // 폼 상태를 선택된 이력 데이터로 채웁니다.
+    setForm({
+      title: expToEdit.title,
+      startDate: expToEdit.startDate,
+      endDate: expToEdit.endDate,
+      description: expToEdit.description
+    });
+
+    // 이미지 처리는 더 복잡하므로 여기서는 폼 데이터만 채웁니다.
+    // 실제 구현에서는 이미지 URL을 preview 상태로 변환하는 로직이 필요합니다.
+
+    setEditingIndex(index); // 수정 모드임을 표시
+    setShowModal(true);
+  }
+
   function showAddExperienceModal() {
+    // 상태 초기화 (폼, 이미지, 편집 인덱스 등)
+    setForm({ title: '', startDate: '', endDate: '', description: '' });
+    setSelectedImages([]);
+    setImagePreviews([]);
+    setEditingIndex(null); // 수정 모드 아님을 확실히 지정
+
     setShowModal(true);
   }
   function closeModal() {
@@ -422,6 +447,7 @@ function App() {
     setForm({ title: '', startDate: '', endDate: '', description: '' });
     setSelectedImages([]);
     setImagePreviews([]);
+    setEditingIndex(null);
   }
 
   // 기간 포맷팅 함수
@@ -482,41 +508,62 @@ function App() {
         return;
       }
 
-      try
-      {
+      try {
         setIsExperienceLoading(true);
 
-        let imageUrls = [];
-
-        // 이미지들이 선택된 경우 구글 드라이브에 업로드
+        let newImageUrls = [];
+        // 1. 새 이미지가 있다면 드라이브에 업로드
         if (selectedImages.length > 0) {
           for (const imageFile of selectedImages) {
             const imageUrl = await uploadImageToDrive(imageFile, form.title);
-            imageUrls.push(imageUrl);
+            newImageUrls.push(imageUrl);
           }
         }
 
-        // 기간 포맷팅
         const period = formatPeriod(form.startDate, form.endDate);
+        let experienceToSave;
 
-        // 로컬 상태 업데이트 (기간 포함)
-        const newExperience = {
-          ...form,
-          period, // 포맷팅된 기간 추가
-          imageUrls
-        };
-        setExperiences([...experiences, newExperience]);
+        if (editingIndex !== null) {
+          // ⭐ 수정 모드 (Editing Mode)
+          const existingImageUrls = experiences[editingIndex].imageUrls || [];
 
-        // 구글 시트에 저장
-        if (spreadsheetId && sheetsService.current) {
-          const sheetData = sheetsService.current.formatExperienceForSheet(newExperience);
-          await sheetsService.current.appendData(spreadsheetId, 'A:E', [sheetData]);
+          experienceToSave = {
+            ...form,
+            period,
+            // 기존 이미지 URL에 새로 업로드한 이미지 URL을 합칩니다.
+            imageUrls: existingImageUrls.concat(newImageUrls)
+          };
+
+          const rowNumber = editingIndex + 2;
+          if (spreadsheetId && sheetsService.current) {
+            const sheetData = sheetsService.current.formatExperienceForSheet(experienceToSave);
+            await sheetsService.current.updateData(spreadsheetId, `A${rowNumber}:E${rowNumber}`, [sheetData]);
+          }
+          setExperiences(prev => prev.map((exp, i) => i === editingIndex ? experienceToSave : exp));
+
+        } else {
+          // ⭐ 등록 모드 (Creation Mode)
+          experienceToSave = {
+            ...form,
+            period,
+            imageUrls: newImageUrls // 새 이력은 새로 업로드한 이미지 URL만 가집니다.
+          };
+
+          // 1. 구글 시트 추가
+          if (spreadsheetId && sheetsService.current) {
+            const sheetData = sheetsService.current.formatExperienceForSheet(experienceToSave);
+            await sheetsService.current.appendData(spreadsheetId, 'A:E', [sheetData]);
+          }
+
+          // 2. ⭐ 로컬 상태에 새 이력 추가 (정확히 새 이력 객체만 추가) ⭐
+          // 이 코드가 이력을 성공적으로 추가하고 화면에 남아있도록 보장합니다.
+          setExperiences(prev => [...prev, experienceToSave]);
         }
 
         closeModal();
-      }catch (error) {
-        console.error('이력 저장 오류:', error);
-        const errorMessage = sheetsService.current?.formatErrorMessage(error) || '이력 저장에 실패했습니다.';
+      } catch (error) {
+        console.error('이력 저장/수정 오류:', error);
+        const errorMessage = sheetsService.current?.formatErrorMessage(error) || '이력 저장/수정에 실패했습니다.';
         alert(errorMessage);
       } finally {
         setIsExperienceLoading(false);
@@ -931,6 +978,43 @@ function App() {
     }
   }
 
+  // 개별 이력 삭제
+  async function deleteIndividualExperience(indexToDelete) {
+    const expToDelete = experiences[indexToDelete];
+
+    if (!window.confirm(`"${expToDelete.title}" 이력을 정말로 삭제하시겠습니까?`)) {
+      return;
+    }
+
+    try {
+      setIsExperienceLoading(true);
+
+      if (spreadsheetId && sheetsService.current) {
+        // 헤더(1행) + 인덱스(0부터 시작) + 1 = 실제 시트 행 번호
+        const rowNumber = indexToDelete + 2;
+
+        // 시트에서 해당 행 삭제
+        await sheetsService.current.deleteData(spreadsheetId, `A${rowNumber}:E${rowNumber}`);
+      }
+
+      // 로컬 상태에서도 삭제
+      const newExperiences = experiences.filter((_, idx) => idx !== indexToDelete);
+      setExperiences(newExperiences);
+
+      // 선택된 목록도 갱신 (선택된 이력이 삭제되었을 경우를 대비)
+      setSelected([]);
+
+      alert('이력이 삭제되었습니다!');
+
+    } catch (error) {
+      console.error('개별 이력 삭제 오류:', error);
+      const errorMessage = sheetsService.current?.formatErrorMessage(error) || '이력 삭제에 실패했습니다.';
+      alert(errorMessage);
+    } finally {
+      setIsExperienceLoading(false);
+    }
+  }
+
   // 파일 다운로드 (Access Token 사용)
   async function handleDriveFileDownload(file) {
     if (!driveService.current || !authService.current) return;
@@ -1183,26 +1267,78 @@ function App() {
     });
   }
 
-  // 첫 슬라이드를 TITLE_AND_BODY로 변환
-  async function makeTitleAndBody(presId, slideId, token) {
-    await fetch(`https://slides.googleapis.com/v1/presentations/${presId}:batchUpdate`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        requests: [
-          {
-            updatePageProperties: {
-              objectId: slideId,
-              pageProperties: { layoutProperties: { name: 'TITLE_AND_BODY' } },
-              fields: 'pageProperties.layoutProperties'
-            }
+  // 첫 슬라이드에 제목/부제목 설정 (레이아웃 변경 없이)
+  async function makeTitleAndBody(presId, slideId, token, title, subtitle) {
+    try {
+      // 슬라이드 데이터를 가져와서 텍스트 요소들을 찾기
+      const slideData = await getPresentationData(presId, token);
+      const slide = slideData.slides.find(s => s.objectId === slideId);
+      
+      if (!slide || !slide.pageElements) {
+        console.error('슬라이드 또는 페이지 요소를 찾을 수 없습니다.');
+        return;
+      }
+
+      console.log('슬라이드 요소들:', slide.pageElements);
+
+      // 제목과 부제목 요소 찾기
+      let titleElement = null;
+      let subtitleElement = null;
+
+      for (const element of slide.pageElements) {
+        if (element.shape && element.shape.shapeType === 'TEXT_BOX') {
+          // 첫 번째 텍스트 박스를 제목으로, 두 번째를 부제목으로 사용
+          if (!titleElement) {
+            titleElement = element;
+          } else if (!subtitleElement) {
+            subtitleElement = element;
           }
-        ]
-      })
-    });
+        }
+      }
+
+      const textRequests = [];
+
+      // 제목 설정
+      if (titleElement && title) {
+        console.log('제목 설정:', title, '요소 ID:', titleElement.objectId);
+        textRequests.push({
+          insertText: {
+            objectId: titleElement.objectId,
+            insertionIndex: 0,
+            text: title
+          }
+        });
+      }
+
+      // 부제목 설정
+      if (subtitleElement && subtitle) {
+        console.log('부제목 설정:', subtitle, '요소 ID:', subtitleElement.objectId);
+        textRequests.push({
+          insertText: {
+            objectId: subtitleElement.objectId,
+            insertionIndex: 0,
+            text: subtitle
+          }
+        });
+      }
+
+      if (textRequests.length > 0) {
+        await fetch(`https://slides.googleapis.com/v1/presentations/${presId}:batchUpdate`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ requests: textRequests })
+        });
+        console.log('제목과 부제목이 성공적으로 설정되었습니다.');
+      } else {
+        console.log('설정할 텍스트 요소를 찾을 수 없습니다.');
+      }
+
+    } catch (error) {
+      console.error('makeTitleAndBody 오류:', error);
+    }
   }
 
   async function getPresentationData(presentationId, token) {
@@ -1429,6 +1565,9 @@ function App() {
     const day = String(currentDate.getDate()).padStart(2, '0');
     const dateString = `${year}-${month}-${day}`;
     
+    // PPT 표지용 제목 (날짜와 중복표시 제거)
+    const cleanTitle = title.replace(/\s+\d{4}-\d{2}-\d{2}$/, '').replace(/_\d+$/, '');
+    
     // 기본 파일명 생성 (날짜 포함)
     const baseFileName = `${title} ${dateString}`;
     
@@ -1499,10 +1638,18 @@ function App() {
         // 폴더 이동 실패해도 PPT 생성은 성공으로 처리
       }
 
-      // 2) 첫 슬라이드 레이아웃 보정
+      // 2) 첫 슬라이드 레이아웃 보정 및 제목/부제목 설정
       let data = await getPresentationData(presId, accessToken);
       if (data.slides?.length > 0) {
-        await makeTitleAndBody(presId, data.slides[0].objectId, accessToken);
+        // 구글 계정에서 사용자 이름 가져오기
+        let userName = '사용자';
+        try {
+          userName = await authService.current.getUserInfo();
+        } catch (error) {
+          console.warn('사용자 이름 가져오기 실패, 기본값 사용:', error);
+        }
+        
+        await makeTitleAndBody(presId, data.slides[0].objectId, accessToken, cleanTitle, userName);
       }
 
       // 3) 템플릿별 슬라이드 추가
@@ -2133,88 +2280,78 @@ function App() {
                                   experiences.map((exp, idx) => (
                                       <div className="list-group-item" key={idx} style={{ cursor: 'pointer' }} onClick={() => openExperienceModal(exp)}>
                                         <div className="d-flex align-items-center">
-                                          <div className="me-3 d-flex flex-column" style={{ gap: '5px' }}>
+                                          <div className="me-3" style={{ width: '60px', height: '60px', flexShrink: 0 }}>
                                             {(exp.imageUrls && exp.imageUrls.length > 0) ? (
-                                                <>
-                                                  {exp.imageUrls.slice(0, 3).map((imageUrl, imgIdx) => (
-                                                      <div
-                                                          key={imgIdx}
-                                                          style={{
-                                                            width: '60px',
-                                                            height: '60px',
-                                                            overflow: 'hidden',
-                                                            borderRadius: '4px',
-                                                            cursor: 'pointer',
-                                                            border: '2px solid transparent',
-                                                            transition: 'border-color 0.2s',
-                                                            position: 'relative'
-                                                          }}
-                                                          onMouseEnter={(e) => e.currentTarget.style.borderColor = '#007bff'}
-                                                          onMouseLeave={(e) => e.currentTarget.style.borderColor = 'transparent'}
-                                                          onClick={() => openImageModal(imageUrl, `${exp.title} - 이미지 ${imgIdx + 1}`)}
-                                                      >
-                                                        {imageLoadingStates.get(`${imageUrl}_${exp.title} 이미지 ${imgIdx + 1}`) === 'loading' && (
-                                                          <div style={{
-                                                            position: 'absolute',
-                                                            top: '50%',
-                                                            left: '50%',
-                                                            transform: 'translate(-50%, -50%)',
-                                                            color: '#007bff',
-                                                            fontSize: '12px'
-                                                          }}>
-                                                            <i className="fas fa-spinner fa-spin"></i>
-                                                          </div>
-                                                        )}
-                                                        {imageLoadingStates.get(`${imageUrl}_${exp.title} 이미지 ${imgIdx + 1}`) === 'error' && (
-                                                          <div style={{
-                                                            position: 'absolute',
-                                                            top: '50%',
-                                                            left: '50%',
-                                                            transform: 'translate(-50%, -50%)',
-                                                            color: '#dc3545',
-                                                            fontSize: '12px'
-                                                          }}>
-                                                            <i className="fas fa-exclamation-triangle"></i>
-                                                          </div>
-                                                        )}
-                                                        <img
-                                                            src={imageUrl}
-                                                            alt={`${exp.title} 이미지 ${imgIdx + 1}`}
-                                                            loading="lazy"
-                                                            decoding="async"
-                                                            style={{ 
-                                                              width: '100%', 
-                                                              height: '100%', 
-                                                              objectFit: 'cover',
-                                                              opacity: imageLoadingStates.get(`${imageUrl}_${exp.title} 이미지 ${imgIdx + 1}`) === 'loading' ? 0.5 : 1
-                                                            }}
-                                                            onLoad={() => setImageLoadingState(`${imageUrl}_${exp.title} 이미지 ${imgIdx + 1}`, false)}
-                                                            onError={async (e) => {
-                                                              // 이미 변환 시도 중인지 확인 (무한 재귀 방지)
-                                                              if (e.target.dataset.converting === 'true') {
-                                                                return;
-                                                              }
-                                                              
-                                                              try {
-                                                                e.target.dataset.converting = 'true';
-                                                                console.log('이미지 로딩 실패, 재시도 시작:', imageUrl);
-                                                                await retryImageLoad(e.target, imageUrl);
-                                                              } catch (error) {
-                                                                console.error('이미지 로딩 재시도 실패:', error);
-                                                                e.target.style.display = 'none';
-                                                              } finally {
-                                                                e.target.dataset.converting = 'false';
-                                                              }
-                                                            }}
-                                                        />
-                                                      </div>
-                                                  ))}
-                                                  {exp.imageUrls.length > 3 && (
-                                                      <div className="text-center" style={{ fontSize: '0.8rem', color: 'white' }}>
-                                                        +{exp.imageUrls.length - 3}
-                                                      </div>
+                                                <div
+                                                    style={{
+                                                      width: '60px',
+                                                      height: '60px',
+                                                      overflow: 'hidden',
+                                                      borderRadius: '4px',
+                                                      cursor: 'pointer',
+                                                      border: '2px solid transparent',
+                                                      transition: 'border-color 0.2s',
+                                                      position: 'relative'
+                                                    }}
+                                                    onMouseEnter={(e) => e.currentTarget.style.borderColor = '#007bff'}
+                                                    onMouseLeave={(e) => e.currentTarget.style.borderColor = 'transparent'}
+                                                    onClick={() => openImageModal(exp.imageUrls[0], `${exp.title} - 이미지 1`)}
+                                                >
+                                                  {imageLoadingStates.get(`${exp.imageUrls[0]}_${exp.title} 이미지 1`) === 'loading' && (
+                                                    <div style={{
+                                                      position: 'absolute',
+                                                      top: '50%',
+                                                      left: '50%',
+                                                      transform: 'translate(-50%, -50%)',
+                                                      color: '#007bff',
+                                                      fontSize: '12px'
+                                                    }}>
+                                                      <i className="fas fa-spinner fa-spin"></i>
+                                                    </div>
                                                   )}
-                                                </>
+                                                  {imageLoadingStates.get(`${exp.imageUrls[0]}_${exp.title} 이미지 1`) === 'error' && (
+                                                    <div style={{
+                                                      position: 'absolute',
+                                                      top: '50%',
+                                                      left: '50%',
+                                                      transform: 'translate(-50%, -50%)',
+                                                      color: '#dc3545',
+                                                      fontSize: '12px'
+                                                    }}>
+                                                      <i className="fas fa-exclamation-triangle"></i>
+                                                    </div>
+                                                  )}
+                                                  <img
+                                                      src={exp.imageUrls[0]}
+                                                      alt={`${exp.title} 이미지 1`}
+                                                      loading="lazy"
+                                                      decoding="async"
+                                                      style={{ 
+                                                        width: '100%', 
+                                                        height: '100%', 
+                                                        objectFit: 'cover',
+                                                        opacity: imageLoadingStates.get(`${exp.imageUrls[0]}_${exp.title} 이미지 1`) === 'loading' ? 0.5 : 1
+                                                      }}
+                                                      onLoad={() => setImageLoadingState(`${exp.imageUrls[0]}_${exp.title} 이미지 1`, false)}
+                                                      onError={async (e) => {
+                                                        // 이미 변환 시도 중인지 확인 (무한 재귀 방지)
+                                                        if (e.target.dataset.converting === 'true') {
+                                                          return;
+                                                        }
+                                                        
+                                                        try {
+                                                          e.target.dataset.converting = 'true';
+                                                          console.log('이미지 로딩 실패, 재시도 시작:', exp.imageUrls[0]);
+                                                          await retryImageLoad(e.target, exp.imageUrls[0]);
+                                                        } catch (error) {
+                                                          console.error('이미지 로딩 재시도 실패:', error);
+                                                          e.target.style.display = 'none';
+                                                        } finally {
+                                                          e.target.dataset.converting = 'false';
+                                                        }
+                                                      }}
+                                                  />
+                                                </div>
                                             ) : (
                                                 <div
                                                     style={{
@@ -2409,20 +2546,20 @@ function App() {
                         <div className="mac-window">
                           <h2>구글 드라이브</h2>
                           <div className="mac-window-content">
-                            {/* 드라이브 연동 상태 */}
-                            <div className="drive-status mb-4">
-                              <div className={`status-indicator ${isDriveInitialized ? 'connected' : 'disconnected'}`}>
-                                <i className={`fas ${isDriveInitialized ? 'fa-check-circle' : 'fa-exclamation-circle'}`}></i>
-                                <span>{isDriveInitialized ? '구글 드라이브 연동됨' : '구글 드라이브 연동 중...'}</span>
+                            {/* 드라이브 연동 상태 - 연동 실패 시에만 표시 */}
+                            {!isDriveInitialized && (
+                              <div className="drive-status mb-4">
+                                <div className="status-indicator disconnected">
+                                  <i className="fas fa-exclamation-circle"></i>
+                                  <span>구글 드라이브가 연동되지 않음</span>
+                                </div>
+                                <div className="drive-help">
+                                  <small style={{ color: 'white' }}>
+                                    구글 드라이브 연동이 필요합니다. 구글 계정으로 로그인해주세요.
+                                  </small>
+                                </div>
                               </div>
-                              {!isDriveInitialized && (
-                                  <div className="drive-help">
-                                    <small style={{ color: 'white' }}>
-                                      구글 드라이브 연동이 필요합니다. 구글 계정으로 로그인해주세요.
-                                    </small>
-                                  </div>
-                              )}
-                            </div>
+                            )}
 
                             {/* 시트 관리 버튼 */}
                             {isDriveInitialized && (
@@ -2933,8 +3070,27 @@ function App() {
                                             <p className="mb-1"><small>{exp.period}</small></p>
                                             <p className="mb-0">{exp.description}</p>
                                           </div>
-                                          <div style={{ color: 'white' }}>
-                                            <small>구글 시트에서 로드됨</small>
+                                          <div className="d-flex align-items-center gap-2">
+                                            <button
+                                                className="btn btn-outline-secondary btn-sm"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  showEditExperienceModal(idx);
+                                                }}
+                                                disabled={isExperienceLoading}
+                                            >
+                                              <i className="fas fa-edit"></i> 수정
+                                            </button>
+                                            <button
+                                                className="btn btn-outline-danger btn-sm"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  deleteIndividualExperience(idx);
+                                                }}
+                                                disabled={isExperienceLoading}
+                                            >
+                                              <i className="fas fa-trash-alt"></i> 삭제
+                                            </button>
                                           </div>
                                         </div>
                                       </div>
@@ -2956,7 +3112,7 @@ function App() {
               <div className="modal-dialog modal-dialog-centered">
                 <div className="modal-content mac-modal">
                   <div className="modal-header">
-                    <h5 className="modal-title">새 이력 추가</h5>
+                    <h5 className="modal-title">{editingIndex !== null ? '이력 수정' : '새 이력 추가'}</h5>
                     <button type="button" className="btn-close" onClick={closeModal}></button>
                   </div>
                   <form onSubmit={saveExperience} ref={formRef}>
@@ -3089,10 +3245,10 @@ function App() {
                         {isExperienceLoading ? (
                             <>
                               <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                              저장 중...
+                              {editingIndex !== null ? '수정 중...' : '저장 중...'}
                             </>
                         ) : (
-                            '저장'
+                            editingIndex !== null ? '수정' : '저장'
                         )}
                       </button>
                     </div>
