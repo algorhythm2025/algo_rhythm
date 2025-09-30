@@ -1183,10 +1183,10 @@ function App() {
     });
   }
 
-  // 첫 슬라이드를 TITLE_AND_BODY로 변환하고 제목/부제목 설정
+  // 첫 슬라이드에 제목/부제목 설정 (레이아웃 변경 없이)
   async function makeTitleAndBody(presId, slideId, token, title, subtitle) {
     try {
-      // 먼저 슬라이드 데이터를 가져와서 텍스트 요소들을 찾기
+      // 슬라이드 데이터를 가져와서 텍스트 요소들을 찾기
       const slideData = await getPresentationData(presId, token);
       const slide = slideData.slides.find(s => s.objectId === slideId);
       
@@ -1197,43 +1197,11 @@ function App() {
 
       console.log('슬라이드 요소들:', slide.pageElements);
 
-      const requests = [
-        {
-          updatePageProperties: {
-            objectId: slideId,
-            pageProperties: { layoutProperties: { name: 'TITLE_AND_BODY' } },
-            fields: 'pageProperties.layoutProperties'
-          }
-        }
-      ];
-
-      // TITLE_AND_BODY 레이아웃으로 변경 후 다시 슬라이드 데이터 가져오기
-      await fetch(`https://slides.googleapis.com/v1/presentations/${presId}:batchUpdate`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ requests })
-      });
-
-      // 잠시 대기 후 업데이트된 슬라이드 데이터 가져오기
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      const updatedSlideData = await getPresentationData(presId, token);
-      const updatedSlide = updatedSlideData.slides.find(s => s.objectId === slideId);
-
-      if (!updatedSlide || !updatedSlide.pageElements) {
-        console.error('업데이트된 슬라이드 데이터를 가져올 수 없습니다.');
-        return;
-      }
-
-      console.log('업데이트된 슬라이드 요소들:', updatedSlide.pageElements);
-
-      // 제목과 부제목 요소 찾기 (더 간단한 방식)
+      // 제목과 부제목 요소 찾기
       let titleElement = null;
       let subtitleElement = null;
 
-      for (const element of updatedSlide.pageElements) {
+      for (const element of slide.pageElements) {
         if (element.shape && element.shape.shapeType === 'TEXT_BOX') {
           // 첫 번째 텍스트 박스를 제목으로, 두 번째를 부제목으로 사용
           if (!titleElement) {
@@ -1280,6 +1248,8 @@ function App() {
           body: JSON.stringify({ requests: textRequests })
         });
         console.log('제목과 부제목이 성공적으로 설정되었습니다.');
+      } else {
+        console.log('설정할 텍스트 요소를 찾을 수 없습니다.');
       }
 
     } catch (error) {
