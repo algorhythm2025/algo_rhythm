@@ -287,24 +287,51 @@ class GoogleDriveService {
     const nameWithoutExt = lastDotIndex > 0 ? originalName.substring(0, lastDotIndex) : originalName;
     const extension = lastDotIndex > 0 ? originalName.substring(lastDotIndex) : '';
 
-    // 같은 이름으로 시작하는 파일들 찾기 (원본 이름과 _숫자 패턴 모두 포함)
-    const sameNameFiles = existingFiles.filter(file => 
-      file.name.startsWith(nameWithoutExt) && 
-      (file.name === originalName || file.name.match(new RegExp(`^${nameWithoutExt}_\\d+${extension.replace('.', '\\.')}$`)))
+    // 날짜 패턴 찾기 (YYYY-MM-DD 형식)
+    const dateMatch = nameWithoutExt.match(/^(.+?)\s+(\d{4}-\d{2}-\d{2})$/);
+    if (!dateMatch) {
+      // 날짜 패턴이 없으면 기존 로직 사용
+      const exactMatch = existingFiles.find(file => file.name === originalName);
+      if (!exactMatch) {
+        return originalName;
+      }
+      const numberedFiles = existingFiles.filter(file => 
+        file.name.match(new RegExp(`^${nameWithoutExt}_\\d+${extension.replace('.', '\\.')}$`))
+      );
+      const numbers = numberedFiles.map(file => {
+        const match = file.name.match(new RegExp(`^${nameWithoutExt}_(\\d+)${extension.replace('.', '\\.')}$`));
+        return match ? parseInt(match[1]) : 0;
+      });
+      const nextNumber = numbers.length > 0 ? Math.max(...numbers) + 1 : 1;
+      return `${nameWithoutExt}_${nextNumber}${extension}`;
+    }
+
+    const baseName = dateMatch[1]; // "ptp"
+    const dateString = dateMatch[2]; // "2025-09-30"
+    const fullBaseName = `${baseName} ${dateString}`; // "ptp 2025-09-30"
+
+    // 정확히 같은 이름의 파일이 있는지 확인
+    const exactMatch = existingFiles.find(file => file.name === originalName);
+    
+    if (!exactMatch) {
+      // 정확히 같은 이름의 파일이 없으면 원본 이름 그대로 반환
+      return originalName;
+    }
+
+    // 같은 기본 이름으로 시작하는 파일들 찾기 (baseName_숫자 날짜 패턴)
+    const numberedFiles = existingFiles.filter(file => 
+      file.name.match(new RegExp(`^${baseName}_\\d+\\s+${dateString}${extension.replace('.', '\\.')}$`))
     );
 
     // 기존 파일들에서 번호 추출
-    const numbers = sameNameFiles.map(file => {
-      if (file.name === originalName) {
-        return 1;
-      }
-      const match = file.name.match(new RegExp(`^${nameWithoutExt}_(\\d+)${extension.replace('.', '\\.')}$`));
-      return match ? parseInt(match[1]) : 1;
+    const numbers = numberedFiles.map(file => {
+      const match = file.name.match(new RegExp(`^${baseName}_(\\d+)\\s+${dateString}${extension.replace('.', '\\.')}$`));
+      return match ? parseInt(match[1]) : 0;
     });
 
-    // 다음 번호 계산
-    const nextNumber = sameNameFiles.length > 0 ? Math.max(...numbers) + 1 : 1;
-    return `${nameWithoutExt}_${nextNumber}${extension}`;
+    // 다음 번호 계산 (기존 번호들 중 최대값 + 1)
+    const nextNumber = numbers.length > 0 ? Math.max(...numbers) + 1 : 1;
+    return `${baseName}_${nextNumber} ${dateString}${extension}`;
   }
 
   // 파일 정보 가져오기
