@@ -32,6 +32,7 @@ function App() {
   const [isUploadLoading, setIsUploadLoading] = useState(false);
   const [isRefreshLoading, setIsRefreshLoading] = useState(false);
   const [isDeleteLoading, setIsDeleteLoading] = useState(false);
+  const [deletingFileIds, setDeletingFileIds] = useState(new Set()); // 삭제 중인 파일 ID들
   const [isViewModeLoading, setIsViewModeLoading] = useState(false);
   const [isPptCreating, setIsPptCreating] = useState(false); // PPT 생성 로딩 상태
   const [currentPath, setCurrentPath] = useState([]); // 현재 경로 추적
@@ -1005,7 +1006,8 @@ function App() {
     if (!window.confirm('정말로 이 파일을 삭제하시겠습니까?') || !driveService.current) return;
 
     try {
-      setIsDeleteLoading(true);
+      // 해당 파일 ID를 삭제 중 상태에 추가
+      setDeletingFileIds(prev => new Set([...prev, fileId]));
       await driveService.current.deleteFile(fileId);
       await loadDriveFiles();
       alert('파일이 삭제되었습니다!');
@@ -1013,7 +1015,12 @@ function App() {
       const errorMessage = driveService.current?.formatErrorMessage(error) || '파일 삭제에 실패했습니다.';
       alert(errorMessage);
     } finally {
-      setIsDeleteLoading(false);
+      // 해당 파일 ID를 삭제 중 상태에서 제거
+      setDeletingFileIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(fileId);
+        return newSet;
+      });
     }
   }
 
@@ -2678,9 +2685,9 @@ function App() {
                                                           <button
                                                               className="btn btn-sm btn-outline-danger"
                                                               onClick={() => handleDriveFileDelete(file.id)}
-                                                              disabled={isDeleteLoading}
+                                                              disabled={deletingFileIds.has(file.id)}
                                                           >
-                                                            {isDeleteLoading ? (
+                                                            {deletingFileIds.has(file.id) ? (
                                                                 <>
                                                                   <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
                                                                   삭제 중...
