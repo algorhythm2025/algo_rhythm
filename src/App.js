@@ -2955,29 +2955,48 @@ function App() {
                                 </div>
                               ) : (
                                 pptHistory.map((ppt, index) => (
-                                  <div key={ppt.id} className="list-group-item mac-list-item">
-                                    <div className="d-flex align-items-center">
+                                    <div
+                                        key={ppt.id}
+                                        className="list-group-item mac-list-item d-flex align-items-center"
+                                        style={{ cursor: 'pointer' }}
+                                        onClick={() =>  window.open(`https://docs.google.com/presentation/d/${ppt.id}/edit`, '_blank')}   // 리스트 클릭 시 열기
+                                    >
                                       <div className="me-3">
                                         <i className="fas fa-file-powerpoint text-primary fa-2x"></i>
                                       </div>
                                       <div className="flex-grow-1">
                                         <h6 className="mb-1 text-white">{ppt.name}</h6>
                                         <small className="text-white-50">
-                                          생성일: {new Date(ppt.createdTime).toLocaleDateString('ko-KR')}
+                                          생성일: {new Date(ppt.createdTime).toLocaleDateString()}
                                         </small>
                                       </div>
-                                      <div className="ms-3">
-                                        <a 
-                                          href={`https://docs.google.com/presentation/d/${ppt.id}/edit`}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className="btn btn-outline-primary btn-sm"
+                                      <div className="d-flex align-items-center gap-2">
+                                        {/* 수정 버튼 */}
+                                        <button
+                                            className="btn btn-outline-secondary btn-sm"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setActiveSection('editor');
+                                              setPresentationId(ppt.id);
+                                            }}
                                         >
-                                          <i className="fas fa-external-link-alt"></i> 열기
-                                        </a>
+                                          <i className="fas fa-edit"></i> 수정
+                                        </button>
+
+                                        {/* 삭제 버튼 */}
+                                        <button
+                                            className="btn btn-outline-danger btn-sm"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              if (window.confirm(`"${ppt.name}" 파일을 삭제하시겠습니까?`)) {
+                                                handleDriveFileDelete(ppt.id);
+                                              }
+                                            }}
+                                        >
+                                          <i className="fas fa-trash-alt"></i> 삭제
+                                        </button>
                                       </div>
                                     </div>
-                                  </div>
                                 ))
                               )}
                             </div>
