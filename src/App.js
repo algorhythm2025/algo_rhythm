@@ -14,6 +14,8 @@ function App() {
     // localStorage에서 저장된 섹션 복원
     return localStorage.getItem('activeSection') || 'main';
   });
+  // App.js 상단 상태 관리 섹션에 추가
+  const [originalPeriod, setOriginalPeriod] = useState(null); // 기존 설정 기간을 저장
   const [showModal, setShowModal] = useState(false);
   const [experiences, setExperiences] = useState([]);
   const [form, setForm] = useState({ title: '', startDate: '', endDate: '', description: '' });
@@ -416,22 +418,39 @@ function App() {
     }
   }
 
-  // 이력 추가 모달
   function showEditExperienceModal(index) {
+    if (index === null || index < 0 || index >= experiences.length) {
+      console.error('유효하지 않은 이력 인덱스:', index);
+      alert('수정할 이력이 존재하지 않습니다.');
+      return;
+    }
+
     const expToEdit = experiences[index];
 
-    // 폼 상태를 선택된 이력 데이터로 채웁니다.
+    // 1. 시트 데이터를 로드합니다 (형식 변환 없이 그대로 로드).
+    const startDate = expToEdit.startDate || '';
+    const endDate = expToEdit.endDate || '';
+
+    // 2. form 상태 초기화 (날짜 입력 필드의 value 역할)
     setForm({
-      title: expToEdit.title,
-      startDate: expToEdit.startDate,
-      endDate: expToEdit.endDate,
-      description: expToEdit.description
+      title: expToEdit.title || '',
+      startDate: '', // ⭐ 빈 문자열로 설정하여 달력 필드가 비어있도록 함
+      endDate: '',   // ⭐ 빈 문자열로 설정하여 달력 필드가 비어있도록 함
+      description: expToEdit.description || ''
     });
 
-    // 이미지 처리는 더 복잡하므로 여기서는 폼 데이터만 채웁니다.
-    // 실제 구현에서는 이미지 URL을 preview 상태로 변환하는 로직이 필요합니다.
+    // ⭐ [핵심] 기존 설정 기간을 저장합니다. ⭐
+    //    모달이 열리자마자 이 값이 '기존 설정 기간' 텍스트에 사용됩니다.
+    setOriginalPeriod({
+      start: startDate, // "2025.06.30"
+      end: endDate      // "2025.10.30"
+    });
 
-    setEditingIndex(index); // 수정 모드임을 표시
+    // 3. 이미지 및 모드 설정
+    const existingUrls = expToEdit.imageUrls || [];
+    setImagePreviews(existingUrls);
+
+    setEditingIndex(index);
     setShowModal(true);
   }
 
@@ -450,6 +469,8 @@ function App() {
     setSelectedImages([]);
     setImagePreviews([]);
     setEditingIndex(null);
+
+    setOriginalPeriod(null);
   }
 
   // 기간 포맷팅 함수
@@ -3180,6 +3201,14 @@ function App() {
                       </div>
                       <div className="mb-3">
                         <label className="form-label">기간</label>
+                        {editingIndex !== null && originalPeriod && originalPeriod.start && originalPeriod.end && (
+                            <div className="alert alert-info py-1 mt-2 mb-2">
+                              <small>
+                                {/* originalPeriod에 저장된 원본 날짜 문자열을 사용합니다. */}
+                                **기존 설정 기간:** {originalPeriod.start} - {originalPeriod.end}
+                              </small>
+                            </div>
+                        )}
                         <div className="period-container">
                           <div className="row">
                             <div className="col-6">
@@ -3220,6 +3249,7 @@ function App() {
                               />
                             </div>
                           </div>
+
                           {form.startDate && form.endDate && (
                               <div className="period-preview">
                                 <small style={{ color: 'white' }}>
@@ -3229,6 +3259,7 @@ function App() {
                           )}
                         </div>
                       </div>
+
                       <div className="mb-3">
                         <label className="form-label">설명</label>
                         <textarea className="form-control" rows="3" required value={form.description} onChange={e => setForm({ ...form, description: e.target.value })}></textarea>
