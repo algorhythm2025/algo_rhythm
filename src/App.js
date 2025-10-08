@@ -250,64 +250,64 @@ function App() {
                                   experiences.map((exp, idx) => (
                                       <div className="list-group-item experience-list-item" key={idx} onClick={() => openExperienceModal(exp)}>
                                         <div className="d-flex align-items-center">
-                                          <div className="me-3 image-container-60">
+                                          <div className="me-3 experience-image-container">
                                             {(exp.imageUrls && exp.imageUrls.length > 0) ? (
-                                                <div
-                                                    className="experience-image"
-                                                    onClick={() => openImageModal(exp.imageUrls[0], `${exp.title} - 이미지 1`)}
-                                                >
-                                                  {imageLoadingStates.get(`${exp.imageUrls[0]}_${exp.title} 이미지 1`) === 'loading' && (
-                                                    <div className="image-overlay">
-                                                      <i className="fas fa-spinner fa-spin"></i>
-                                                    </div>
-                                                  )}
-                                                  {imageLoadingStates.get(`${exp.imageUrls[0]}_${exp.title} 이미지 1`) === 'error' && (
-                                                    <div className="image-overlay">
-                                                      <i className="fas fa-exclamation-triangle"></i>
-                                                    </div>
-                                                  )}
-                                                  <img
-                                                      src={exp.imageUrls[0]}
-                                                      alt={`${exp.title} 이미지 1`}
-                                                      loading="lazy"
-                                                      decoding="async"
-                                                      className="experience-image img"
-                                                      onLoad={() => setImageLoadingState(`${exp.imageUrls[0]}_${exp.title} 이미지 1`, false)}
-                                                      onError={async (e) => {
-                                                        // 이미 변환 시도 중인지 확인 (무한 재귀 방지)
-                                                        if (e.target.dataset.converting === 'true') {
-                                                          return;
-                                                        }
-                                                        
-                                                        try {
-                                                          e.target.dataset.converting = 'true';
-                                                          console.log('이미지 로딩 실패, 재시도 시작:', exp.imageUrls[0]);
-                                                          await retryImageLoad(e.target, exp.imageUrls[0]);
-                                                        } catch (error) {
-                                                          console.error('이미지 로딩 재시도 실패:', error);
-                                                          e.target.style.display = 'none';
-                                                        } finally {
-                                                          e.target.dataset.converting = 'false';
-                                                        }
+                                                <>
+                                                  <div
+                                                      className="experience-image-wrapper ppt-size"
+                                                      onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        openImageModal(exp.imageUrls[0], `${exp.title} - 이미지 1`);
                                                       }}
-                                                  />
-                                                </div>
+                                                  >
+                                                    {imageLoadingStates.get(`${exp.imageUrls[0]}_${exp.title} 이미지 1`) === 'loading' && (
+                                                      <div className="experience-image-loading ppt-size">
+                                                        <i className="fas fa-spinner fa-spin"></i>
+                                                      </div>
+                                                    )}
+                                                    {imageLoadingStates.get(`${exp.imageUrls[0]}_${exp.title} 이미지 1`) === 'error' && (
+                                                      <div className="experience-image-error ppt-size">
+                                                        <i className="fas fa-exclamation-triangle"></i>
+                                                      </div>
+                                                    )}
+                                                    <img
+                                                        src={exp.imageUrls[0]}
+                                                        alt={`${exp.title} 이미지 1`}
+                                                        loading="lazy"
+                                                        decoding="async"
+                                                        className={`experience-image ${imageLoadingStates.get(`${exp.imageUrls[0]}_${exp.title} 이미지 1`) === 'loading' ? 'loading' : ''}`}
+                                                        onLoad={() => setImageLoadingState(`${exp.imageUrls[0]}_${exp.title} 이미지 1`, false)}
+                                                        onError={async (e) => {
+                                                          // 이미 변환 시도 중인지 확인 (무한 재귀 방지)
+                                                          if (e.target.dataset.converting === 'true') {
+                                                            return;
+                                                          }
+                                                        
+                                                          try {
+                                                            e.target.dataset.converting = 'true';
+                                                            console.log('이미지 로딩 실패, 재시도 시작:', exp.imageUrls[0]);
+                                                            await retryImageLoad(e.target, exp.imageUrls[0]);
+                                                          } catch (error) {
+                                                            console.error('이미지 로딩 재시도 실패:', error);
+                                                            e.target.style.display = 'none';
+                                                          } finally {
+                                                            e.target.dataset.converting = 'false';
+                                                          }
+                                                        }}
+                                                    />
+                                                  </div>
+                                                  {exp.imageUrls.length > 1 && (
+                                                      <div className="experience-image-count">
+                                                        +{exp.imageUrls.length - 1}
+                                                      </div>
+                                                  )}
+                                                </>
                                             ) : (
                                                 <div
-                                                    style={{
-                                                      width: '60px',
-                                                      height: '60px',
-                                                      backgroundColor: '#f8f9fa',
-                                                      border: '2px dashed #dee2e6',
-                                                      borderRadius: '4px',
-                                                      display: 'flex',
-                                                      alignItems: 'center',
-                                                      justifyContent: 'center',
-                                                      color: 'white'
-                                                    }}
+                                                    className="experience-no-image ppt-size"
                                                     title="이미지 없음"
                                                 >
-                                                  <i className="fas fa-image image-icon"></i>
+                                                  <i className="fas fa-image experience-no-image-icon"></i>
                                                 </div>
                                             )}
                                           </div>
@@ -947,107 +947,64 @@ function App() {
                                   experiences.map((exp, idx) => (
                                       <div className="list-group-item file-item" key={idx} onClick={() => openExperienceModal(exp)}>
                                         <div className="d-flex align-items-center">
-                                          <div className="me-3 d-flex flex-column" style={{ gap: '5px' }}>
+                                          <div className="me-3 experience-image-container">
                                             {(exp.imageUrls && exp.imageUrls.length > 0) ? (
                                                 <>
-                                                  {exp.imageUrls.slice(0, 3).map((imageUrl, imgIdx) => (
-                                                      <div
-                                                          key={imgIdx}
-                                                          style={{
-                                                            width: '50px',
-                                                            height: '50px',
-                                                            overflow: 'hidden',
-                                                            borderRadius: '4px',
-                                                            cursor: 'pointer',
-                                                            border: '2px solid transparent',
-                                                            transition: 'border-color 0.2s',
-                                                            position: 'relative'
-                                                          }}
-                                                          onMouseEnter={(e) => e.currentTarget.style.borderColor = '#007bff'}
-                                                          onMouseLeave={(e) => e.currentTarget.style.borderColor = 'transparent'}
-                                                          onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            openImageModal(imageUrl, `${exp.title} - 이미지 ${imgIdx + 1}`);
-                                                          }}
-                                                      >
-                                                        {imageLoadingStates.get(`${imageUrl}_${exp.title} 이미지 ${imgIdx + 1}`) === 'loading' && (
-                                                          <div style={{
-                                                            position: 'absolute',
-                                                            top: '50%',
-                                                            left: '50%',
-                                                            transform: 'translate(-50%, -50%)',
-                                                            color: '#007bff',
-                                                            fontSize: '10px'
-                                                          }}>
-                                                            <i className="fas fa-spinner fa-spin"></i>
-                                                          </div>
-                                                        )}
-                                                        {imageLoadingStates.get(`${imageUrl}_${exp.title} 이미지 ${imgIdx + 1}`) === 'error' && (
-                                                          <div style={{
-                                                            position: 'absolute',
-                                                            top: '50%',
-                                                            left: '50%',
-                                                            transform: 'translate(-50%, -50%)',
-                                                            color: '#dc3545',
-                                                            fontSize: '10px'
-                                                          }}>
-                                                            <i className="fas fa-exclamation-triangle"></i>
-                                                          </div>
-                                                        )}
-                                                        <img
-                                                            src={imageUrl}
-                                                            alt={`${exp.title} 이미지 ${imgIdx + 1}`}
-                                                            loading="lazy"
-                                                            decoding="async"
-                                                            style={{ 
-                                                              width: '100%', 
-                                                              height: '100%', 
-                                                              objectFit: 'cover',
-                                                              opacity: imageLoadingStates.get(`${imageUrl}_${exp.title} 이미지 ${imgIdx + 1}`) === 'loading' ? 0.5 : 1
-                                                            }}
-                                                            onLoad={() => setImageLoadingState(`${imageUrl}_${exp.title} 이미지 ${imgIdx + 1}`, false)}
-                                                            onError={async (e) => {
-                                                              // 이미 변환 시도 중인지 확인 (무한 재귀 방지)
-                                                              if (e.target.dataset.converting === 'true') {
-                                                                return;
-                                                              }
-                                                              
-                                                              try {
-                                                                e.target.dataset.converting = 'true';
-                                                                console.log('이미지 로딩 실패, 재시도 시작:', imageUrl);
-                                                                await retryImageLoad(e.target, imageUrl);
-                                                              } catch (error) {
-                                                                console.error('이미지 로딩 재시도 실패:', error);
-                                                                e.target.style.display = 'none';
-                                                              } finally {
-                                                                e.target.dataset.converting = 'false';
-                                                              }
-                                                            }}
-                                                        />
+                                                  <div
+                                                      className="experience-image-wrapper"
+                                                      onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        openImageModal(exp.imageUrls[0], `${exp.title} - 이미지 1`);
+                                                      }}
+                                                  >
+                                                    {imageLoadingStates.get(`${exp.imageUrls[0]}_${exp.title} 이미지 1`) === 'loading' && (
+                                                      <div className="experience-image-loading">
+                                                        <i className="fas fa-spinner fa-spin"></i>
                                                       </div>
-                                                  ))}
-                                                  {exp.imageUrls.length > 3 && (
-                                                      <div className="text-center" style={{ fontSize: '0.8rem', color: 'white' }}>
-                                                        +{exp.imageUrls.length - 3}
+                                                    )}
+                                                    {imageLoadingStates.get(`${exp.imageUrls[0]}_${exp.title} 이미지 1`) === 'error' && (
+                                                      <div className="experience-image-error">
+                                                        <i className="fas fa-exclamation-triangle"></i>
+                                                      </div>
+                                                    )}
+                                                    <img
+                                                        src={exp.imageUrls[0]}
+                                                        alt={`${exp.title} 이미지 1`}
+                                                        loading="lazy"
+                                                        decoding="async"
+                                                        className={`experience-image ${imageLoadingStates.get(`${exp.imageUrls[0]}_${exp.title} 이미지 1`) === 'loading' ? 'loading' : ''}`}
+                                                        onLoad={() => setImageLoadingState(`${exp.imageUrls[0]}_${exp.title} 이미지 1`, false)}
+                                                        onError={async (e) => {
+                                                          // 이미 변환 시도 중인지 확인 (무한 재귀 방지)
+                                                          if (e.target.dataset.converting === 'true') {
+                                                            return;
+                                                          }
+                                                        
+                                                          try {
+                                                            e.target.dataset.converting = 'true';
+                                                            console.log('이미지 로딩 실패, 재시도 시작:', exp.imageUrls[0]);
+                                                            await retryImageLoad(e.target, exp.imageUrls[0]);
+                                                          } catch (error) {
+                                                            console.error('이미지 로딩 재시도 실패:', error);
+                                                            e.target.style.display = 'none';
+                                                          } finally {
+                                                            e.target.dataset.converting = 'false';
+                                                          }
+                                                        }}
+                                                    />
+                                                  </div>
+                                                  {exp.imageUrls.length > 1 && (
+                                                      <div className="experience-image-count">
+                                                        +{exp.imageUrls.length - 1}
                                                       </div>
                                                   )}
                                                 </>
                                             ) : (
                                                 <div
-                                                    style={{
-                                                      width: '50px',
-                                                      height: '50px',
-                                                      backgroundColor: '#f8f9fa',
-                                                      border: '2px dashed #dee2e6',
-                                                      borderRadius: '4px',
-                                                      display: 'flex',
-                                                      alignItems: 'center',
-                                                      justifyContent: 'center',
-                                                      color: 'white'
-                                                    }}
+                                                    className="experience-no-image"
                                                     title="이미지 없음"
                                                 >
-                                                  <i className="fas fa-image" style={{ fontSize: '1.2rem' }}></i>
+                                                  <i className="fas fa-image experience-no-image-icon"></i>
                                                 </div>
                                             )}
                                           </div>
@@ -1457,9 +1414,9 @@ function App() {
                           </div>
                         </div>
                       ) : (
-                        <div className="text-center p-4" style={{ backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
-                          <i className="fas fa-image fa-3x mb-3" style={{ color: '#6c757d' }}></i>
-                          <p className="mb-0" style={{ color: '#6c757d' }}>첨부된 이미지가 없습니다</p>
+                        <div className="experience-modal-no-image">
+                          <i className="fas fa-image experience-modal-no-image-icon"></i>
+                          <p className="experience-modal-no-image-text">첨부된 이미지가 없습니다</p>
                         </div>
                       )}
                     </div>
