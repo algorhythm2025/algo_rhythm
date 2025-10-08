@@ -1199,7 +1199,7 @@ function App() {
   }
 
   // 파일 삭제 핸들러
-  async function handleDriveFileDelete(fileId) {
+  async function handleDriveFileDelete(fileId, isFromPptHistory = false) {
     if (!window.confirm('정말로 이 파일을 삭제하시겠습니까?') || !driveService.current) return;
 
     try {
@@ -1207,9 +1207,15 @@ function App() {
       setDeletingFileIds(prev => new Set([...prev, fileId]));
       await driveService.current.deleteFile(fileId);
       
-      // 현재 경로를 유지하면서 파일 목록 새로고침
-      const currentParentId = currentPath.length > 0 ? currentPath[currentPath.length - 1].id : null;
-      await loadDriveFiles(currentParentId);
+      if (isFromPptHistory) {
+        // PPT 기록에서 삭제한 경우 PPT 기록 새로고침
+        await loadPptHistory();
+        console.log('PPT 기록이 새로고침되었습니다.');
+      } else {
+        // 드라이브 파일에서 삭제한 경우 드라이브 파일 목록 새로고침
+        const currentParentId = currentPath.length > 0 ? currentPath[currentPath.length - 1].id : null;
+        await loadDriveFiles(currentParentId);
+      }
       
       alert('파일이 삭제되었습니다!');
     } catch (error) {
@@ -1378,7 +1384,7 @@ function App() {
           {
             createSlide: {
               slideLayoutReference: {
-                predefinedLayout: 'TITLE_AND_BODY'
+                predefinedLayout: 'BLANK'  // 빈 슬라이드로 변경
               }
             }
           }
@@ -1532,6 +1538,126 @@ function App() {
     });
   }
 
+  // 스타일이 적용된 텍스트박스를 슬라이드에 추가
+  async function addStyledTextBoxToSlide(presentationId, slideId, text, token, position = { x: 0, y: 0, width: 300, height: 100 }, style = {}) {
+    try {
+      const objectId = `textbox_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      const response = await fetch(`https://slides.googleapis.com/v1/presentations/${presentationId}:batchUpdate`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          requests: [{
+            createShape: {
+              objectId: objectId,
+              shapeType: 'TEXT_BOX',
+              elementProperties: {
+                pageObjectId: slideId,
+                size: {
+                  width: { magnitude: position.width, unit: 'PT' },
+                  height: { magnitude: position.height, unit: 'PT' }
+                },
+                transform: {
+                  scaleX: 1,
+                  scaleY: 1,
+                  translateX: position.x,
+                  translateY: position.y,
+                  unit: 'PT'
+                }
+              }
+            }
+          }, {
+            insertText: {
+              objectId: objectId,
+              text: text
+            }
+          }, {
+            updateTextStyle: {
+              objectId: objectId,
+              style: {
+                bold: style.bold || false,
+                italic: style.italic || false,
+                fontSize: style.fontSize || { magnitude: 12, unit: 'PT' },
+                fontFamily: style.fontFamily || 'Arial',
+                foregroundColor: style.color || { opaqueColor: { rgbColor: { red: 0, green: 0, blue: 0 } } }
+              },
+              fields: 'bold,italic,fontSize,fontFamily,foregroundColor'
+            }
+          }]
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`스타일 텍스트박스 추가 실패: ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log('스타일 텍스트박스가 슬라이드에 추가되었습니다:', result);
+      return result;
+    } catch (error) {
+      console.error('스타일 텍스트박스 추가 오류:', error);
+      throw error;
+    }
+  }
+
+  // 텍스트박스를 슬라이드에 추가
+  async function addTextBoxToSlide(presentationId, slideId, text, token, position = { x: 0, y: 0, width: 300, height: 100 }) {
+    try {
+      const objectId = `textbox_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      const response = await fetch(`https://slides.googleapis.com/v1/presentations/${presentationId}:batchUpdate`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          requests: [{
+            createShape: {
+              objectId: objectId,
+              shapeType: 'TEXT_BOX',
+              elementProperties: {
+                pageObjectId: slideId,
+                size: {
+                  width: { magnitude: position.width, unit: 'PT' },
+                  height: { magnitude: position.height, unit: 'PT' }
+                },
+                transform: {
+                  scaleX: 1,
+                  scaleY: 1,
+                  translateX: position.x,
+                  translateY: position.y,
+                  unit: 'PT'
+                }
+              }
+            }
+          }, {
+            insertText: {
+              objectId: objectId,
+              text: text
+            }
+          }]
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`텍스트박스 추가 실패: ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log('텍스트박스가 슬라이드에 추가되었습니다:', result);
+      return result;
+    } catch (error) {
+      console.error('텍스트박스 추가 오류:', error);
+      throw error;
+    }
+  }
+
   // 이미지를 슬라이드에 추가
   async function addImageToSlide(presentationId, slideId, imageUrl, token, position = { x: 0, y: 0, width: 300, height: 200 }) {
     try {
@@ -1618,11 +1744,6 @@ function App() {
     });
   }
 
-
-  function getTextFromElement(el) {
-    if (!el.shape || !el.shape.text || !el.shape.text.textElements) return '';
-    return el.shape.text.textElements.map(te => te.textRun?.content || '').join('');
-  }
 
   async function downloadPptxFromDrive(presentationId, token) {
     const mime = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
@@ -1856,11 +1977,45 @@ function App() {
       for (const exp of selectedExperiences) {
         if (!slidesArr[idx]) break;
         const s = slidesArr[idx];
-        const titleShapeId = findFirstPlaceholder(s.pageElements, 'TITLE');
-        const bodyShapeId  = findFirstPlaceholder(s.pageElements, 'BODY');
 
-        if (titleShapeId) await updateElementText(presId, titleShapeId, exp.title, accessToken);
-        if (bodyShapeId)  await updateElementText(presId, bodyShapeId, `${exp.period}\n\n${exp.description}`, accessToken);
+        // 제목, 기간, 설명을 위한 새로운 텍스트박스들을 생성
+        try {
+          // 1. 제목 텍스트박스 (제목 스타일 적용)
+          await addStyledTextBoxToSlide(presId, s.objectId, exp.title, accessToken, {
+            x: 50,   // 왼쪽에서 50pt
+            y: 50,   // 상단에서 50pt
+            width: 400,
+            height: 60
+          }, {
+            bold: true,
+            fontSize: { magnitude: 24, unit: 'PT' },
+            fontFamily: 'Arial',
+            color: { opaqueColor: { rgbColor: { red: 0, green: 0, blue: 0 } } }
+          });
+          console.log(`제목 텍스트박스가 슬라이드 ${idx}에 추가되었습니다:`, exp.title);
+
+          // 2. 기간 텍스트박스 (일반 스타일, 가로 길이 증가)
+          await addTextBoxToSlide(presId, s.objectId, exp.period, accessToken, {
+            x: 50,   // 왼쪽에서 50pt
+            y: 100,  // 제목 아래 간격을 줄임 (120 → 100)
+            width: 350,  // 가로 길이를 늘림 (200 → 350)
+            height: 40
+          });
+          console.log(`기간 텍스트박스가 슬라이드 ${idx}에 추가되었습니다:`, exp.period);
+
+          // 3. 설명 텍스트박스 (일반 스타일, 위치 조정)
+          await addTextBoxToSlide(presId, s.objectId, exp.description, accessToken, {
+            x: 50,   // 왼쪽에서 50pt
+            y: 150,  // 기간 아래 간격을 줄임 (170 → 150)
+            width: 300,
+            height: 80
+          });
+          console.log(`설명 텍스트박스가 슬라이드 ${idx}에 추가되었습니다:`, exp.description);
+
+        } catch (textBoxError) {
+          console.error(`슬라이드 ${idx}에 텍스트박스 추가 실패:`, textBoxError);
+          // 텍스트박스 추가 실패해도 PPT 생성은 계속 진행
+        }
         
         // 이미지가 있는 경우 슬라이드에 추가
         if (exp.imageUrls && exp.imageUrls.length > 0) {
@@ -2618,10 +2773,12 @@ function App() {
                                   <div key={slide.objectId || sIdx} className="editor-slide">
                                     <div className="slide-header">슬라이드 {sIdx + 1}</div>
                                     <div className="slide-body">
-                                      {slide.pageElements?.map((el) => {
+                                      {slide.pageElements?.filter(el => {
+                                        // 텍스트 요소만 필터링 (shape이 있고 text 속성이 있는 요소)
+                                        return el.shape && el.shape.text && el.shape.text.textElements;
+                                      }).map((el) => {
                                         const elText = getTextFromElement(el);
                                         const elId = el.objectId;
-
 
                                         return (
                                             <div key={elId} className="text-box">
@@ -3116,7 +3273,7 @@ function App() {
                                             onClick={(e) => {
                                               e.stopPropagation();
                                               if (window.confirm(`"${ppt.name}" 파일을 삭제하시겠습니까?`)) {
-                                                handleDriveFileDelete(ppt.id);
+                                                handleDriveFileDelete(ppt.id, true); // PPT 기록에서 삭제하므로 true 전달
                                               }
                                             }}
                                         >
