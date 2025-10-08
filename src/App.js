@@ -14,6 +14,8 @@ function App() {
     // localStorage에서 저장된 섹션 복원
     return localStorage.getItem('activeSection') || 'main';
   });
+  // App.js 상단 상태 관리 섹션에 추가
+  const [originalPeriod, setOriginalPeriod] = useState(null); // 기존 설정 기간을 저장
   const [showModal, setShowModal] = useState(false);
   const [experiences, setExperiences] = useState([]);
   const [form, setForm] = useState({ title: '', startDate: '', endDate: '', description: '' });
@@ -416,22 +418,93 @@ function App() {
     }
   }
 
-  // 이력 추가 모달
   function showEditExperienceModal(index) {
+    if (index === null || index < 0 || index >= experiences.length) {
+      console.error('유효하지 않은 이력 인덱스:', index);
+      alert('수정할 이력이 존재하지 않습니다.');
+      return;
+    }
+
     const expToEdit = experiences[index];
 
-    // 폼 상태를 선택된 이력 데이터로 채웁니다.
+    // 1. period 필드에서 날짜를 파싱합니다
+    let startDate = '';
+    let endDate = '';
+    
+    // 디버깅을 위해 데이터 구조 확인
+    console.log('수정할 이력 데이터:', expToEdit);
+    
+    if (expToEdit.period) {
+      console.log('period 필드:', expToEdit.period);
+      
+      // 다양한 period 형식 지원
+      // 1. "2025.06.30 - 2025.10.30" 형식
+      let periodMatch = expToEdit.period.match(/(\d{4}\.\d{2}\.\d{2})\s*[-~]\s*(\d{4}\.\d{2}\.\d{2})/);
+      
+      if (periodMatch) {
+        // "2025.06.30" 형식을 "2025-06-30" 형식으로 변환
+        startDate = periodMatch[1].replace(/\./g, '-');
+        endDate = periodMatch[2].replace(/\./g, '-');
+        console.log('파싱된 날짜:', { startDate, endDate });
+      } else {
+        // 2. "2025-06-30 - 2025-10-30" 형식 (이미 하이픈 형식)
+        periodMatch = expToEdit.period.match(/(\d{4}-\d{2}-\d{2})\s*[-~]\s*(\d{4}-\d{2}-\d{2})/);
+        if (periodMatch) {
+          startDate = periodMatch[1];
+          endDate = periodMatch[2];
+          console.log('파싱된 날짜 (하이픈 형식):', { startDate, endDate });
+        } else {
+          // 3. "2025/06/30 - 2025/10/30" 형식
+          periodMatch = expToEdit.period.match(/(\d{4}\/\d{2}\/\d{2})\s*[-~]\s*(\d{4}\/\d{2}\/\d{2})/);
+          if (periodMatch) {
+            startDate = periodMatch[1].replace(/\//g, '-');
+            endDate = periodMatch[2].replace(/\//g, '-');
+            console.log('파싱된 날짜 (슬래시 형식):', { startDate, endDate });
+          } else {
+            // 4. 단일 날짜 형식 "2025.09.24" (시작일만 있는 경우)
+            periodMatch = expToEdit.period.match(/(\d{4}\.\d{2}\.\d{2})/);
+            if (periodMatch) {
+              startDate = periodMatch[1].replace(/\./g, '-');
+              endDate = periodMatch[1].replace(/\./g, '-'); // 시작일과 동일하게 설정
+              console.log('파싱된 날짜 (단일 날짜):', { startDate, endDate });
+            } else {
+              // 5. 하이픈 형식 단일 날짜 "2025-09-24"
+              periodMatch = expToEdit.period.match(/(\d{4}-\d{2}-\d{2})/);
+              if (periodMatch) {
+                startDate = periodMatch[1];
+                endDate = periodMatch[1]; // 시작일과 동일하게 설정
+                console.log('파싱된 날짜 (하이픈 단일 날짜):', { startDate, endDate });
+              } else {
+                console.log('날짜 파싱 실패 - 지원되지 않는 형식:', expToEdit.period);
+              }
+            }
+          }
+        }
+      }
+    } else {
+      console.log('period 필드가 없습니다');
+    }
+
+    // 2. form 상태 초기화 (날짜 입력 필드의 value 역할)
     setForm({
-      title: expToEdit.title,
-      startDate: expToEdit.startDate,
-      endDate: expToEdit.endDate,
-      description: expToEdit.description
+      title: expToEdit.title || '',
+      startDate: startDate, // ⭐ 기존 데이터를 사용하여 달력 필드에 표시
+      endDate: endDate,     // ⭐ 기존 데이터를 사용하여 달력 필드에 표시
+      description: expToEdit.description || ''
     });
 
-    // 이미지 처리는 더 복잡하므로 여기서는 폼 데이터만 채웁니다.
-    // 실제 구현에서는 이미지 URL을 preview 상태로 변환하는 로직이 필요합니다.
+    // ⭐ [핵심] 기존 설정 기간을 저장합니다. ⭐
+    //    모달이 열리자마자 이 값이 '기존 설정 기간' 텍스트에 사용됩니다.
+    setOriginalPeriod({
+      start: startDate, // "2025.06.30"
+      end: endDate      // "2025.10.30"
+    });
 
-    setEditingIndex(index); // 수정 모드임을 표시
+    // 3. 이미지 및 모드 설정
+    const existingUrls = expToEdit.imageUrls || [];
+    setImagePreviews(existingUrls);
+
+    setEditingIndex(index);
     setShowModal(true);
   }
 
@@ -450,6 +523,8 @@ function App() {
     setSelectedImages([]);
     setImagePreviews([]);
     setEditingIndex(null);
+
+    setOriginalPeriod(null);
   }
 
   // 기간 포맷팅 함수
@@ -491,12 +566,12 @@ function App() {
       return false;
     }
 
-    // 미래 날짜 체크 (선택사항)
-    const today = new Date();
-    if (start > today) {
-      alert('시작일은 오늘 이전이어야 합니다.');
-      return false;
-    }
+    // 미래 날짜 체크 제거 (너무 엄격함)
+    // const today = new Date();
+    // if (start > today) {
+    //   alert('시작일은 오늘 이전이어야 합니다.');
+    //   return false;
+    // }
 
     return true;
   }
@@ -3191,10 +3266,18 @@ function App() {
                                   value={form.startDate}
                                   onChange={e => {
                                     const newStartDate = e.target.value;
+                                    
+                                    // 빈 값이거나 유효하지 않은 날짜 형식이면 검사하지 않음
+                                    if (!newStartDate || newStartDate.length < 10) {
+                                      setForm({ ...form, startDate: newStartDate });
+                                      return;
+                                    }
+                                    
                                     setForm({ ...form, startDate: newStartDate });
 
-                                    // 시작일이 종료일보다 늦으면 종료일 초기화
+                                    // 시작일이 종료일보다 늦으면 경고 후 종료일 초기화
                                     if (newStartDate && form.endDate && newStartDate > form.endDate) {
+                                      alert('시작일은 종료일보다 이전이어야 합니다.');
                                       setForm(prev => ({ ...prev, endDate: '' }));
                                     }
                                   }}
@@ -3209,6 +3292,13 @@ function App() {
                                   value={form.endDate}
                                   onChange={e => {
                                     const newEndDate = e.target.value;
+                                    
+                                    // 빈 값이거나 유효하지 않은 날짜 형식이면 검사하지 않음
+                                    if (!newEndDate || newEndDate.length < 10) {
+                                      setForm({ ...form, endDate: newEndDate });
+                                      return;
+                                    }
+                                    
                                     setForm({ ...form, endDate: newEndDate });
 
                                     // 종료일이 시작일보다 이르면 경고
@@ -3220,6 +3310,7 @@ function App() {
                               />
                             </div>
                           </div>
+
                           {form.startDate && form.endDate && (
                               <div className="period-preview">
                                 <small style={{ color: 'white' }}>
@@ -3229,6 +3320,7 @@ function App() {
                           )}
                         </div>
                       </div>
+
                       <div className="mb-3">
                         <label className="form-label">설명</label>
                         <textarea className="form-control" rows="3" required value={form.description} onChange={e => setForm({ ...form, description: e.target.value })}></textarea>
