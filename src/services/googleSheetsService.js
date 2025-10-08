@@ -161,10 +161,26 @@ class GoogleSheetsService {
 
       const gapiClient = this.authService.getAuthenticatedGapiClient();
 
-      const response = await gapiClient.sheets.spreadsheets.values.clear({
+      // range에서 행 번호 추출 (예: "A2:E2" -> 2)
+      const rowNumber = parseInt(range.match(/\d+/)[0]);
+      
+      // 행 자체를 삭제 (values.clear 대신 batchUpdate 사용)
+      const response = await gapiClient.sheets.spreadsheets.batchUpdate({
         spreadsheetId: spreadsheetId,
-        range: range
+        resource: {
+          requests: [{
+            deleteDimension: {
+              range: {
+                sheetId: 0, // 첫 번째 시트
+                dimension: 'ROWS',
+                startIndex: rowNumber - 1, // 0부터 시작하므로 -1
+                endIndex: rowNumber // endIndex는 제외되므로 rowNumber
+              }
+            }
+          }]
+        }
       });
+      
       return response.result;
     } catch (error) {
       console.error('데이터 삭제 오류:', error);
