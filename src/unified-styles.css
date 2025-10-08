@@ -1,3 +1,8 @@
+/* ========================================
+   통합 스타일 파일 - 실제 사용자에게 보여지는 스타일만 포함
+   ======================================== */
+
+/* 기존 styles.css 내용 (실제 적용되는 부분) */
 body {
     background-color: #0a0a0a;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
@@ -41,8 +46,57 @@ body {
     color: rgba(255, 255, 255, 0.7);
 }
 
+/* 날짜 선택기 스타일 */
+input[type="date"] {
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #fff;
+    border-radius: 5px;
+    padding: 8px 12px;
+}
+
+input[type="date"]:focus {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.3);
+    color: #fff;
+    box-shadow: none;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+    cursor: pointer;
+}
+
+input[type="date"]::-webkit-datetime-edit {
+    color: #fff;
+}
+
+input[type="date"]::-webkit-datetime-edit-fields-wrapper {
+    color: #fff;
+}
+
+/* 기간 선택 컨테이너 */
+.period-container {
+    background-color: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+
+.period-preview {
+    background-color: rgba(0, 123, 255, 0.1);
+    border: 1px solid rgba(0, 123, 255, 0.3);
+    border-radius: 5px;
+    padding: 8px 12px;
+    margin-top: 10px;
+    text-align: center;
+    font-weight: 500;
+}
+
+/* 로그인 페이지 - 실제 적용되는 스타일 */
 #loginPage {
-    background: linear-gradient(135deg, #007bff, #0056b3);
+    background-color: lightblue; /* 인라인 스타일에서 이동 */
 }
 
 #loginPage .card {
@@ -601,6 +655,57 @@ a.btn-google:hover {
     padding: 16px;
 }
 
+/* 슬라이드 편집기 스타일 */
+.slide-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.slide-item {
+    background: rgba(40, 40, 40, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 16px;
+}
+
+.slide-item h4 {
+    color: #fff;
+    margin-bottom: 16px;
+    font-size: 1.2rem;
+    font-weight: 500;
+}
+
+.slide-content {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.text-box {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    padding: 12px;
+}
+
+.text-box input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-size: 1rem;
+    padding: 8px 0;
+    outline: none;
+}
+
+.text-box input:focus {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+    padding: 8px 12px;
+}
+
 /* 전체 선택/해제 버튼 스타일 */
 .select-all-btn,
 .deselect-all-btn {
@@ -766,6 +871,176 @@ a.btn:hover,
     color: #fff !important;
 }
 
+/* ========================================
+   App.js에서 인라인 스타일로 적용되던 스타일들
+   ======================================== */
+
+/* 로그인 페이지 배경 */
+#loginPage {
+    background-color: lightblue;
+}
+
+/* 이력 목록 아이템 커서 */
+.experience-list-item {
+    cursor: pointer;
+}
+
+/* 이미지 컨테이너 */
+.image-container-60 {
+    width: 60px;
+    height: 60px;
+    flex-shrink: 0;
+}
+
+.image-container-50 {
+    width: 50px;
+    height: 50px;
+}
+
+/* 이미지 스타일 */
+.experience-image {
+    width: 60px;
+    height: 60px;
+    overflow: hidden;
+    border-radius: 4px;
+    position: relative;
+}
+
+.experience-image-50 {
+    width: 50px;
+    height: 50px;
+    overflow: hidden;
+    border-radius: 4px;
+    position: relative;
+}
+
+.experience-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* 이미지 오버레이 */
+.image-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+/* 로딩 오버레이 (스피너용) */
+.image-overlay .fa-spinner {
+    color: #007bff;
+    font-size: 12px;
+}
+
+/* 에러 오버레이 */
+.image-overlay .fa-exclamation-triangle {
+    color: #dc3545;
+    font-size: 12px;
+}
+
+/* 이미지 아이콘 */
+.image-icon {
+    font-size: 1.5rem;
+}
+
+.image-icon-small {
+    font-size: 1.2rem;
+}
+
+/* 로딩 스피너 */
+.loading-spinner {
+    width: 3rem;
+    height: 3rem;
+}
+
+/* 텍스트 색상 */
+.white-text {
+    color: white;
+}
+
+/* 구분선 */
+.gradient-divider {
+    border: none;
+    height: 2px;
+    background: linear-gradient(to right, #007bff, #6c757d, #007bff);
+    margin: 20px 0;
+}
+
+.simple-divider {
+    border: none;
+    height: 1px;
+    background: #e9ecef;
+    margin: 15px 0;
+}
+
+/* 파일 업로드 버튼 */
+.file-upload-btn {
+    pointer-events: none;
+}
+
+.file-upload-btn:not(.disabled) {
+    pointer-events: auto;
+}
+
+/* 숨김 요소 */
+.hidden-input {
+    display: none;
+}
+
+/* 파일 아이템 */
+.file-item {
+    cursor: pointer;
+}
+
+.file-name {
+    color: #0d6efd !important;
+}
+
+.folder-icon {
+    color: #ffc107 !important;
+}
+
+/* 파일 타입별 색상 */
+.file-type-spreadsheet {
+    color: #28a745 !important;
+}
+
+.file-type-document {
+    color: #007bff !important;
+}
+
+.file-type-presentation {
+    color: #dc3545 !important;
+}
+
+.file-type-image {
+    color: #6f42c1 !important;
+}
+
+/* PPT 히스토리 아이템 */
+.ppt-history-item {
+    cursor: pointer;
+}
+
+/* 모달 표시 */
+.modal-show {
+    display: block;
+    background: rgba(0,0,0,0.5);
+}
+
+/* 폼 라벨 */
+.form-label-white {
+    color: white !important;
+}
+
 /* 이미지 업로드 영역 스타일 */
 .image-upload-container {
     border: 2px dashed rgba(255, 255, 255, 0.3);
@@ -786,6 +1061,7 @@ a.btn:hover,
 .image-upload-container.dragover {
     border-color: #fff;
     background-color: rgba(255, 255, 255, 0.15);
+    transform: scale(1.02);
 }
 
 .image-upload-icon {
@@ -1020,4 +1296,73 @@ a.btn:hover,
     color: #fff;
     margin-bottom: 5px;
     font-size: 0.95rem;
-} 
+}
+
+/* 이미지 그리드 */
+.image-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.image-grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2px;
+}
+
+.image-grid-3 img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* 추가 이미지 카운터 */
+.additional-count {
+    font-size: 0.8rem;
+    color: white;
+}
+
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+    .file-actions {
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .file-actions .btn {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+    }
+
+    .btn-group {
+        flex-direction: column;
+    }
+
+    .btn-group .btn {
+        margin-bottom: 4px;
+        margin-right: 0;
+    }
+
+    /* 이력 모달 모바일 반응형 */
+    .experience-images .col-6 {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+
+    .experience-images .image-thumbnail {
+        height: 200px;
+    }
+
+    .mac-modal .modal-dialog {
+        margin: 0.5rem;
+    }
+
+    .mac-modal .row {
+        flex-direction: column;
+    }
+
+    .mac-modal .col-md-6 {
+        margin-bottom: 1rem;
+    }
+}

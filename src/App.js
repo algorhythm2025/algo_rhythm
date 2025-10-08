@@ -509,6 +509,7 @@ function App() {
   }
 
   function showAddExperienceModal() {
+    console.log('showAddExperienceModal 호출됨');
     // 상태 초기화 (폼, 이미지, 편집 인덱스 등)
     setForm({ title: '', startDate: '', endDate: '', description: '' });
     setSelectedImages([]);
@@ -516,6 +517,7 @@ function App() {
     setEditingIndex(null); // 수정 모드 아님을 확실히 지정
 
     setShowModal(true);
+    console.log('showModal 상태를 true로 설정');
   }
   function closeModal() {
     setShowModal(false);
@@ -2432,7 +2434,7 @@ function App() {
       <div>
         {/* 로그인 페이지 */}
         {!isLoggedIn && (
-            <div id="loginPage" className="vh-100" style={{ backgroundColor: 'lightblue' }}>
+            <div id="loginPage" className="vh-100">
               <div className="row h-100 g-0">
                 <div className="col-8 intro-section">
                   <div className="d-flex flex-column justify-content-center h-100 p-5">
@@ -2597,46 +2599,21 @@ function App() {
                                   </div>
                               ) : (
                                   experiences.map((exp, idx) => (
-                                      <div className="list-group-item" key={idx} style={{ cursor: 'pointer' }} onClick={() => openExperienceModal(exp)}>
+                                      <div className="list-group-item experience-list-item" key={idx} onClick={() => openExperienceModal(exp)}>
                                         <div className="d-flex align-items-center">
-                                          <div className="me-3" style={{ width: '60px', height: '60px', flexShrink: 0 }}>
+                                          <div className="me-3 image-container-60">
                                             {(exp.imageUrls && exp.imageUrls.length > 0) ? (
                                                 <div
-                                                    style={{
-                                                      width: '60px',
-                                                      height: '60px',
-                                                      overflow: 'hidden',
-                                                      borderRadius: '4px',
-                                                      cursor: 'pointer',
-                                                      border: '2px solid transparent',
-                                                      transition: 'border-color 0.2s',
-                                                      position: 'relative'
-                                                    }}
-                                                    onMouseEnter={(e) => e.currentTarget.style.borderColor = '#007bff'}
-                                                    onMouseLeave={(e) => e.currentTarget.style.borderColor = 'transparent'}
+                                                    className="experience-image"
                                                     onClick={() => openImageModal(exp.imageUrls[0], `${exp.title} - 이미지 1`)}
                                                 >
                                                   {imageLoadingStates.get(`${exp.imageUrls[0]}_${exp.title} 이미지 1`) === 'loading' && (
-                                                    <div style={{
-                                                      position: 'absolute',
-                                                      top: '50%',
-                                                      left: '50%',
-                                                      transform: 'translate(-50%, -50%)',
-                                                      color: '#007bff',
-                                                      fontSize: '12px'
-                                                    }}>
+                                                    <div className="image-overlay">
                                                       <i className="fas fa-spinner fa-spin"></i>
                                                     </div>
                                                   )}
                                                   {imageLoadingStates.get(`${exp.imageUrls[0]}_${exp.title} 이미지 1`) === 'error' && (
-                                                    <div style={{
-                                                      position: 'absolute',
-                                                      top: '50%',
-                                                      left: '50%',
-                                                      transform: 'translate(-50%, -50%)',
-                                                      color: '#dc3545',
-                                                      fontSize: '12px'
-                                                    }}>
+                                                    <div className="image-overlay">
                                                       <i className="fas fa-exclamation-triangle"></i>
                                                     </div>
                                                   )}
@@ -2645,12 +2622,7 @@ function App() {
                                                       alt={`${exp.title} 이미지 1`}
                                                       loading="lazy"
                                                       decoding="async"
-                                                      style={{ 
-                                                        width: '100%', 
-                                                        height: '100%', 
-                                                        objectFit: 'cover',
-                                                        opacity: imageLoadingStates.get(`${exp.imageUrls[0]}_${exp.title} 이미지 1`) === 'loading' ? 0.5 : 1
-                                                      }}
+                                                      className="experience-image img"
                                                       onLoad={() => setImageLoadingState(`${exp.imageUrls[0]}_${exp.title} 이미지 1`, false)}
                                                       onError={async (e) => {
                                                         // 이미 변환 시도 중인지 확인 (무한 재귀 방지)
@@ -2686,7 +2658,7 @@ function App() {
                                                     }}
                                                     title="이미지 없음"
                                                 >
-                                                  <i className="fas fa-image" style={{ fontSize: '1.5rem' }}></i>
+                                                  <i className="fas fa-image image-icon"></i>
                                                 </div>
                                             )}
                                           </div>
@@ -2714,7 +2686,7 @@ function App() {
                         <h2>{isPptCreating ? '포트폴리오 생성중입니다' : '템플릿을 선택하세요'}</h2>
                         {isPptCreating ? (
                           <div className="text-center p-5">
-                            <div className="spinner-border text-primary mb-3" role="status" style={{width: '3rem', height: '3rem'}}>
+                            <div className="spinner-border text-primary mb-3 loading-spinner" role="status">
                               <span className="visually-hidden">로딩중...</span>
                             </div>
                             <p className="text-muted">잠시만 기다려주세요. 이력과 이미지를 슬라이드에 추가하고 있습니다.</p>
@@ -2754,7 +2726,7 @@ function App() {
 
                             {isLoading ? (
                               <div className="text-center p-5">
-                                <div className="spinner-border text-primary mb-3" role="status" style={{width: '3rem', height: '3rem'}}>
+                                <div className="spinner-border text-primary mb-3 loading-spinner" role="status">
                                   <span className="visually-hidden">로딩중...</span>
                                 </div>
                                 <p className="text-muted">PPT 데이터를 불러오는 중입니다...</p>
@@ -2896,7 +2868,7 @@ function App() {
                                   <span>구글 드라이브가 연동되지 않음</span>
                                 </div>
                                 <div className="drive-help">
-                                  <small style={{ color: 'white' }}>
+                                  <small className="white-text">
                                     구글 드라이브 연동이 필요합니다. 구글 계정으로 로그인해주세요.
                                   </small>
                                 </div>
@@ -2993,7 +2965,7 @@ function App() {
 
                             {/* 구분선 */}
                             {isDriveInitialized && (
-                                <hr style={{ border: 'none', height: '2px', background: 'linear-gradient(to right, #007bff, #6c757d, #007bff)', margin: '20px 0' }} />
+                                <hr className="gradient-divider" />
                             )}
 
                             {/* 파일 목록 */}
@@ -3014,12 +2986,12 @@ function App() {
                                         {currentPath.length > 0 ? currentPath[currentPath.length - 1].name :
                                             driveViewMode === 'all' ? '전체 파일' : '포트폴리오 폴더 내용'}
                                         {driveViewMode === 'portfolio' && portfolioFolderId && currentPath.length === 0 && (
-                                            <small className="ms-2" style={{ color: 'white' }}>(포트폴리오 이력 폴더)</small>
+                                            <small className="ms-2 white-text">(포트폴리오 이력 폴더)</small>
                                         )}
                                       </h4>
                                     </div>
                                     <div>
-                                      <label htmlFor="drive-upload-input" className={`btn btn-outline-success btn-sm me-2 ${isUploadLoading ? 'disabled' : ''}`} style={{ pointerEvents: isUploadLoading ? 'none' : 'auto' }}>
+                                      <label htmlFor="drive-upload-input" className={`btn btn-outline-success btn-sm me-2 ${isUploadLoading ? 'disabled file-upload-btn' : ''}`}>
                                         {isUploadLoading ? (
                                             <>
                                               <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
@@ -3034,7 +3006,7 @@ function App() {
                                       <input
                                           id="drive-upload-input"
                                           type="file"
-                                          style={{ display: 'none' }}
+                                          className="hidden-input"
                                           onChange={handleDriveFileUpload}
                                       />
                                       <button className="btn btn-outline-primary btn-sm" onClick={handleDriveRefresh} disabled={isRefreshLoading}>
@@ -3057,7 +3029,7 @@ function App() {
                                           <div className="spinner-border text-primary" role="status">
                                             <span className="visually-hidden">로딩중...</span>
                                           </div>
-                                          <p className="mt-2" style={{ color: 'white' }}>파일 목록을 불러오는 중...</p>
+                                          <p className="mt-2 white-text">파일 목록을 불러오는 중...</p>
                                         </div>
                                     ) : driveFiles.length === 0 ? (
                                         <div className="empty-state">
@@ -3073,14 +3045,14 @@ function App() {
                                               .filter(file => file.mimeType === 'application/vnd.google-apps.folder')
                                               .map((file, index, array) => (
                                                   <div key={file.id}>
-                                                    <div className="file-item list-group-item folder-item" style={{ cursor: 'pointer' }} onClick={() => enterFolder(file.id, file.name)}>
+                                                    <div className="file-item list-group-item folder-item" onClick={() => enterFolder(file.id, file.name)}>
                                                       <div className="d-flex align-items-center">
-                                                        <i className="fas fa-folder me-3" style={{ color: '#ffc107' }}></i>
+                                                        <i className="fas fa-folder me-3 folder-icon"></i>
                                                         <div className="flex-grow-1">
                                                           <h6 className="mb-1 folder-name">
                                                             {file.name}
                                                           </h6>
-                                                          <small style={{ color: 'white' }}>
+                                                          <small className="white-text">
                                                             폴더 • {new Date(file.createdTime).toLocaleDateString()}
                                                           </small>
                                                         </div>
@@ -3122,7 +3094,7 @@ function App() {
                                           {/* 폴더와 파일 사이 구분선 */}
                                           {driveFiles.filter(file => file.mimeType === 'application/vnd.google-apps.folder').length > 0 &&
                                               driveFiles.filter(file => file.mimeType !== 'application/vnd.google-apps.folder').length > 0 && (
-                                                  <hr style={{ border: 'none', height: '1px', background: '#e9ecef', margin: '15px 0' }} />
+                                                  <hr className="simple-divider" />
                                               )}
 
                                           {/* 파일들 표시 */}
@@ -3138,21 +3110,18 @@ function App() {
                                                                     file.mimeType === 'application/vnd.google-apps.presentation' ? 'fa-file-powerpoint' :
                                                                         file.mimeType.startsWith('image/') ? 'fa-file-image' :
                                                                             'fa-file'
-                                                        } me-3`} style={{
-                                                          color: file.mimeType === 'application/vnd.google-apps.spreadsheet' ? '#28a745' :
-                                                              file.mimeType === 'application/vnd.google-apps.document' ? '#007bff' :
-                                                                  file.mimeType === 'application/vnd.google-apps.presentation' ? '#dc3545' :
-                                                                      file.mimeType.startsWith('image/') ? '#6f42c1' : 'white'
-                                                        }}></i>
+                                                        } me-3 ${file.mimeType === 'application/vnd.google-apps.spreadsheet' ? 'file-type-spreadsheet' :
+                                                              file.mimeType === 'application/vnd.google-apps.document' ? 'file-type-document' :
+                                                                  file.mimeType === 'application/vnd.google-apps.presentation' ? 'file-type-presentation' :
+                                                                      file.mimeType.startsWith('image/') ? 'file-type-image' : ''}`}></i>
                                                         <div className="flex-grow-1">
                                                           <h6
-                                                              className="mb-1 file-name"
-                                                              style={{ cursor: 'pointer', color: '#0d6efd' }}
+                                                              className="mb-1 file-name file-item"
                                                               onClick={() => downloadFile(file)}
                                                           >
                                                             {file.name}
                                                           </h6>
-                                                          <small style={{ color: 'white' }}>
+                                                          <small className="white-text">
                                                             {file.mimeType === 'application/vnd.google-apps.spreadsheet' ? '스프레드시트' :
                                                                 file.mimeType === 'application/vnd.google-apps.document' ? '문서' :
                                                                     file.mimeType === 'application/vnd.google-apps.presentation' ? '프레젠테이션' :
@@ -3242,8 +3211,7 @@ function App() {
                                 pptHistory.map((ppt, index) => (
                                     <div
                                         key={ppt.id}
-                                        className="list-group-item mac-list-item d-flex align-items-center"
-                                        style={{ cursor: 'pointer' }}
+                                        className="list-group-item mac-list-item d-flex align-items-center file-item"
                                         onClick={() =>  window.open(`https://docs.google.com/presentation/d/${ppt.id}/edit`, '_blank')}   // 리스트 클릭 시 열기
                                     >
                                       <div className="me-3">
@@ -3319,7 +3287,7 @@ function App() {
                                   </div>
                               ) : (
                                   experiences.map((exp, idx) => (
-                                      <div className="list-group-item" key={idx} style={{ cursor: 'pointer' }} onClick={() => openExperienceModal(exp)}>
+                                      <div className="list-group-item file-item" key={idx} onClick={() => openExperienceModal(exp)}>
                                         <div className="d-flex align-items-center">
                                           <div className="me-3 d-flex flex-column" style={{ gap: '5px' }}>
                                             {(exp.imageUrls && exp.imageUrls.length > 0) ? (
@@ -3468,7 +3436,8 @@ function App() {
 
         {/* 이력 추가 모달 */}
         {showModal && (
-            <div className="modal fade show" style={{ display: 'block', background: 'rgba(0,0,0,0.5)' }} tabIndex="-1">
+            console.log('모달 렌더링 중, showModal:', showModal),
+            <div className="modal fade show" style={{display: 'block', backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9999}} tabIndex="-1">
               <div className="modal-dialog modal-dialog-centered">
                 <div className="modal-content mac-modal">
                   <div className="modal-header">
@@ -3486,7 +3455,7 @@ function App() {
                         <div className="period-container">
                           <div className="row">
                             <div className="col-6">
-                              <label className="form-label small" style={{ color: 'white' }}>시작일</label>
+                              <label className="form-label small white-text">시작일</label>
                               <input
                                   type="date"
                                   className="form-control"
@@ -3512,7 +3481,7 @@ function App() {
                               />
                             </div>
                             <div className="col-6">
-                              <label className="form-label small" style={{ color: 'white' }}>종료일</label>
+                              <label className="form-label small white-text">종료일</label>
                               <input
                                   type="date"
                                   className="form-control"
@@ -3541,7 +3510,7 @@ function App() {
 
                           {form.startDate && form.endDate && (
                               <div className="period-preview">
-                                <small style={{ color: 'white' }}>
+                                <small className="white-text">
                                   선택된 기간: {formatPeriod(form.startDate, form.endDate)}
                                 </small>
                               </div>
@@ -3612,7 +3581,7 @@ function App() {
                             </div>
                         )}
                         <div className="image-size-info mt-2">
-                          <small style={{ color: 'white' }}>최대 파일 크기: 5MB, 지원 형식: JPG, PNG, GIF</small>
+                          <small className="white-text">최대 파일 크기: 5MB, 지원 형식: JPG, PNG, GIF</small>
                         </div>
                       </div>
                     </div>
@@ -3730,22 +3699,22 @@ function App() {
                 <div className="modal-body">
                   <div className="row">
                     <div className="col-md-6">
-                      <h6 className="mb-3" style={{ color: 'white' }}>기본 정보</h6>
+                      <h6 className="mb-3 white-text">기본 정보</h6>
                       <div className="mb-3">
-                        <strong style={{ color: 'white' }}>제목:</strong>
-                        <p className="mt-1" style={{ color: 'white' }}>{selectedExperience.title}</p>
+                        <strong className="white-text">제목:</strong>
+                        <p className="mt-1 white-text">{selectedExperience.title}</p>
                       </div>
                       <div className="mb-3">
-                        <strong style={{ color: 'white' }}>기간:</strong>
-                        <p className="mt-1" style={{ color: 'white' }}>{selectedExperience.period}</p>
+                        <strong className="white-text">기간:</strong>
+                        <p className="mt-1 white-text">{selectedExperience.period}</p>
                       </div>
                       <div className="mb-3">
-                        <strong style={{ color: 'white' }}>설명:</strong>
+                        <strong className="white-text">설명:</strong>
                         <p className="mt-1" style={{ whiteSpace: 'pre-wrap', color: 'white' }}>{selectedExperience.description}</p>
                       </div>
                     </div>
                     <div className="col-md-6">
-                      <h6 className="mb-3" style={{ color: 'white' }}>첨부 이미지</h6>
+                      <h6 className="mb-3 white-text">첨부 이미지</h6>
                       {selectedExperience.imageUrls && selectedExperience.imageUrls.length > 0 ? (
                         <div className="experience-images">
                           <div className="row g-2">
@@ -3825,7 +3794,7 @@ function App() {
                             ))}
                           </div>
                           <div className="mt-2 text-center">
-                            <small style={{ color: 'white' }}>
+                            <small className="white-text">
                               총 {selectedExperience.imageUrls.length}개의 이미지
                             </small>
                           </div>
@@ -3864,7 +3833,7 @@ function App() {
                 <div className="modal-body">
                   <div className="row">
                     <div className="col-12">
-                      <h6 className="mb-3" style={{ color: 'white' }}>템플릿 설명</h6>
+                      <h6 className="mb-3 white-text">템플릿 설명</h6>
                       <p className="mb-4" style={{ whiteSpace: 'pre-wrap', color: 'white' }}>
                         {templateDescriptions[selectedTemplateForModal]?.description}
                       </p>
@@ -3873,7 +3842,7 @@ function App() {
                       {templateDescriptions[selectedTemplateForModal]?.previewImages && 
                        templateDescriptions[selectedTemplateForModal].previewImages.length > 0 && (
                         <div className="mb-4">
-                          <h6 className="mb-3" style={{ color: 'white' }}>템플릿 미리보기</h6>
+                          <h6 className="mb-3 white-text">템플릿 미리보기</h6>
                           <div className="template-preview-container">
                             <div className="row g-3">
                               {templateDescriptions[selectedTemplateForModal].previewImages.map((imagePath, index) => (
@@ -3912,12 +3881,12 @@ function App() {
                         </div>
                       )}
                       
-                      <h6 className="mb-3" style={{ color: 'white' }}>주요 특징</h6>
+                      <h6 className="mb-3 white-text">주요 특징</h6>
                       <div className="template-features">
                         {templateDescriptions[selectedTemplateForModal]?.features.map((feature, index) => (
                           <div key={index} className="feature-item mb-2 d-flex align-items-center">
                             <i className="fas fa-check-circle text-success me-2"></i>
-                            <span style={{ color: 'white' }}>{feature}</span>
+                            <span className="white-text">{feature}</span>
                           </div>
                         ))}
                       </div>
