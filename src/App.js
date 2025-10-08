@@ -167,26 +167,7 @@ function App() {
                         <div className="auth-status mb-4">
                           <div className={`status-indicator ${authStatus === 'connected' ? 'connected' : authStatus === 'error' ? 'error' : 'disconnected'}`}>
                             <i className={`fas ${authStatus === 'connected' ? 'fa-check-circle' : authStatus === 'error' ? 'fa-exclamation-triangle' : 'fa-exclamation-circle'}`}></i>
-                            {/*<span>*/}
-                            {/*  {authStatus === 'connected' ? '구글 서비스 연동됨' : */}
-                            {/*   authStatus === 'error' ? '구글 서비스 연동 오류' : */}
-                            {/*   '구글 서비스 연동 중...'}*/}
-                            {/*</span>*/}
                           </div>
-                          {/*{spreadsheetId && (*/}
-                          {/*  <div className="spreadsheet-info">*/}
-                          {/*    <small>스프레드시트 ID: {spreadsheetId}</small>*/}
-                          {/*    <br />*/}
-                          {/*    <small>총 이력 수: {experiences.length}개</small>*/}
-                          {/*  </div>*/}
-                          {/*)}*/}
-                          {/*{authStatus === 'disconnected' && (*/}
-                          {/*  <div className="auth-help">*/}
-                          {/*    <small className="text-muted">*/}
-                          {/*      구글 서비스 연동이 필요합니다. 구글 계정으로 로그인해주세요.*/}
-                          {/*    </small>*/}
-                          {/*  </div>*/}
-                          {/*)}*/}
                         </div>
 
                         <div className="mac-grid">
@@ -877,7 +858,7 @@ function App() {
                                     <div
                                         key={ppt.id}
                                         className="list-group-item mac-list-item d-flex align-items-center file-item"
-                                        onClick={() =>  window.open(`https://docs.google.com/presentation/d/${ppt.id}/edit`, '_blank')}   // 리스트 클릭 시 열기
+                                        onClick={() => window.open(`https://docs.google.com/presentation/d/${ppt.id}/edit`, '_blank')}
                                     >
                                       <div className="me-3">
                                         <i className="fas fa-file-powerpoint text-primary fa-2x"></i>
@@ -1101,7 +1082,6 @@ function App() {
 
         {/* 이력 추가 모달 */}
         {showModal && (
-            console.log('모달 렌더링 중, showModal:', showModal),
             <div className="modal fade show" style={{display: 'block', backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9999}} tabIndex="-1">
               <div className="modal-dialog modal-dialog-centered">
                 <div className="modal-content mac-modal">
