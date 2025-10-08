@@ -939,6 +939,38 @@ function App() {
     }
   }
 
+  // PPT 수정을 위한 슬라이드 데이터 로드
+  async function loadPptForEdit(pptId) {
+    if (!accessToken) {
+      alert('인증이 필요합니다. 다시 로그인해주세요.');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      console.log('PPT 수정을 위한 데이터 로드 시작:', pptId);
+      
+      // 프레젠테이션 데이터 가져오기
+      const data = await getPresentationData(pptId, accessToken);
+      console.log('프레젠테이션 데이터 로드됨:', data);
+      
+      // 슬라이드 데이터 설정
+      setSlides(data.slides || []);
+      setPresentationId(pptId);
+      
+      console.log('슬라이드 데이터 설정 완료:', data.slides);
+      
+      // 에디터 섹션으로 이동
+      setActiveSection('editor');
+      
+    } catch (error) {
+      console.error('PPT 수정 데이터 로드 오류:', error);
+      alert('PPT 데이터를 불러오는데 실패했습니다: ' + (error.message || error));
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   // 드롭된 파일 처리
   function handleDroppedFiles(files) {
     files.forEach(file => {
@@ -2557,12 +2589,32 @@ function App() {
                         <div className="content-section">
                           <div className="ppt-editor">
                             <div className="editor-toolbar">
-                              <button onClick={() => window.open(`https://docs.google.com/presentation/d/${presentationId}/edit`, '_blank')}>Google Slides에서 열기</button>
+                              <button onClick={() => setActiveSection('myPage')} className="btn btn-outline-secondary me-2">
+                                <i className="fas fa-arrow-left"></i> 뒤로가기
+                              </button>
+                              <button onClick={() => window.open(`https://docs.google.com/presentation/d/${presentationId}/edit`, '_blank')} className="btn btn-primary">
+                                <i className="fas fa-external-link-alt"></i> Google Slides에서 열기
+                              </button>
                             </div>
 
-
-                            <div className="editor-canvas">
-                              {slides.map((slide, sIdx) => (
+                            {isLoading ? (
+                              <div className="text-center p-5">
+                                <div className="spinner-border text-primary mb-3" role="status" style={{width: '3rem', height: '3rem'}}>
+                                  <span className="visually-hidden">로딩중...</span>
+                                </div>
+                                <p className="text-muted">PPT 데이터를 불러오는 중입니다...</p>
+                              </div>
+                            ) : slides.length === 0 ? (
+                              <div className="text-center p-5">
+                                <i className="fas fa-file-powerpoint fa-3x mb-3 text-muted"></i>
+                                <p className="text-muted">슬라이드 데이터를 불러올 수 없습니다.</p>
+                                <button onClick={() => setActiveSection('myPage')} className="btn btn-outline-primary">
+                                  <i className="fas fa-arrow-left"></i> 마이페이지로 돌아가기
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="editor-canvas">
+                                {slides.map((slide, sIdx) => (
                                   <div key={slide.objectId || sIdx} className="editor-slide">
                                     <div className="slide-header">슬라이드 {sIdx + 1}</div>
                                     <div className="slide-body">
@@ -2665,6 +2717,7 @@ function App() {
                                   </div>
                               ))}
                             </div>
+                            )}
                           </div>
                         </div>
                     )}
@@ -3030,29 +3083,47 @@ function App() {
                                 </div>
                               ) : (
                                 pptHistory.map((ppt, index) => (
-                                  <div key={ppt.id} className="list-group-item mac-list-item">
-                                    <div className="d-flex align-items-center">
+                                    <div
+                                        key={ppt.id}
+                                        className="list-group-item mac-list-item d-flex align-items-center"
+                                        style={{ cursor: 'pointer' }}
+                                        onClick={() =>  window.open(`https://docs.google.com/presentation/d/${ppt.id}/edit`, '_blank')}   // 리스트 클릭 시 열기
+                                    >
                                       <div className="me-3">
                                         <i className="fas fa-file-powerpoint text-primary fa-2x"></i>
                                       </div>
                                       <div className="flex-grow-1">
                                         <h6 className="mb-1 text-white">{ppt.name}</h6>
                                         <small className="text-white-50">
-                                          생성일: {new Date(ppt.createdTime).toLocaleDateString('ko-KR')}
+                                          생성일: {new Date(ppt.createdTime).toLocaleDateString()}
                                         </small>
                                       </div>
-                                      <div className="ms-3">
-                                        <a 
-                                          href={`https://docs.google.com/presentation/d/${ppt.id}/edit`}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className="btn btn-outline-primary btn-sm"
+                                      <div className="d-flex align-items-center gap-2">
+                                        {/* 수정 버튼 */}
+                                        <button
+                                            className="btn btn-outline-secondary btn-sm"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              loadPptForEdit(ppt.id);
+                                            }}
                                         >
-                                          <i className="fas fa-external-link-alt"></i> 열기
-                                        </a>
+                                          <i className="fas fa-edit"></i> 수정
+                                        </button>
+
+                                        {/* 삭제 버튼 */}
+                                        <button
+                                            className="btn btn-outline-danger btn-sm"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              if (window.confirm(`"${ppt.name}" 파일을 삭제하시겠습니까?`)) {
+                                                handleDriveFileDelete(ppt.id);
+                                              }
+                                            }}
+                                        >
+                                          <i className="fas fa-trash-alt"></i> 삭제
+                                        </button>
                                       </div>
                                     </div>
-                                  </div>
                                 ))
                               )}
                             </div>
