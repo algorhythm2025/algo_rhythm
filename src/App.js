@@ -427,15 +427,69 @@ function App() {
 
     const expToEdit = experiences[index];
 
-    // 1. 시트 데이터를 로드합니다 (형식 변환 없이 그대로 로드).
-    const startDate = expToEdit.startDate || '';
-    const endDate = expToEdit.endDate || '';
+    // 1. period 필드에서 날짜를 파싱합니다
+    let startDate = '';
+    let endDate = '';
+    
+    // 디버깅을 위해 데이터 구조 확인
+    console.log('수정할 이력 데이터:', expToEdit);
+    
+    if (expToEdit.period) {
+      console.log('period 필드:', expToEdit.period);
+      
+      // 다양한 period 형식 지원
+      // 1. "2025.06.30 - 2025.10.30" 형식
+      let periodMatch = expToEdit.period.match(/(\d{4}\.\d{2}\.\d{2})\s*[-~]\s*(\d{4}\.\d{2}\.\d{2})/);
+      
+      if (periodMatch) {
+        // "2025.06.30" 형식을 "2025-06-30" 형식으로 변환
+        startDate = periodMatch[1].replace(/\./g, '-');
+        endDate = periodMatch[2].replace(/\./g, '-');
+        console.log('파싱된 날짜:', { startDate, endDate });
+      } else {
+        // 2. "2025-06-30 - 2025-10-30" 형식 (이미 하이픈 형식)
+        periodMatch = expToEdit.period.match(/(\d{4}-\d{2}-\d{2})\s*[-~]\s*(\d{4}-\d{2}-\d{2})/);
+        if (periodMatch) {
+          startDate = periodMatch[1];
+          endDate = periodMatch[2];
+          console.log('파싱된 날짜 (하이픈 형식):', { startDate, endDate });
+        } else {
+          // 3. "2025/06/30 - 2025/10/30" 형식
+          periodMatch = expToEdit.period.match(/(\d{4}\/\d{2}\/\d{2})\s*[-~]\s*(\d{4}\/\d{2}\/\d{2})/);
+          if (periodMatch) {
+            startDate = periodMatch[1].replace(/\//g, '-');
+            endDate = periodMatch[2].replace(/\//g, '-');
+            console.log('파싱된 날짜 (슬래시 형식):', { startDate, endDate });
+          } else {
+            // 4. 단일 날짜 형식 "2025.09.24" (시작일만 있는 경우)
+            periodMatch = expToEdit.period.match(/(\d{4}\.\d{2}\.\d{2})/);
+            if (periodMatch) {
+              startDate = periodMatch[1].replace(/\./g, '-');
+              endDate = periodMatch[1].replace(/\./g, '-'); // 시작일과 동일하게 설정
+              console.log('파싱된 날짜 (단일 날짜):', { startDate, endDate });
+            } else {
+              // 5. 하이픈 형식 단일 날짜 "2025-09-24"
+              periodMatch = expToEdit.period.match(/(\d{4}-\d{2}-\d{2})/);
+              if (periodMatch) {
+                startDate = periodMatch[1];
+                endDate = periodMatch[1]; // 시작일과 동일하게 설정
+                console.log('파싱된 날짜 (하이픈 단일 날짜):', { startDate, endDate });
+              } else {
+                console.log('날짜 파싱 실패 - 지원되지 않는 형식:', expToEdit.period);
+              }
+            }
+          }
+        }
+      }
+    } else {
+      console.log('period 필드가 없습니다');
+    }
 
     // 2. form 상태 초기화 (날짜 입력 필드의 value 역할)
     setForm({
       title: expToEdit.title || '',
-      startDate: '', // ⭐ 빈 문자열로 설정하여 달력 필드가 비어있도록 함
-      endDate: '',   // ⭐ 빈 문자열로 설정하여 달력 필드가 비어있도록 함
+      startDate: startDate, // ⭐ 기존 데이터를 사용하여 달력 필드에 표시
+      endDate: endDate,     // ⭐ 기존 데이터를 사용하여 달력 필드에 표시
       description: expToEdit.description || ''
     });
 
@@ -512,12 +566,12 @@ function App() {
       return false;
     }
 
-    // 미래 날짜 체크 (선택사항)
-    const today = new Date();
-    if (start > today) {
-      alert('시작일은 오늘 이전이어야 합니다.');
-      return false;
-    }
+    // 미래 날짜 체크 제거 (너무 엄격함)
+    // const today = new Date();
+    // if (start > today) {
+    //   alert('시작일은 오늘 이전이어야 합니다.');
+    //   return false;
+    // }
 
     return true;
   }
@@ -3201,14 +3255,6 @@ function App() {
                       </div>
                       <div className="mb-3">
                         <label className="form-label">기간</label>
-                        {editingIndex !== null && originalPeriod && originalPeriod.start && originalPeriod.end && (
-                            <div className="alert alert-info py-1 mt-2 mb-2">
-                              <small>
-                                {/* originalPeriod에 저장된 원본 날짜 문자열을 사용합니다. */}
-                                **기존 설정 기간:** {originalPeriod.start} - {originalPeriod.end}
-                              </small>
-                            </div>
-                        )}
                         <div className="period-container">
                           <div className="row">
                             <div className="col-6">
@@ -3220,10 +3266,18 @@ function App() {
                                   value={form.startDate}
                                   onChange={e => {
                                     const newStartDate = e.target.value;
+                                    
+                                    // 빈 값이거나 유효하지 않은 날짜 형식이면 검사하지 않음
+                                    if (!newStartDate || newStartDate.length < 10) {
+                                      setForm({ ...form, startDate: newStartDate });
+                                      return;
+                                    }
+                                    
                                     setForm({ ...form, startDate: newStartDate });
 
-                                    // 시작일이 종료일보다 늦으면 종료일 초기화
+                                    // 시작일이 종료일보다 늦으면 경고 후 종료일 초기화
                                     if (newStartDate && form.endDate && newStartDate > form.endDate) {
+                                      alert('시작일은 종료일보다 이전이어야 합니다.');
                                       setForm(prev => ({ ...prev, endDate: '' }));
                                     }
                                   }}
@@ -3238,6 +3292,13 @@ function App() {
                                   value={form.endDate}
                                   onChange={e => {
                                     const newEndDate = e.target.value;
+                                    
+                                    // 빈 값이거나 유효하지 않은 날짜 형식이면 검사하지 않음
+                                    if (!newEndDate || newEndDate.length < 10) {
+                                      setForm({ ...form, endDate: newEndDate });
+                                      return;
+                                    }
+                                    
                                     setForm({ ...form, endDate: newEndDate });
 
                                     // 종료일이 시작일보다 이르면 경고
