@@ -943,17 +943,32 @@ function App() {
 
   // PPT 수정을 위한 슬라이드 데이터 로드
   async function loadPptForEdit(pptId) {
-    if (!accessToken) {
-      alert('인증이 필요합니다. 다시 로그인해주세요.');
-      return;
-    }
-
     try {
       setIsLoading(true);
       console.log('PPT 수정을 위한 데이터 로드 시작:', pptId);
       
+      // 인증 서비스를 통해 토큰 확인 및 갱신
+      if (!authService.current) {
+        alert('인증 서비스가 초기화되지 않았습니다. 다시 로그인해주세요.');
+        return;
+      }
+      
+      // 인증 상태 확인
+      const isAuthenticated = await authService.current.isAuthenticated();
+      if (!isAuthenticated) {
+        alert('인증이 필요합니다. 다시 로그인해주세요.');
+        return;
+      }
+      
+      // 액세스 토큰 가져오기
+      const token = await authService.current.getAccessToken();
+      if (!token) {
+        alert('액세스 토큰을 가져올 수 없습니다. 다시 로그인해주세요.');
+        return;
+      }
+      
       // 프레젠테이션 데이터 가져오기
-      const data = await getPresentationData(pptId, accessToken);
+      const data = await getPresentationData(pptId, token);
       console.log('프레젠테이션 데이터 로드됨:', data);
       
       // 슬라이드 데이터 설정
@@ -967,7 +982,11 @@ function App() {
       
     } catch (error) {
       console.error('PPT 수정 데이터 로드 오류:', error);
-      alert('PPT 데이터를 불러오는데 실패했습니다: ' + (error.message || error));
+      if (error.message && error.message.includes('인증')) {
+        alert('인증이 만료되었습니다. 다시 로그인해주세요.');
+      } else {
+        alert('PPT 데이터를 불러오는데 실패했습니다: ' + (error.message || error));
+      }
     } finally {
       setIsLoading(false);
     }
@@ -1054,6 +1073,124 @@ function App() {
     }
   }
 
+  // 이미지 URL에서 파일 ID 추출하는 헬퍼 함수
+  function extractFileIdFromImageUrl(imageUrl) {
+    try {
+      // Google Drive 썸네일 URL에서 파일 ID 추출
+      // 예: https://drive.google.com/thumbnail?id=FILE_ID&sz=w400
+      const match = imageUrl.match(/[?&]id=([^&]+)/);
+      if (match) {
+        return match[1];
+      }
+      
+      // 직접 파일 URL에서 파일 ID 추출
+      // 예: https://drive.google.com/file/d/FILE_ID/view
+      const directMatch = imageUrl.match(/\/file\/d\/([^\/]+)/);
+      if (directMatch) {
+        return directMatch[1];
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('파일 ID 추출 오류:', error);
+      return null;
+    }
+  }
+
+  // 이미지 파일들을 삭제하는 헬퍼 함수
+  async function deleteImageFiles(imageUrls) {
+    if (!imageUrls || imageUrls.length === 0 || !driveService.current) return;
+    
+    const deletePromises = imageUrls.map(async (imageUrl) => {
+      try {
+        const fileId = extractFileIdFromImageUrl(imageUrl);
+        if (fileId) {
+          console.log('이미지 파일 삭제 시도:', fileId);
+          await driveService.current.deleteFile(fileId);
+          console.log('이미지 파일 삭제 완료:', fileId);
+        }
+      } catch (error) {
+        console.error('이미지 파일 삭제 실패:', imageUrl, error);
+        // 개별 이미지 삭제 실패해도 전체 프로세스는 계속 진행
+      }
+    });
+    
+    await Promise.allSettled(deletePromises);
+  }
+
+  // 이력 폴더를 삭제하는 헬퍼 함수
+  async function deleteExperienceFolder(experienceTitle) {
+    if (!experienceTitle || !driveService.current || !portfolioFolderId) {
+      console.log('폴더 삭제 조건 미충족:', { experienceTitle, hasDriveService: !!driveService.current, portfolioFolderId });
+      return;
+    }
+    
+    try {
+      console.log('포트폴리오 폴더 ID:', portfolioFolderId);
+      console.log('검색할 이력 제목:', experienceTitle);
+      
+      // 포트폴리오 이력 폴더 내에서 image 폴더 찾기
+      const files = await driveService.current.getFilesInFolder(portfolioFolderId);
+      console.log('포트폴리오 폴더 내 파일들:', files.map(f => ({ name: f.name, mimeType: f.mimeType, id: f.id })));
+      
+      const imageFolder = files.find(file => 
+        file.name === 'image' && 
+        file.mimeType === 'application/vnd.google-apps.folder'
+      );
+      
+      if (!imageFolder) {
+        console.log('image 폴더를 찾을 수 없습니다');
+        return;
+      }
+      
+      console.log('image 폴더 발견:', imageFolder.name, imageFolder.id);
+      
+      // image 폴더 내에서 해당 이력 폴더 찾기
+      const imageFiles = await driveService.current.getFilesInFolder(imageFolder.id);
+      console.log('image 폴더 내 파일들:', imageFiles.map(f => ({ name: f.name, mimeType: f.mimeType, id: f.id })));
+      
+      // 정확한 이름으로 먼저 찾기
+      let experienceFolder = imageFiles.find(file => 
+        file.name === experienceTitle && 
+        file.mimeType === 'application/vnd.google-apps.folder'
+      );
+      
+      // 정확한 이름으로 찾지 못했다면 부분 일치로 찾기
+      if (!experienceFolder) {
+        experienceFolder = imageFiles.find(file => 
+          file.name.includes(experienceTitle) && 
+          file.mimeType === 'application/vnd.google-apps.folder'
+        );
+      }
+      
+      // 여전히 찾지 못했다면 대소문자 무시하고 찾기
+      if (!experienceFolder) {
+        experienceFolder = imageFiles.find(file => 
+          file.name.toLowerCase() === experienceTitle.toLowerCase() && 
+          file.mimeType === 'application/vnd.google-apps.folder'
+        );
+      }
+      
+      if (experienceFolder) {
+        console.log('이력 폴더 발견:', experienceFolder.name, experienceFolder.id);
+        console.log('이력 폴더 삭제 시도:', experienceFolder.name, experienceFolder.id);
+        await driveService.current.deleteFile(experienceFolder.id);
+        console.log('이력 폴더 삭제 완료:', experienceFolder.name);
+      } else {
+        console.log('삭제할 이력 폴더를 찾을 수 없습니다:', experienceTitle);
+        console.log('image 폴더 내 사용 가능한 폴더들:', imageFiles.filter(f => f.mimeType === 'application/vnd.google-apps.folder').map(f => f.name));
+        console.log('검색 조건:', { 
+          exactMatch: experienceTitle,
+          partialMatch: `contains ${experienceTitle}`,
+          caseInsensitive: experienceTitle.toLowerCase()
+        });
+      }
+    } catch (error) {
+      console.error('이력 폴더 삭제 실패:', experienceTitle, error);
+      // 폴더 삭제 실패해도 전체 프로세스는 계속 진행
+    }
+  }
+
   // 선택된 이력 삭제
   async function deleteSelectedExperiences() {
     if (selected.length === 0 || !sheetsService.current) return;
@@ -1062,6 +1199,19 @@ function App() {
 
     try {
       setIsExperienceLoading(true);
+
+      // 삭제할 이력들의 이미지 URL과 제목 수집
+      const imagesToDelete = [];
+      const foldersToDelete = [];
+      for (const index of selected) {
+        const exp = experiences[index];
+        if (exp.imageUrls && exp.imageUrls.length > 0) {
+          imagesToDelete.push(...exp.imageUrls);
+        }
+        if (exp.title) {
+          foldersToDelete.push(exp.title);
+        }
+      }
 
       // 선택된 이력들을 구글 시트에서 삭제
       if (spreadsheetId && isSheetsInitialized) {
@@ -1073,6 +1223,21 @@ function App() {
           const rowNumber = index + 2;
           await sheetsService.current.deleteData(spreadsheetId, `A${rowNumber}:E${rowNumber}`);
         }
+      }
+
+      // 이미지 파일들 삭제
+      if (imagesToDelete.length > 0) {
+        console.log('삭제할 이미지 파일들:', imagesToDelete);
+        await deleteImageFiles(imagesToDelete);
+      }
+
+      // 이력 폴더들 삭제
+      if (foldersToDelete.length > 0) {
+        console.log('삭제할 이력 폴더들:', foldersToDelete);
+        const folderDeletePromises = foldersToDelete.map(folderName => 
+          deleteExperienceFolder(folderName)
+        );
+        await Promise.allSettled(folderDeletePromises);
       }
 
       // 로컬 상태에서도 삭제
@@ -1100,12 +1265,30 @@ function App() {
     try {
       setIsExperienceLoading(true);
 
+      // 삭제할 이력의 이미지 URL 수집
+      const imagesToDelete = expToDelete.imageUrls || [];
+
       if (spreadsheetId && sheetsService.current) {
         // 헤더(1행) + 인덱스(0부터 시작) + 1 = 실제 시트 행 번호
         const rowNumber = indexToDelete + 2;
 
         // 시트에서 해당 행 삭제
         await sheetsService.current.deleteData(spreadsheetId, `A${rowNumber}:E${rowNumber}`);
+      }
+
+      // 이미지 파일들 삭제
+      if (imagesToDelete.length > 0) {
+        console.log('삭제할 이미지 파일들:', imagesToDelete);
+        await deleteImageFiles(imagesToDelete);
+      }
+
+      // 이력 폴더 삭제
+      if (expToDelete.title) {
+        console.log('개별 이력 삭제 - 삭제할 이력 폴더:', expToDelete.title);
+        console.log('개별 이력 삭제 - 이력 정보:', expToDelete);
+        await deleteExperienceFolder(expToDelete.title);
+      } else {
+        console.log('개별 이력 삭제 - 이력 제목이 없습니다:', expToDelete);
       }
 
       // 로컬 상태에서도 삭제
@@ -1802,7 +1985,28 @@ function App() {
   // 템플릿 모달에서 사용 버튼 클릭
   async function handleTemplateUse() {
     setShowTemplateModal(false);
-    await handleTemplateSelect(selectedTemplateForModal);
+    
+    // 인증 서비스를 통해 토큰 확인 및 갱신
+    if (!authService.current) {
+      alert('인증 서비스가 초기화되지 않았습니다. 다시 로그인해주세요.');
+      return;
+    }
+    
+    // 인증 상태 확인
+    const isAuthenticated = await authService.current.isAuthenticated();
+    if (!isAuthenticated) {
+      alert('인증이 필요합니다. 다시 로그인해주세요.');
+      return;
+    }
+    
+    // 액세스 토큰 가져오기
+    const token = await authService.current.getAccessToken();
+    if (!token) {
+      alert('액세스 토큰을 가져올 수 없습니다. 다시 로그인해주세요.');
+      return;
+    }
+    
+    await handleTemplateSelect(selectedTemplateForModal, token);
   }
 
   // 템플릿 모달에서 취소 버튼 클릭
@@ -1838,7 +2042,7 @@ function App() {
   };
 
   // 템플릿 선택 → 프레젠테이션 생성 + 이력 반영
-  async function handleTemplateSelect(templateName) {
+  async function handleTemplateSelect(templateName, token) {
     const title = prompt('슬라이드 제목을 입력하세요:', '나의 포트폴리오');
     if (!title) {
       alert('제목이 없습니다.');
@@ -1883,10 +2087,22 @@ function App() {
     }
 
     // 토큰 확보 보장
-    if (!accessToken) {
+    let currentToken = accessToken;
+    if (!currentToken) {
       try {
-        const token = await authService.current.getAccessToken();
-        setAccessToken(token);
+        // 인증 상태 확인
+        const isAuthenticated = await authService.current.isAuthenticated();
+        if (!isAuthenticated) {
+          alert('인증이 필요합니다. 다시 로그인해주세요.');
+          return;
+        }
+        
+        currentToken = await authService.current.getAccessToken();
+        if (!currentToken) {
+          alert('액세스 토큰을 가져올 수 없습니다. 다시 로그인해주세요.');
+          return;
+        }
+        setAccessToken(currentToken);
       } catch (error) {
         console.error('토큰 가져오기 실패:', error);
         alert('인증이 필요합니다. 다시 로그인해주세요.');
@@ -1899,7 +2115,7 @@ function App() {
 
     try {
       // 1) 프레젠테이션 생성 (중복 확인된 최종 파일명으로)
-      const presId = await createPresentation(finalFileName, accessToken);
+      const presId = await createPresentation(finalFileName, currentToken);
       setPresentationId(presId);
 
       // 1-1) PPT 파일을 PPT 폴더로 이동
@@ -1926,7 +2142,7 @@ function App() {
       }
 
       // 2) 첫 슬라이드 레이아웃 보정 및 제목/부제목 설정
-      let data = await getPresentationData(presId, accessToken);
+      let data = await getPresentationData(presId, currentToken);
       if (data.slides?.length > 0) {
         // 구글 계정에서 사용자 이름 가져오기
         let userName = '사용자';
@@ -1936,27 +2152,27 @@ function App() {
           console.warn('사용자 이름 가져오기 실패, 기본값 사용:', error);
         }
         
-        await makeTitleAndBody(presId, data.slides[0].objectId, accessToken, cleanTitle, userName);
+        await makeTitleAndBody(presId, data.slides[0].objectId, currentToken, cleanTitle, userName);
       }
 
       // 3) 템플릿별 슬라이드 추가
       if (templateName === 'basic') {
         for (let i = 0; i < selectedExperiences.length; i++) {
-          await addSlide(presId, accessToken);
+          await addSlide(presId, currentToken);
         }
       } else if (templateName === 'timeline') {
-        await addSlide(presId, accessToken);
-        await addSlide(presId, accessToken);
+        await addSlide(presId, currentToken);
+        await addSlide(presId, currentToken);
         for (let i = 0; i < selectedExperiences.length; i++) {
-          await addSlide(presId, accessToken);
+          await addSlide(presId, currentToken);
         }
       } else if (templateName === 'grid') {
-        await addSlide(presId, accessToken);
-        await addSlide(presId, accessToken);
+        await addSlide(presId, currentToken);
+        await addSlide(presId, currentToken);
       }
 
       // 4) 최신 데이터 가져오기
-      data = await getPresentationData(presId, accessToken);
+      data = await getPresentationData(presId, currentToken);
       const slidesArr = data.slides || [];
 
       // 5) 텍스트 채우기
@@ -1966,12 +2182,12 @@ function App() {
         const bodyShapeId  = findFirstPlaceholder(s0.pageElements, 'BODY');
 
         // 표지 제목: 원본 제목 (날짜 제외)
-        if (titleShapeId) await updateElementText(presId, titleShapeId, title, accessToken);
+        if (titleShapeId) await updateElementText(presId, titleShapeId, title, currentToken);
         
         // 표지 본문: 구글 계정 이름
         if (bodyShapeId) {
           const userName = await getGoogleAccountName();
-          await updateElementText(presId, bodyShapeId, userName, accessToken);
+          await updateElementText(presId, bodyShapeId, userName, currentToken);
         }
       }
 
@@ -1983,7 +2199,7 @@ function App() {
         // 제목, 기간, 설명을 위한 새로운 텍스트박스들을 생성
         try {
           // 1. 제목 텍스트박스 (제목 스타일 적용)
-          await addStyledTextBoxToSlide(presId, s.objectId, exp.title, accessToken, {
+          await addStyledTextBoxToSlide(presId, s.objectId, exp.title, token, {
             x: 50,   // 왼쪽에서 50pt
             y: 50,   // 상단에서 50pt
             width: 400,
@@ -1997,7 +2213,7 @@ function App() {
           console.log(`제목 텍스트박스가 슬라이드 ${idx}에 추가되었습니다:`, exp.title);
 
           // 2. 기간 텍스트박스 (일반 스타일, 가로 길이 증가)
-          await addTextBoxToSlide(presId, s.objectId, exp.period, accessToken, {
+          await addTextBoxToSlide(presId, s.objectId, exp.period, token, {
             x: 50,   // 왼쪽에서 50pt
             y: 100,  // 제목 아래 간격을 줄임 (120 → 100)
             width: 350,  // 가로 길이를 늘림 (200 → 350)
@@ -2006,7 +2222,7 @@ function App() {
           console.log(`기간 텍스트박스가 슬라이드 ${idx}에 추가되었습니다:`, exp.period);
 
           // 3. 설명 텍스트박스 (일반 스타일, 위치 조정)
-          await addTextBoxToSlide(presId, s.objectId, exp.description, accessToken, {
+          await addTextBoxToSlide(presId, s.objectId, exp.description, token, {
             x: 50,   // 왼쪽에서 50pt
             y: 150,  // 기간 아래 간격을 줄임 (170 → 150)
             width: 300,
@@ -2041,7 +2257,7 @@ function App() {
                 height: imageHeight
               };
               
-              await addImageToSlide(presId, s.objectId, imageUrl, accessToken, imagePosition);
+              await addImageToSlide(presId, s.objectId, imageUrl, token, imagePosition);
               console.log(`이미지 ${i + 1}/${imageCount}가 슬라이드 ${idx}에 추가되었습니다:`, imageUrl);
             }
           } catch (imageError) {
@@ -2054,7 +2270,7 @@ function App() {
       }
 
       // 6) 최종 상태 반영
-      const refreshed = await getPresentationData(presId, accessToken);
+      const refreshed = await getPresentationData(presId, currentToken);
       setSlides(refreshed.slides || []);
       
       // 7) PPT 기록 새로고침

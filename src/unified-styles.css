@@ -1,8 +1,4 @@
-/* ========================================
-   통합 스타일 파일 - 실제 사용자에게 보여지는 스타일만 포함
-   ======================================== */
 
-/* 기존 styles.css 내용 (실제 적용되는 부분) */
 body {
     background-color: #0a0a0a;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
