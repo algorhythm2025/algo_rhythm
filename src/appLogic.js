@@ -2,12 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import GoogleSheetsService from './services/googleSheetsService';
 import GoogleDriveService from './services/googleDriveService';
 import GoogleAuthService from './services/googleAuthService';
-
-// 분리된 로직들 import
-import { useAuthLogic } from './logic/auth/authLogic';
 import { useExperienceLogic } from './logic/experience/experienceLogic';
-import { useDriveLogic } from './logic/drive/driveLogic';
-import { useSheetsLogic } from './logic/sheets/sheetsLogic';
 import { usePresentationLogic } from './logic/presentation/presentationLogic';
 import { useUILogic } from './logic/ui/uiLogic';
 
@@ -34,6 +29,7 @@ function useAppLogic() {
     });
     const [isSheetsInitialized, setIsSheetsInitialized] = useState(false);
     const [isDriveInitialized, setIsDriveInitialized] = useState(false);
+    const [isInitializing, setIsInitializing] = useState(false); // 서비스 초기화 중 상태
     const [driveFiles, setDriveFiles] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [isSheetLoading, setIsSheetLoading] = useState(false);
@@ -79,10 +75,8 @@ function useAppLogic() {
     const driveService = useRef(null);
   
     // 분리된 로직들 초기화
-    const authLogic = useAuthLogic();
+    // 통합된 로직들 (services에 통합된 것들은 제거)
     const experienceLogic = useExperienceLogic();
-    const driveLogic = useDriveLogic();
-    const sheetsLogic = useSheetsLogic();
     const presentationLogic = usePresentationLogic();
     const uiLogic = useUILogic();
 
@@ -90,6 +84,7 @@ function useAppLogic() {
     async function initializeServices() {
       try {
         console.log('서비스들 초기화 시작...');
+        setIsInitializing(true);
 
         // 인증 상태 확인
         if (!authService.current.isAuthenticated()) {
@@ -184,8 +179,10 @@ function useAppLogic() {
           // 시트 ID 상태를 먼저 업데이트
           setSpreadsheetId(currentSpreadsheetId);
 
-          // 새로 생성된 시트에서 데이터 로드
-          await sheetsLogic.loadExperiencesFromSheets(currentSpreadsheetId, sheetsService, setExperiences, uiLogic.preloadImage);
+          // 새로 생성된 시트에서 데이터 로드 (통합된 sheetsService 사용)
+          if (sheetsService.current) {
+            await sheetsService.current.loadExperiencesFromSheets(currentSpreadsheetId, setExperiences, uiLogic.preloadImage);
+          }
           await loadDriveFiles();
         }
 
@@ -197,31 +194,33 @@ function useAppLogic() {
         alert(errorMessage);
         setIsSheetsInitialized(false);
         setIsDriveInitialized(false);
+      } finally {
+        setIsInitializing(false);
       }
     }
 
-    // 통합 인증 시스템 초기화
+    // 통합 인증 시스템 초기화 (통합된 authService 사용)
     async function initializeGoogleAuth() {
-      return await authLogic.initializeGoogleAuth(authService.current, setAuthStatus, setIsSheetsInitialized, setIsDriveInitialized, initializeServices);
+      return await authService.current.initializeGoogleAuth(setAuthStatus, setIsSheetsInitialized, setIsDriveInitialized, initializeServices);
     }
 
-    // GIS 기반 로그인 (단일 팝업에서 로그인+권한 처리)
+    // GIS 기반 로그인 (단일 팝업에서 로그인+권한 처리) (통합된 authService 사용)
     async function handleGISLogin() {
-      await authLogic.handleGISLogin(authService.current, setIsLoading, 
-        (loggedIn, spreadsheetIdValue) => authLogic.saveLoginState(loggedIn, spreadsheetIdValue, setIsLoggedIn, setSpreadsheetId),
+      await authService.current.handleGISLogin(setIsLoading, 
+        (loggedIn, spreadsheetIdValue) => authService.current.saveLoginState(loggedIn, spreadsheetIdValue, setIsLoggedIn, setSpreadsheetId),
         setActiveSection, initializeServices, setAccessToken);
     }
 
-    // 로그아웃
+    // 로그아웃 (통합된 authService 사용)
     function logout() {
-      authLogic.logout(authService.current, 
-        (loggedIn, spreadsheetIdValue) => authLogic.saveLoginState(loggedIn, spreadsheetIdValue, setIsLoggedIn, setSpreadsheetId),
+      authService.current.logout(
+        (loggedIn, spreadsheetIdValue) => authService.current.saveLoginState(loggedIn, spreadsheetIdValue, setIsLoggedIn, setSpreadsheetId),
         setActiveSection, setPortfolioFolderId, setIsSheetsInitialized, setIsDriveInitialized, setAuthStatus, sheetsService, driveService);
     }
 
-    // 로그인 상태 저장
+    // 로그인 상태 저장 (통합된 authService 사용)
     function saveLoginState(loggedIn, spreadsheetIdValue = null) {
-      authLogic.saveLoginState(loggedIn, spreadsheetIdValue, setIsLoggedIn, setSpreadsheetId);
+      authService.current.saveLoginState(loggedIn, spreadsheetIdValue, setIsLoggedIn, setSpreadsheetId);
     }
 
     // 이력 저장
@@ -240,69 +239,89 @@ function useAppLogic() {
       await experienceLogic.deleteIndividualExperience(indexToDelete, experiences, sheetsService, spreadsheetId, driveService, portfolioFolderId, setExperiences, setSelected, setIsExperienceLoading);
     }
 
-    // 드라이브 파일 목록 로드
+    // 드라이브 파일 목록 로드 (통합된 driveService 사용)
     async function loadDriveFiles(parentId = null) {
-      await driveLogic.loadDriveFiles(driveService, driveViewMode, portfolioFolderId, spreadsheetId, sheetsService, setDriveFiles, setIsDriveLoading, setSpreadsheetId);
+      if (!driveService.current) {
+        console.log('driveService가 초기화되지 않았습니다.');
+        return;
+      }
+      await driveService.current.loadDriveFiles(driveViewMode, portfolioFolderId, spreadsheetId, sheetsService, setDriveFiles, setIsDriveLoading, setSpreadsheetId);
     }
 
-    // 파일 다운로드 (Access Token 사용)
+    // 파일 다운로드 (Access Token 사용) (통합된 driveService 사용)
     async function handleDriveFileDownload(file) {
-      await driveLogic.handleDriveFileDownload(file, driveService, authService, setIsLoading);
+      await driveService.current.handleDriveFileDownload(file, authService.current, setIsLoading);
     }
 
-    // 파일 업로드 핸들러
+    // 파일 업로드 핸들러 (통합된 driveService 사용)
     async function handleDriveFileUpload(event) {
-      await driveLogic.handleDriveFileUpload(event, driveService, currentPath, loadDriveFiles, setIsUploadLoading);
+      await driveService.current.handleDriveFileUpload(event, currentPath, loadDriveFiles, setIsUploadLoading);
     }
 
-    // 파일 삭제 핸들러
+    // 파일 삭제 핸들러 (통합된 driveService 사용)
     async function handleDriveFileDelete(fileId, isFromPptHistory = false) {
-      await driveLogic.handleDriveFileDelete(fileId, isFromPptHistory, driveService, currentPath, loadDriveFiles, loadPptHistory, setDeletingFileIds);
+      await driveService.current.handleDriveFileDelete(fileId, isFromPptHistory, currentPath, loadDriveFiles, loadPptHistory, setDeletingFileIds);
     }
 
-    // 뷰 모드 전환
+    // 뷰 모드 전환 (통합된 driveService 사용)
     async function switchViewMode(mode) {
-      await driveLogic.switchViewMode(mode, setDriveViewMode, setCurrentPath, loadDriveFiles, setIsViewModeLoading);
+      await driveService.current.switchViewMode(mode, setDriveViewMode, setCurrentPath, loadDriveFiles, setIsViewModeLoading);
     }
 
-    // 드라이브 새로고침
+    // 드라이브 새로고침 (통합된 driveService 사용)
     async function handleDriveRefresh() {
-      await driveLogic.handleDriveRefresh(currentPath, loadDriveFiles, setIsRefreshLoading);
+      await driveService.current.handleDriveRefresh(currentPath, loadDriveFiles, setIsRefreshLoading);
     }
 
-    // 폴더 진입
+    // 폴더 진입 (통합된 driveService 사용)
     async function enterFolder(folderId, folderName) {
-      await driveLogic.enterFolder(folderId, folderName, portfolioFolderId, setPortfolioFolderId, setDriveViewMode, setCurrentPath, loadDriveFiles, setIsViewModeLoading);
+      await driveService.current.enterFolder(folderId, folderName, portfolioFolderId, setPortfolioFolderId, setDriveViewMode, setCurrentPath, loadDriveFiles, setIsViewModeLoading);
     }
 
-    // 뒤로가기
+    // 뒤로가기 (통합된 driveService 사용)
     async function goBack() {
-      await driveLogic.goBack(currentPath, setCurrentPath, loadDriveFiles, setIsViewModeLoading);
+      await driveService.current.goBack(currentPath, setCurrentPath, loadDriveFiles, setIsViewModeLoading);
     }
 
-    // 파일 다운로드
+    // 파일 다운로드 (통합된 driveService 사용)
     async function downloadFile(file) {
-      await driveLogic.downloadFile(file, driveService, authService);
+      await driveService.current.downloadFile(file, authService.current);
     }
 
-    // 시트에서 이력 데이터 로드
+    // 시트에서 이력 데이터 로드 (통합된 sheetsService 사용)
     async function loadExperiencesFromSheets(spreadsheetIdToUse = null) {
-      await sheetsLogic.loadExperiencesFromSheets(spreadsheetIdToUse || spreadsheetId, sheetsService, setExperiences, uiLogic.preloadImage);
+      if (!sheetsService.current) {
+        console.log('sheetsService가 초기화되지 않았습니다.');
+        return;
+      }
+      await sheetsService.current.loadExperiencesFromSheets(spreadsheetIdToUse || spreadsheetId, setExperiences, uiLogic.preloadImage);
     }
 
-    // 구글 시트 데이터 새로고침
+    // 구글 시트 데이터 새로고침 (통합된 sheetsService 사용)
     async function refreshSheetsData() {
-      await sheetsLogic.refreshSheetsData(loadExperiencesFromSheets, setIsExperienceLoading);
+      if (!sheetsService.current) {
+        console.log('sheetsService가 초기화되지 않았습니다.');
+        return;
+      }
+      await sheetsService.current.refreshSheetsData(loadExperiencesFromSheets, setIsExperienceLoading);
     }
 
-    // 시트 생성
+    // 시트 생성 (통합된 sheetsService 사용)
     async function createSheet() {
-      await sheetsLogic.createSheet(sheetsService, driveService, setPortfolioFolderId, setSpreadsheetId, loadDriveFiles, setIsSheetLoading);
+      if (!sheetsService.current) {
+        console.log('sheetsService가 초기화되지 않았습니다.');
+        return;
+      }
+      await sheetsService.current.createSheet(driveService, setPortfolioFolderId, setSpreadsheetId, loadDriveFiles, setIsSheetLoading);
     }
 
-    // 시트 삭제
+    // 시트 삭제 (통합된 sheetsService 사용)
     async function deleteSheet() {
-      await sheetsLogic.deleteSheet(spreadsheetId, driveService, portfolioFolderId, setSpreadsheetId, setPortfolioFolderId, setExperiences, loadDriveFiles, setIsSheetLoading);
+      if (!sheetsService.current) {
+        console.log('sheetsService가 초기화되지 않았습니다.');
+        return;
+      }
+      await sheetsService.current.deleteSheet(spreadsheetId, driveService, portfolioFolderId, setSpreadsheetId, setPortfolioFolderId, setExperiences, loadDriveFiles, setIsSheetLoading);
     }
 
     // PPT 기록 조회
@@ -421,7 +440,7 @@ function useAppLogic() {
           // 구글 계정에서 사용자 이름 가져오기
           let userName = '사용자';
           try {
-            userName = await authLogic.getGoogleAccountName(authService.current);
+            userName = await authService.current.getGoogleAccountName();
           } catch (error) {
             console.warn('사용자 이름 가져오기 실패, 기본값 사용:', error);
           }
@@ -460,7 +479,7 @@ function useAppLogic() {
           
           // 표지 본문: 구글 계정 이름
           if (bodyShapeId) {
-            const userName = await authLogic.getGoogleAccountName(authService.current);
+            const userName = await authService.current.getGoogleAccountName();
             await presentationLogic.updateElementText(presId, bodyShapeId, userName, currentToken);
           }
         }
@@ -775,6 +794,7 @@ function useAppLogic() {
       spreadsheetId,
       isSheetsInitialized,
       isDriveInitialized,
+      isInitializing,
       driveFiles,
       isLoading,
       isSheetLoading,

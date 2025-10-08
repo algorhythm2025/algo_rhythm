@@ -13,6 +13,7 @@ function App() {
     spreadsheetId,
     isSheetsInitialized,
     isDriveInitialized,
+    isInitializing,
     driveFiles,
     isLoading,
     isSheetLoading,
@@ -163,12 +164,14 @@ function App() {
                   {/* 메인 섹션 */}
                   {activeSection === 'main' && (
                       <div id="mainSection" className="content-section">
-                        {/* 통합 인증 상태 */}
-                        <div className="auth-status mb-4">
-                          <div className={`status-indicator ${authStatus === 'connected' ? 'connected' : authStatus === 'error' ? 'error' : 'disconnected'}`}>
-                            <i className={`fas ${authStatus === 'connected' ? 'fa-check-circle' : authStatus === 'error' ? 'fa-exclamation-triangle' : 'fa-exclamation-circle'}`}></i>
+                        {/* 통합 인증 상태 - 로그인되지 않은 상태에서만 표시 */}
+                        {!isLoggedIn && (
+                          <div className="auth-status mb-4">
+                            <div className={`status-indicator ${authStatus === 'connected' ? 'connected' : authStatus === 'error' ? 'error' : 'disconnected'}`}>
+                              <i className={`fas ${authStatus === 'connected' ? 'fa-check-circle' : authStatus === 'error' ? 'fa-exclamation-triangle' : 'fa-exclamation-circle'}`}></i>
+                            </div>
                           </div>
-                        </div>
+                        )}
 
                         <div className="mac-grid">
                           <div className="mac-card" onClick={showAddExperienceModal}>
@@ -506,18 +509,27 @@ function App() {
                         <div className="mac-window">
                           <h2>구글 드라이브</h2>
                           <div className="mac-window-content">
-                            {/* 드라이브 연동 상태 - 연동 실패 시에만 표시 */}
+                            {/* 드라이브 연동 상태 - 로그인된 상태에서는 초기화 중이거나 연동 실패 시에만 표시 */}
                             {!isDriveInitialized && (
                               <div className="drive-status mb-4">
-                                <div className="status-indicator disconnected">
-                                  <i className="fas fa-exclamation-circle"></i>
-                                  <span>구글 드라이브가 연동되지 않음</span>
-                                </div>
-                                <div className="drive-help">
-                                  <small className="white-text">
-                                    구글 드라이브 연동이 필요합니다. 구글 계정으로 로그인해주세요.
-                                  </small>
-                                </div>
+                                {isLoggedIn || isInitializing ? (
+                                  <div className="status-indicator loading">
+                                    <div className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></div>
+                                    <span>구글 드라이브 연동 중...</span>
+                                  </div>
+                                ) : (
+                                  <>
+                                    <div className="status-indicator disconnected">
+                                      <i className="fas fa-exclamation-circle"></i>
+                                      <span>구글 드라이브가 연동되지 않음</span>
+                                    </div>
+                                    <div className="drive-help">
+                                      <small className="white-text">
+                                        구글 드라이브 연동이 필요합니다. 구글 계정으로 로그인해주세요.
+                                      </small>
+                                    </div>
+                                  </>
+                                )}
                               </div>
                             )}
 
@@ -824,7 +836,7 @@ function App() {
                             <i className="fas fa-university fa-3x mb-3 text-primary"></i>
                             <h3 className="mb-3">학교 포털로 이동</h3>
                             <p className="mb-4">학교 포털에서 학사 정보를 확인하세요.</p>
-                            <a href="#" className="btn btn-primary">학교 포털 열기</a>
+                            <a href="https://portal.yuhan.ac.kr/" target="_blank" rel="noopener noreferrer" className="btn btn-primary">학교 포털 열기</a>
                           </div>
                         </div>
                       </div>
