@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useAppLogic, SECTION_LIST } from './appLogic';
+import { useAppLogic } from './appLogic';
 import TopNav from './TopNav';
 import './unified-styles.css';
 
@@ -75,7 +75,6 @@ function HeroCarousel({ onSelect }) {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    const slide = slides[index];
 
     return (
         <div
@@ -142,16 +141,21 @@ function HeroCarousel({ onSelect }) {
 
 
 function App() {
-  // appLogic에서 모든 상태와 함수들을 가져옴
-  const {
+    // appLogic에서 모든 상태와 함수들을 가져옴
+    const {
+      // PPT 진행 상황 상태들
+      pptProgress,
+      pptMessages,
+      pptCurrentSlide,
+      pptTotalSlides,
+      pptCurrentImage,
+      pptTotalImages,
     // 상태들
     isLoggedIn,
     activeSection,
-    authStatus,
     experiences,
     selected,
     spreadsheetId,
-    isSheetsInitialized,
     isDriveInitialized,
     isInitializing,
     driveFiles,
@@ -167,7 +171,6 @@ function App() {
     isViewModeLoading,
     isPptCreating,
     currentPath,
-    selectedImages,
     imagePreviews,
     showImageModal,
     pptHistory,
@@ -185,14 +188,12 @@ function App() {
     presentationId,
     slides,
     accessToken,
-    selectedExperiences,
     templateDescriptions,
     // 함수들
     showSection,
     logout,
     showAddExperienceModal,
     selectAllExperiences,
-    deleteSelectedExperiences,
     refreshSheetsData,
     openExperienceModal,
     openImageModal,
@@ -329,23 +330,27 @@ function App() {
                   {activeSection === 'pptMaker' && (
                       <div id="pptMakerSection" className="content-section">
                         <div className="mac-window">
-                          <h2>포트폴리오 내용 선택</h2>
+                          <div className="d-flex justify-content-between align-items-center mb-3">
+                            <h2 className="mb-0">포트폴리오 내용 선택</h2>
+                            <div>
+                              <button
+                                  className="btn btn-dark"
+                                  id="nextButton"
+                                  disabled={selected.length === 0 || isExperienceLoading}
+                                  onClick={() => {
+                                    const picked = selected
+                                        .sort((a,b)=>a-b)
+                                        .map(i => experiences[i]);
+                                    setSelectedExperiences(picked);
+                                    setActiveSection('templateSelection'); // 템플릿 선택 탭으로 전환
+                                  }}
+                              >
+                                다음
+                              </button>
+                            </div>
+                          </div>
                           <div className="mac-window-content">
-                            <div className="d-flex justify-content-between align-items-center mb-3">
-                              <div>
-                                <button className="btn btn-outline-dark me-2" onClick={() => selectAllExperiences(true)} disabled={isExperienceLoading}>전체 선택</button>
-                                <button className="btn btn-outline-dark me-2" onClick={() => selectAllExperiences(false)} disabled={isExperienceLoading}>전체 해제</button>
-                                <button className="btn btn-outline-danger" onClick={deleteSelectedExperiences} disabled={selected.length === 0 || isExperienceLoading}>
-                                  {isExperienceLoading ? (
-                                      <>
-                                        <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
-                                        삭제 중...
-                                      </>
-                                  ) : (
-                                      '선택 삭제'
-                                  )}
-                                </button>
-                              </div>
+                            <div className="d-flex justify-content-end align-items-center mb-3">
                               <div>
                                 <button className="btn btn-outline-primary me-2" onClick={refreshSheetsData} disabled={isExperienceLoading}>
                                   {isExperienceLoading ? (
@@ -359,20 +364,8 @@ function App() {
                                       </>
                                   )}
                                 </button>
-                                <button
-                                    className="btn btn-dark"
-                                    id="nextButton"
-                                    disabled={selected.length === 0 || isExperienceLoading}
-                                    onClick={() => {
-                                      const picked = selected
-                                          .sort((a,b)=>a-b)
-                                          .map(i => experiences[i]);
-                                      setSelectedExperiences(picked);
-                                      setActiveSection('templateSelection'); // 템플릿 선택 탭으로 전환
-                                    }}
-                                >
-                                  다음
-                                </button>
+                                <button className="btn btn-outline-dark me-2" onClick={() => selectAllExperiences(false)} disabled={isExperienceLoading}>전체 해제</button>
+                                <button className="btn btn-outline-dark me-2" onClick={() => selectAllExperiences(true)} disabled={isExperienceLoading}>전체 선택</button>
                               </div>
                             </div>
                             <div id="experienceList" className="mac-list">
@@ -473,10 +466,22 @@ function App() {
                         <h2>{isPptCreating ? '포트폴리오 생성중입니다' : '템플릿을 선택하세요'}</h2>
                         {isPptCreating ? (
                           <div className="text-center p-5">
-                            <div className="spinner-border text-primary mb-3 loading-spinner" role="status">
-                              <span className="visually-hidden">로딩중...</span>
+                            <div className="loading-progress-container mb-4">
+                              <div className="loading-progress-bar">
+                                <div className="loading-progress-fill" style={{ width: `${pptProgress}%` }}></div>
+                              </div>
+                              <div className="loading-progress-text mt-2">
+                                <span className="white-text">{pptProgress}%</span>
+                              </div>
                             </div>
-                            <p className="text-muted">잠시만 기다려주세요. 이력과 이미지를 슬라이드에 추가하고 있습니다.</p>
+                            <div className="loading-log">
+                              {pptMessages.map((messageObj) => (
+                                <div key={messageObj.id} className="loading-log-item">
+                                  <i className="fas fa-circle me-2"></i>
+                                  <span className="white-text">{messageObj.text}</span>
+                                </div>
+                              ))}
+                            </div>
                           </div>
                         ) : (
                           <div className="template-grid">
@@ -488,9 +493,9 @@ function App() {
                               <h3>타임라인 템플릿</h3>
                               <p>시간 흐름에 따른 구성</p>
                             </div>
-                            <div className="mac-card" onClick={() => openTemplateModal('grid')}>
-                              <h3>그리드 템플릿</h3>
-                              <p>균형 잡힌 구성</p>
+                            <div className="mac-card" onClick={() => openTemplateModal('photo')}>
+                              <h3>사진강조 템플릿</h3>
+                              <p>이미지 중심의 구성</p>
                             </div>
                           </div>
                         )}
@@ -516,7 +521,7 @@ function App() {
                                 <div className="spinner-border text-primary mb-3 loading-spinner" role="status">
                                   <span className="visually-hidden">로딩중...</span>
                                 </div>
-                                <p className="text-muted">PPT 데이터를 불러오는 중입니다...</p>
+                                <p className="white-text">PPT 데이터를 불러오는 중입니다...</p>
                               </div>
                             ) : slides.length === 0 ? (
                               <div className="text-center p-5">
@@ -1591,11 +1596,11 @@ function App() {
                       </p>
                       
                       {/* 템플릿 미리보기 이미지 */}
-                      {templateDescriptions[selectedTemplateForModal]?.previewImages && 
-                       templateDescriptions[selectedTemplateForModal].previewImages.length > 0 && (
-                        <div className="mb-4">
-                          <h6 className="mb-3 white-text">템플릿 미리보기</h6>
-                          <div className="template-preview-container">
+                      <div className="mb-4">
+                        <h6 className="mb-3 white-text">템플릿 미리보기</h6>
+                        <div className="template-preview-container">
+                          {templateDescriptions[selectedTemplateForModal]?.previewImages && 
+                           templateDescriptions[selectedTemplateForModal].previewImages.length > 0 ? (
                             <div className="row g-3">
                               {templateDescriptions[selectedTemplateForModal].previewImages.map((imagePath, index) => (
                                 <div key={index} className="col-md-4">
@@ -1629,9 +1634,16 @@ function App() {
                                 </div>
                               ))}
                             </div>
-                          </div>
+                          ) : (
+                            <div className="text-center py-4">
+                              <i className="fas fa-image fa-3x mb-3" style={{ color: 'rgba(255, 255, 255, 0.3)' }}></i>
+                              <p className="mb-0" style={{ color: 'rgba(255, 255, 255, 0.6)' }}>
+                                미리보기 이미지가 준비 중입니다
+                              </p>
+                            </div>
+                          )}
                         </div>
-                      )}
+                      </div>
                       
                       <h6 className="mb-3 white-text">주요 특징</h6>
                       <div className="template-features">
