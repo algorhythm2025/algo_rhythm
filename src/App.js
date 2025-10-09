@@ -471,7 +471,7 @@ function App() {
                                 <div className="loading-progress-fill" style={{ width: `${pptProgress}%` }}></div>
                               </div>
                               <div className="loading-progress-text mt-2">
-                                <span className="white-text">{pptProgress}%</span>
+                                <span className="white-text">{Math.round(pptProgress)}%</span>
                               </div>
                             </div>
                             <div className="loading-log">

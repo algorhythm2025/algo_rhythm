@@ -247,12 +247,9 @@ export function useUILogic() {
         });
     }
 
-    function setImageErrorState(imageKey, setImageLoadingStates) {
-        setImageLoadingStates(prev => {
-            const newMap = new Map(prev);
-            newMap.set(imageKey, 'error');
-            return newMap;
-        });
+    function setImageErrorState(imageKey) {
+        // 이 함수는 현재 사용되지 않으므로 빈 함수로 유지
+        console.log('이미지 에러 상태 설정:', imageKey);
     }
 
     // 이미지 로딩 재시도 함수 (최적화됨)
@@ -269,7 +266,7 @@ export function useUILogic() {
         
         if (retryCount >= maxRetries) {
             console.error('이미지 로딩 실패 - 모든 재시도 소진:', originalUrl);
-            setImageErrorState(imageKey, setImageErrorState);
+            setImageErrorState(imageKey);
             imgElement.style.display = 'none';
             return;
         }
@@ -278,7 +275,7 @@ export function useUILogic() {
         console.log(`이미지 로딩 재시도 ${retryCount + 1}/${maxRetries + 1}:`, currentUrl);
         
         // 로딩 상태 설정
-        setImageLoadingState(imageKey, true, setImageLoadingState);
+        setImageLoadingState(imageKey, true);
         
         // 새로운 이미지 객체로 테스트 (타임아웃 설정)
         const testImg = new Image();
@@ -286,7 +283,7 @@ export function useUILogic() {
         
         const cleanup = () => {
             if (timeoutId) clearTimeout(timeoutId);
-            setImageLoadingState(imageKey, false, setImageLoadingState);
+            setImageLoadingState(imageKey, false);
         };
         
         // 3초 타임아웃 설정 (더 빠른 응답)
