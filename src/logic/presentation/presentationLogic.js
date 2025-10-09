@@ -525,6 +525,309 @@ export function usePresentationLogic() {
         }
     }
 
+    // 슬라이드별 진행 상황 계산 함수
+    function calculateSlideProgress(currentSlide, totalSlides, hasImages = false) {
+        const baseProgress = 20; // PPT 파일 생성 + 표지 슬라이드 생성 완료 후 시작
+        const slideProgress = 60; // 슬라이드 생성에 할당된 진행률
+        const imageProgress = 20; // 이미지 처리에 할당된 진행률
+        
+        if (totalSlides === 0) return baseProgress;
+        
+        const slideRatio = currentSlide / totalSlides;
+        const slideContribution = slideProgress * slideRatio;
+        
+        if (hasImages) {
+            return baseProgress + slideContribution + imageProgress;
+        }
+        
+        return baseProgress + slideContribution;
+    }
+
+    // PPT 생성 메인 함수
+    async function handleTemplateSelect(templateName, token, {
+        selectedExperiences,
+        driveService,
+        authService,
+        setSelectedTemplate,
+        setIsPptCreating,
+        setPptMessages,
+        updatePptProgress,
+        setPresentationId,
+        setSlides,
+        loadPptHistory,
+        setActiveSection,
+        setAccessToken,
+        accessToken
+    }) {
+        const title = prompt('슬라이드 제목을 입력하세요:', '나의 포트폴리오');
+        if (!title) {
+            alert('제목이 없습니다.');
+            return;
+        }
+
+        // 현재 날짜를 YYYY-MM-DD 형식으로 생성
+        const currentDate = new Date();
+        const year = currentDate.getFullYear();
+        const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+        const day = String(currentDate.getDate()).padStart(2, '0');
+        const dateString = `${year}-${month}-${day}`;
+        
+        // PPT 표지용 제목 (날짜와 중복표시 제거)
+        const cleanTitle = title.replace(/\s+\d{4}-\d{2}-\d{2}$/, '').replace(/_\d+$/, '');
+        
+        // 기본 파일명 생성 (날짜 포함)
+        const baseFileName = `${title} ${dateString}`;
+        
+        // PPT 폴더에서 기존 PPT 파일들 조회하여 중복 확인
+        let finalFileName = baseFileName;
+        try {
+            const portfolioFolder = await driveService.current.ensurePortfolioFolder();
+            const pptFolder = await driveService.current.findFolder('PPT', portfolioFolder.id);
+            
+            if (pptFolder) {
+                const existingFiles = await driveService.current.getFilesInFolder(pptFolder.id);
+                
+                // PPT 파일만 필터링 (Google Slides 파일)
+                const pptFiles = existingFiles.filter(file => 
+                    file.mimeType === 'application/vnd.google-apps.presentation'
+                );
+                
+                // 순차적 번호가 포함된 파일명 생성
+                finalFileName = driveService.current.generateSequentialFileName(baseFileName, pptFiles);
+                console.log(`원본 PPT 파일명: ${baseFileName} → 최종 파일명: ${finalFileName}`);
+            } else {
+                console.log('PPT 폴더가 없어서 기본 파일명 사용');
+            }
+        } catch (error) {
+            console.warn('PPT 파일명 중복 확인 실패, 기본 파일명 사용:', error);
+        }
+
+        // 토큰 확보 보장
+        let currentToken = accessToken;
+        if (!currentToken) {
+            try {
+                // 인증 상태 확인
+                const isAuthenticated = await authService.current.isAuthenticated();
+                if (!isAuthenticated) {
+                    alert('인증이 필요합니다. 다시 로그인해주세요.');
+                    return;
+                }
+                
+                currentToken = await authService.current.getAccessToken();
+                if (!currentToken) {
+                    alert('액세스 토큰을 가져올 수 없습니다. 다시 로그인해주세요.');
+                    return;
+                }
+                setAccessToken(currentToken);
+            } catch (error) {
+                console.error('토큰 가져오기 실패:', error);
+                alert('인증이 필요합니다. 다시 로그인해주세요.');
+                return;
+            }
+        }
+
+        setSelectedTemplate(templateName);
+        setIsPptCreating(true); // PPT 생성 시작
+        
+        // 진행 상황 초기화
+        setPptMessages([]);
+        updatePptProgress(0, 'PPT 생성을 시작합니다...');
+
+        try {
+            // 1) 프레젠테이션 생성 (중복 확인된 최종 파일명으로)
+            updatePptProgress(10, 'PPT 파일을 생성하고 있습니다...');
+            const presId = await createPresentation(finalFileName, currentToken);
+            setPresentationId(presId);
+
+            // 1-1) PPT 파일을 PPT 폴더로 이동
+            try {
+                const portfolioFolder = await driveService.current.ensurePortfolioFolder();
+                const pptFolder = await driveService.current.findFolder('PPT', portfolioFolder.id);
+                
+                if (pptFolder) {
+                    const gapiClient = authService.current.getAuthenticatedGapiClient();
+                    
+                    // PPT 파일을 PPT 폴더로 이동
+                    await gapiClient.drive.files.update({
+                        fileId: presId,
+                        addParents: pptFolder.id,
+                        removeParents: 'root'
+                    });
+                    console.log('PPT 파일이 PPT 폴더로 이동되었습니다.');
+                } else {
+                    console.warn('PPT 폴더를 찾을 수 없습니다. 포트폴리오 폴더에 저장됩니다.');
+                }
+            } catch (moveError) {
+                console.warn('PPT 파일 폴더 이동 실패:', moveError);
+                // 폴더 이동 실패해도 PPT 생성은 성공으로 처리
+            }
+
+            // 2) 첫 슬라이드 레이아웃 보정 및 제목/부제목 설정
+            updatePptProgress(20, '표지 슬라이드 생성중');
+            let data = await getPresentationData(presId, currentToken);
+            if (data.slides?.length > 0) {
+                // 구글 계정에서 사용자 이름 가져오기
+                let userName = '사용자';
+                try {
+                    userName = await authService.current.getGoogleAccountName();
+                } catch (error) {
+                    console.warn('사용자 이름 가져오기 실패, 기본값 사용:', error);
+                }
+                
+                await makeTitleAndBody(presId, data.slides[0].objectId, currentToken, cleanTitle, userName);
+            }
+
+            // 3) 템플릿별 슬라이드 추가 (기본 슬라이드만 먼저 생성)
+            const totalSlides = selectedExperiences.length;
+            
+            if (templateName === 'basic') {
+                // 기본 템플릿: 이력별 슬라이드만 생성
+                for (let i = 0; i < selectedExperiences.length; i++) {
+                    await addSlide(presId, currentToken);
+                }
+            } else if (templateName === 'timeline') {
+                // 타임라인 템플릿: 추가 슬라이드 2개 + 이력별 슬라이드
+                await addSlide(presId, currentToken);
+                await addSlide(presId, currentToken);
+                for (let i = 0; i < selectedExperiences.length; i++) {
+                    await addSlide(presId, currentToken);
+                }
+            } else if (templateName === 'photo') {
+                // 사진강조 템플릿: 추가 슬라이드 2개 + 이력별 슬라이드
+                await addSlide(presId, currentToken);
+                await addSlide(presId, currentToken);
+                for (let i = 0; i < selectedExperiences.length; i++) {
+                    await addSlide(presId, currentToken);
+                }
+            }
+
+            // 4) 최신 데이터 가져오기
+            data = await getPresentationData(presId, currentToken);
+            const slidesArr = data.slides || [];
+
+            // 5) 텍스트 채우기
+            if (slidesArr[0]) {
+                const s0 = slidesArr[0];
+                const titleShapeId = findFirstPlaceholder(s0.pageElements, 'TITLE');
+                const bodyShapeId  = findFirstPlaceholder(s0.pageElements, 'BODY');
+
+                // 표지 제목: 원본 제목 (날짜 제외)
+                if (titleShapeId) await updateElementText(presId, titleShapeId, title, currentToken);
+                
+                // 표지 본문: 구글 계정 이름
+                if (bodyShapeId) {
+                    const userName = await authService.current.getGoogleAccountName();
+                    await updateElementText(presId, bodyShapeId, userName, currentToken);
+                }
+            }
+
+            // 5) 각 이력 슬라이드별로 내용 추가
+            let idx = 1; // 표지 다음부터 시작
+            for (let i = 0; i < selectedExperiences.length; i++) {
+                const exp = selectedExperiences[i];
+                if (!slidesArr[idx]) break;
+                const s = slidesArr[idx];
+                
+                // 슬라이드 생성 완료
+                updatePptProgress(calculateSlideProgress(i, totalSlides), `슬라이드 ${i + 1} 생성중`, i + 1, totalSlides);
+                
+                // 슬라이드 내용 삽입 시작
+                updatePptProgress(calculateSlideProgress(i, totalSlides) + 5, `슬라이드 ${i + 1} 내용 삽입중`, i + 1, totalSlides);
+
+                // 제목, 기간, 설명을 위한 새로운 텍스트박스들을 생성
+                try {
+                    // 1. 제목 텍스트박스 (제목 스타일 적용)
+                    await addStyledTextBoxToSlide(presId, s.objectId, exp.title, currentToken, {
+                        x: 50,   // 왼쪽에서 50pt
+                        y: 50,   // 상단에서 50pt
+                        width: 400,
+                        height: 60
+                    }, {
+                        bold: true,
+                        fontSize: { magnitude: 24, unit: 'PT' },
+                        fontFamily: 'Arial',
+                        color: { opaqueColor: { rgbColor: { red: 0, green: 0, blue: 0 } } }
+                    });
+                    console.log(`제목 텍스트박스가 슬라이드 ${idx}에 추가되었습니다:`, exp.title);
+
+                    // 2. 기간 텍스트박스 (일반 스타일, 가로 길이 증가)
+                    await addTextBoxToSlide(presId, s.objectId, exp.period, currentToken, {
+                        x: 50,   // 왼쪽에서 50pt
+                        y: 100,  // 제목 아래 간격을 줄임 (120 → 100)
+                        width: 350,  // 가로 길이를 늘림 (200 → 350)
+                        height: 40
+                    });
+                    console.log(`기간 텍스트박스가 슬라이드 ${idx}에 추가되었습니다:`, exp.period);
+
+                    // 3. 설명 텍스트박스 (일반 스타일, 위치 조정)
+                    await addTextBoxToSlide(presId, s.objectId, exp.description, currentToken, {
+                        x: 50,   // 왼쪽에서 50pt
+                        y: 150,  // 기간 아래 간격을 줄임 (170 → 150)
+                        width: 300,
+                        height: 80
+                    });
+                    console.log(`설명 텍스트박스가 슬라이드 ${idx}에 추가되었습니다:`, exp.description);
+
+                } catch (textBoxError) {
+                    console.error(`슬라이드 ${idx}에 텍스트박스 추가 실패:`, textBoxError);
+                    // 텍스트박스 추가 실패해도 PPT 생성은 계속 진행
+                }
+                
+                // 이미지가 있는 경우 슬라이드에 추가
+                if (exp.imageUrls && exp.imageUrls.length > 0) {
+                    updatePptProgress(calculateSlideProgress(i, totalSlides) + 10, `슬라이드 ${i + 1} 이미지 삽입중`, i + 1, totalSlides, 0, exp.imageUrls.length);
+                    try {
+                        // 모든 이미지를 추가 (세로로 일렬 배치)
+                        const imageCount = exp.imageUrls.length;
+                        const imageWidth = 250;
+                        const imageHeight = 150;
+                        const imageSpacing = 20;
+                        const startX = 400; // 텍스트 영역 오른쪽
+                        const startY = 100; // 상단에서 100pt
+                        
+                        for (let j = 0; j < imageCount; j++) {
+                            const imageUrl = exp.imageUrls[j];
+                            
+                            // 이미지 위치 계산 (세로로 일렬 배치)
+                            const imagePosition = {
+                                x: startX,
+                                y: startY + j * (imageHeight + imageSpacing),
+                                width: imageWidth,
+                                height: imageHeight
+                            };
+                            
+                            await addImageToSlide(presId, s.objectId, imageUrl, currentToken, imagePosition);
+                            updatePptProgress(calculateSlideProgress(i, totalSlides) + 10 + (j + 1) * 2, `이미지 ${j + 1} 삽입중`, i + 1, totalSlides, j + 1, imageCount);
+                            console.log(`이미지 ${j + 1}/${imageCount}가 슬라이드 ${i + 1}에 추가되었습니다:`, imageUrl);
+                        }
+                    } catch (imageError) {
+                        console.error(`슬라이드 ${idx}에 이미지 추가 실패:`, imageError);
+                        // 이미지 추가 실패해도 PPT 생성은 계속 진행
+                    }
+                }
+                
+                idx++;
+            }
+
+            // 6) 최종 상태 반영
+            const refreshed = await getPresentationData(presId, currentToken);
+            setSlides(refreshed.slides || []);
+            
+            // 7) PPT 기록 새로고침
+            updatePptProgress(95, '최종 정리중');
+            await loadPptHistory();
+            
+            updatePptProgress(100, 'PPT 생성 완료!');
+            alert('PPT가 생성되었습니다.');
+            setActiveSection('editor');
+        } catch (error) {
+            console.error('PPT 생성 오류:', error);
+            alert('PPT 생성에 실패했습니다: ' + (error?.message || error));
+        } finally {
+            setIsPptCreating(false); // PPT 생성 완료 (성공/실패 관계없이)
+        }
+    }
+
     return {
         createPresentation,
         addSlide,
@@ -540,6 +843,8 @@ export function usePresentationLogic() {
         findFirstPlaceholder,
         getTextFromElement,
         loadPptHistory,
-        loadPptForEdit
+        loadPptForEdit,
+        calculateSlideProgress,
+        handleTemplateSelect
     };
 }

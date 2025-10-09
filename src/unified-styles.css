@@ -515,7 +515,6 @@ a.btn-google:hover {
     color: #fff;
     padding: 20px;
     margin: 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     font-size: 1.3rem;
     font-weight: 500;
     letter-spacing: 0.5px;
@@ -540,6 +539,27 @@ a.btn-google:hover {
 
 .mac-window-content {
     padding: 24px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* PPT 제작 페이지 전용 스타일 - 원래 짧은 선 복원 */
+#pptMakerSection .mac-window h2 {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+#pptMakerSection .mac-window-content {
+    border-top: none;
+}
+
+/* 학교 포털 페이지와 구글 드라이브 페이지에도 짧은 선 적용 */
+#portalSection .mac-window h2,
+#driveSection .mac-window h2 {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+#portalSection .mac-window-content,
+#driveSection .mac-window-content {
+    border-top: none !important;
 }
 
 .mac-list {
@@ -575,36 +595,73 @@ a.btn-google:hover {
     color: #fff;
 }
 
-/* 모달 스타일 */
+/* 모달 스타일 - Apple-like */
 .mac-modal {
-    background: rgba(30, 30, 30, 0.95);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
-    backdrop-filter: blur(10px);
+    background: linear-gradient(180deg, var(--ink-panel), var(--ink-panel-2));
+    border: 1px solid var(--ink-line);
+    border-radius: 18px;
+    box-shadow: var(--ink-shadow);
+    backdrop-filter: blur(16px) saturate(160%);
 }
 
 .mac-modal .modal-header {
-    background: rgba(30, 30, 30, 0.95);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    padding: 20px;
-    color: #fff;
+    background: var(--ink-panel);
+    border-bottom: 1px solid var(--ink-line);
+    padding: 24px 28px 20px;
+    color: var(--ink-text);
+    border-radius: 18px 18px 0 0;
+}
+
+.mac-modal .modal-header .modal-title {
+    color: var(--ink-text);
+    font-weight: 700;
+    font-size: 20px;
+    margin: 0;
 }
 
 .mac-modal .modal-body {
-    background: rgba(30, 30, 30, 0.95);
-    color: #fff;
-    padding: 24px;
+    background: var(--ink-panel);
+    color: var(--ink-text);
+    padding: 24px 28px 20px;
 }
 
 .mac-modal .modal-footer {
-    background: rgba(30, 30, 30, 0.95);
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    padding: 20px;
+    background: var(--ink-panel);
+    border-top: 1px solid var(--ink-line);
+    padding: 20px 28px 28px;
+    border-radius: 0 0 18px 18px;
 }
 
 .mac-modal .btn {
-    border-radius: 6px;
-    padding: 8px 16px;
+    border-radius: 12px;
+    padding: 10px 18px;
+    font-weight: 600;
+    transition: all .2s ease;
+}
+
+.mac-modal .btn-primary {
+    background: linear-gradient(180deg, var(--ink-panel-2), var(--ink-panel));
+    border: 1px solid var(--ink-line);
+    color: var(--ink-text);
+}
+
+.mac-modal .btn-primary:hover {
+    background: linear-gradient(180deg, var(--ink-panel-2), var(--ink-panel-2));
+    border-color: var(--ink-line-strong);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,.3);
+}
+
+.mac-modal .btn-secondary {
+    background: transparent;
+    border: 1px solid var(--ink-line);
+    color: var(--ink-muted);
+}
+
+.mac-modal .btn-secondary:hover {
+    background: rgba(255,255,255,.04);
+    border-color: var(--ink-line-strong);
+    color: var(--ink-text);
 }
 
 /* 빈 상태 스타일 */
@@ -666,10 +723,11 @@ a.btn-google:hover {
 .form-check-input {
     background-color: rgba(255, 255, 255, 0.1);
     border-color: rgba(255, 255, 255, 0.2);
-    width: 1.2rem;
-    height: 1.2rem;
+    width: 1.5rem;
+    height: 1.5rem;
     cursor: pointer;
     transition: all 0.3s ease;
+    border-radius: 6px;
 }
 
 .form-check-input:checked {
@@ -679,6 +737,35 @@ a.btn-google:hover {
 
 .form-check-input:hover {
     border-color: rgba(255, 255, 255, 0.4);
+    transform: scale(1.05);
+}
+
+/* PPT 제작 페이지 체크박스 - 더 크게 */
+#pptMakerSection .form-check-input {
+    width: 1.8rem;
+    height: 1.8rem;
+    border-radius: 8px;
+    border-width: 2px;
+}
+
+#pptMakerSection .form-check-input:hover {
+    transform: scale(1.1);
+    border-color: var(--ink-ring);
+}
+
+#pptMakerSection .form-check-input:checked {
+    background-color: var(--ink-ring);
+    border-color: var(--ink-ring);
+    box-shadow: 0 0 0 3px rgba(124,146,255,.2);
+}
+
+/* PPT 제작 페이지 체크박스 라벨 */
+#pptMakerSection .form-check-label {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--ink-text);
+    margin-left: 8px;
+    cursor: pointer;
 }
 
 /* 템플릿 그리드 */
@@ -1294,42 +1381,209 @@ a.btn:hover,
 }
 
 /* 모달 내 구분선 */
-.modal .divider {
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    margin: 15px 0;
+.mac-modal .divider {
+    border-top: 1px solid var(--ink-line);
+    margin: 20px 0;
+}
+
+/* 모달 닫기 버튼 */
+.mac-modal .btn-close {
+    background: none;
+    border: none;
+    color: var(--ink-muted);
+    font-size: 18px;
+    padding: 8px;
+    border-radius: 8px;
+    transition: all .2s ease;
+}
+
+.mac-modal .btn-close:hover {
+    background: rgba(255,255,255,.06);
+    color: var(--ink-text);
+}
+
+/* 모달 내 이미지 업로드 영역 */
+.mac-modal .image-upload-container {
+    border: 2px dashed var(--ink-line);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    margin: 20px 0;
+    background: rgba(255,255,255,.01);
+    transition: all .2s ease;
+}
+
+.mac-modal .image-upload-container:hover {
+    border-color: var(--ink-line-strong);
+    background: rgba(255,255,255,.02);
+}
+
+.mac-modal .image-upload-icon {
+    font-size: 2rem;
+    color: var(--ink-muted);
+    margin-bottom: 8px;
+}
+
+.mac-modal .image-upload-text {
+    color: var(--ink-text);
+    font-size: 14px;
+    margin-bottom: 5px;
+    font-weight: 600;
+}
+
+.mac-modal .image-upload-subtext {
+    color: var(--ink-hint);
+    font-size: 12px;
+}
+
+/* 모달 내 이미지 미리보기 */
+.mac-modal .image-preview {
+    width: 100%;
+    max-width: 250px;
+    height: 150px;
+    margin: 15px auto;
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+    border: 1px solid var(--ink-line);
+}
+
+.mac-modal .image-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.mac-modal .image-preview .remove-image {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: rgba(0, 0, 0, 0.7);
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all .2s ease;
+}
+
+.mac-modal .image-preview .remove-image:hover {
+    background: rgba(0, 0, 0, 0.9);
 }
 
 /* 모달 스크롤바 스타일 */
-.modal-body {
+.mac-modal .modal-body {
     max-height: 80vh;
     overflow-y: auto;
     scrollbar-width: thin;
-    scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+    scrollbar-color: var(--ink-line) transparent;
 }
 
-.modal-body::-webkit-scrollbar {
+.mac-modal .modal-body::-webkit-scrollbar {
     width: 6px;
 }
 
-.modal-body::-webkit-scrollbar-track {
+.mac-modal .modal-body::-webkit-scrollbar-track {
     background: transparent;
 }
 
-.modal-body::-webkit-scrollbar-thumb {
-    background-color: rgba(255, 255, 255, 0.3);
+.mac-modal .modal-body::-webkit-scrollbar-thumb {
+    background-color: var(--ink-line);
     border-radius: 3px;
 }
 
+.mac-modal .modal-body::-webkit-scrollbar-thumb:hover {
+    background-color: var(--ink-line-strong);
+}
+
+/* 모달 내 에러 메시지 */
+.mac-modal .upload-error {
+    color: #ff6b6b;
+    margin-top: 8px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+/* 모달 내 정보 텍스트 */
+.mac-modal .image-size-info {
+    color: var(--ink-hint);
+    font-size: 11px;
+    margin-top: 4px;
+}
+
+/* 모달 내 빈 상태 */
+.mac-modal .empty-state {
+    color: var(--ink-muted);
+    text-align: center;
+    padding: 40px 20px;
+}
+
+.mac-modal .empty-state i {
+    color: var(--ink-hint);
+    margin-bottom: 12px;
+}
+
 /* 모달 내 폼 그룹 간격 조정 */
-.modal .form-group {
-    margin-bottom: 15px;
+.mac-modal .form-group {
+    margin-bottom: 20px;
 }
 
 /* 모달 내 라벨 스타일 */
-.modal .form-label {
-    color: #fff;
-    margin-bottom: 5px;
-    font-size: 0.95rem;
+.mac-modal .form-label {
+    color: var(--ink-text);
+    margin-bottom: 8px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+/* 모달 내 폼 컨트롤 스타일 */
+.mac-modal .form-control {
+    background: rgba(255,255,255,.02);
+    border: 1px solid var(--ink-line);
+    border-radius: 12px;
+    color: var(--ink-text);
+    padding: 12px 16px;
+    font-size: 14px;
+    transition: all .2s ease;
+}
+
+.mac-modal .form-control:focus {
+    background: rgba(255,255,255,.04);
+    border-color: var(--ink-ring);
+    color: var(--ink-text);
+    box-shadow: 0 0 0 3px rgba(124,146,255,.1);
+}
+
+.mac-modal .form-control::placeholder {
+    color: var(--ink-hint);
+}
+
+/* 모달 내 텍스트 영역 */
+.mac-modal textarea.form-control {
+    min-height: 100px;
+    resize: vertical;
+}
+
+/* 모달 내 체크박스와 라디오 */
+.mac-modal .form-check-input {
+    background-color: rgba(255,255,255,.02);
+    border: 1px solid var(--ink-line);
+    border-radius: 6px;
+}
+
+.mac-modal .form-check-input:checked {
+    background-color: var(--ink-ring);
+    border-color: var(--ink-ring);
+}
+
+.mac-modal .form-check-label {
+    color: var(--ink-text);
+    font-size: 14px;
 }
 
 /* 이미지 그리드 */
@@ -1660,8 +1914,8 @@ a.btn:hover,
     --ink-bg-0: #0c0d10;
     --ink-bg-1: #0f1115;
     --ink-bg-2: #12141a;
-    --ink-panel: #141821;
-    --ink-panel-2: #171b24;
+    --ink-panel: #1a1a1a;
+    --ink-panel-2: #2a2a2a;
     --ink-line: rgba(255,255,255,.08);
     --ink-line-strong: rgba(255,255,255,.14);
     --ink-text: #e9eef6;
@@ -2059,6 +2313,85 @@ a.btn:hover,
     .content-section:not(.content-main) .mac-window h2 {
         font-size: 20px;
         margin-bottom: 16px;
+    }
+}
+
+/* PPT 생성 로딩바 스타일 */
+.loading-progress-container {
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+.loading-progress-bar {
+    width: 100%;
+    height: 8px;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+
+.loading-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #007bff, #0056b3);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.loading-progress-text {
+    text-align: center;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.loading-log {
+    text-align: center;
+    max-width: 500px;
+    margin: 0 auto;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.loading-log-item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 0;
+    font-size: 14px;
+    color: #e9eef6;
+    animation: slideInFade 0.5s ease-out;
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.loading-log-item i {
+    font-size: 8px;
+    width: 12px;
+    text-align: center;
+    color: #007bff;
+    margin-right: 8px;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes slideInFade {
+    0% {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 0.6;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.2);
     }
 }
 
