@@ -1,5 +1,145 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useAppLogic, SECTION_LIST } from './appLogic';
+import TopNav from './TopNav';
+import './unified-styles.css';
+
+/* 상단 네비게이션 아이템 */
+export const NAV_ITEMS = [
+    { id: "main", label: "메인",          icon: "fas fa-home" },
+    { id: "drive", label: "구글 드라이브", icon: "fab fa-google-drive" },
+    { id: "portal", label: "학교 포털",     icon: "fas fa-university" },
+    { id: "pptMaker", label: "PPT 제작",    icon: "fas fa-file-powerpoint" },
+    { id: "myPage", label: "마이페이지",    icon: "fas fa-user" },
+];
+
+/** Apple TV+ 스타일 캐러셀 (순수 React) */
+function HeroCarousel({ onSelect }) {
+    const slides = [
+        {
+            key: "pptMaker",
+            eyebrow: "Make",
+            title: "포트폴리오 PPT 제작",
+            subtitle: "템플릿으로 빠르게, 더 세련되게",
+            bg: "linear-gradient(135deg,#0F1115 0%, #171B22 50%, #0E0F13 100%)",
+            accent: "linear-gradient(90deg,#e2e2e2, #f5f5f5)",
+        },
+        {
+            key: "drive",
+            eyebrow: "Sync",
+            title: "구글 드라이브 연동",
+            subtitle: "파일 업로드부터 공유까지 한 번에",
+            bg: "linear-gradient(135deg,#0F1115 0%, #151922 55%, #0E0F13 100%)",
+            accent: "linear-gradient(90deg,#d9e2ff, #eff3ff)",
+        },
+        {
+            key: "portal",
+            eyebrow: "Campus",
+            title: "학교 포털 바로가기",
+            subtitle: "학사 일정과 공지 확인",
+            bg: "linear-gradient(135deg,#0F1115 0%, #161b21 50%, #0F1218 100%)",
+            accent: "linear-gradient(90deg,#e9e9e9,#f7f7f7)",
+        },
+        {
+            key: "myPage",
+            eyebrow: "Profile",
+            title: "마이페이지",
+            subtitle: "내 기록과 제작 이력 한눈에",
+            bg: "linear-gradient(135deg,#0F1115 0%, #171B22 55%, #0E0F13 100%)",
+            accent: "linear-gradient(90deg,#e2e2e2, #f5f5f5)",
+        },
+    ];
+
+    const [index, setIndex] = useState(0);
+    const timerRef = useRef(null);
+
+    const next = () => setIndex((p) => (p + 1) % slides.length);
+    const prev = () => setIndex((p) => (p - 1 + slides.length) % slides.length);
+    const goto = (i) => setIndex(i);
+
+    const start = () => {
+        if (timerRef.current) return;
+        timerRef.current = setInterval(() => {
+            setIndex((p) => (p + 1) % slides.length);
+        }, 5500);
+    };
+    const stop = () => {
+        if (!timerRef.current) return;
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+    };
+
+    /* 자동 슬라이드 시작/정리 */
+    useEffect(() => {
+        start();
+        return () => stop();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    const slide = slides[index];
+
+    return (
+        <div
+            className="hero-carousel"
+            onMouseEnter={stop}
+            onMouseLeave={start}
+        >
+            {slides.map((slideData, i) => (
+                <div
+                    key={slideData.key}
+                    className={`hero-slide ${i === index ? 'active' : ''}`}
+                    style={{
+                        background: slideData.bg,
+                    }}
+                >
+                    <div className="hero-content">
+                        <div className="hero-eyebrow">
+                            {slideData.eyebrow}
+                        </div>
+                        <h2
+                            className="hero-title"
+                            style={{
+                                background: slideData.accent,
+                                WebkitBackgroundClip: "text",
+                                WebkitTextFillColor: "transparent",
+                            }}
+                        >
+                            {slideData.title}
+                        </h2>
+                        <p className="hero-subtitle">
+                            {slideData.subtitle}
+                        </p>
+                    </div>
+
+                    <div className="hero-visual" />
+                </div>
+            ))}
+
+            <button aria-label="이전" onClick={prev} className="hero-arrow prev">
+                ‹
+            </button>
+            <button aria-label="다음" onClick={next} className="hero-arrow next">
+                ›
+            </button>
+
+            <div className="hero-dots">
+                {slides.map((_, i) => (
+                    <button
+                        key={i}
+                        onClick={() => goto(i)}
+                        aria-label={`슬라이드 ${i + 1}`}
+                        className={`dot ${index === i ? 'active' : ''}`}
+                    />
+                ))}
+            </div>
+
+            {/* 진행 바 */}
+            <div className="hero-progress">
+                <span style={{ transform: `scaleX(${(index + 1) / slides.length})` }} />
+            </div>
+        </div>
+    );
+}
+
 
 function App() {
   // appLogic에서 모든 상태와 함수들을 가져옴
@@ -95,94 +235,92 @@ function App() {
     setShowImageModal
   } = useAppLogic();
 
+  /* 스크롤 시 상단바 스타일 토글 */
+  useEffect(() => {
+    if (!isLoggedIn) return;
+
+    const el = document.querySelector(".mac-titlebar.is-minimal");
+    if (!el) return;
+
+    const onScroll = () => {
+      if (window.scrollY > 8) el.classList.add("is-scrolled");
+      else el.classList.remove("is-scrolled");
+    };
+
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [isLoggedIn]);
+
   // 실제 화면 렌더링
   return (
       <div>
         {/* 로그인 페이지 */}
         {!isLoggedIn && (
-            <div id="loginPage" className="vh-100">
-              <div className="row h-100 g-0">
-                <div className="col-8 intro-section">
-                  <div className="d-flex flex-column justify-content-center h-100 p-5">
-                    <h1 className="display-1 fw-bold mb-2">Portra</h1>
-                    <h2 className="h3 mb-4 text-white-50">포트폴리오 메이커</h2>
-                    <div className="features">
-                      <div className="feature-item mb-3">
-                        <i className="fas fa-check-circle me-2"></i>
-                        간편한 이력 관리
-                      </div>
-                      <div className="feature-item mb-3">
-                        <i className="fas fa-check-circle me-2"></i>
-                        전문적인 PPT 템플릿
-                      </div>
-                      <div className="feature-item mb-3">
-                        <i className="fas fa-check-circle me-2"></i>
-                        구글 드라이브 연동
-                      </div>
+            <section id="loginPage" className="start-hero theme-apple">
+                <div className="hero-blob a" />
+                <div className="hero-blob b" />
+
+                <div className="hero-left">
+                    <div className="brand">
+                        <h1 className="brand-title">Portra</h1>
+                        <p className="brand-sub">포트폴리오 메이커</p>
                     </div>
-                  </div>
+
+                    <ul className="feature-list">
+                        <li>
+                            <i className="fas fa-check-circle" />
+                            간편한 이력 관리
+                        </li>
+                        <li>
+                            <i className="fas fa-check-circle" />
+                            전문적인 PPT 템플릿
+                        </li>
+                        <li>
+                            <i className="fas fa-check-circle" />
+                            구글 드라이브 연동
+                        </li>
+                    </ul>
                 </div>
-                <div className="col-4 login-section">
-                  <div className="d-flex flex-column justify-content-center align-items-center h-100">
-                    <div className="login-box text-center">
-                      <h2 className="mb-4">시작하기</h2>
-                      <div id="googleSignInDiv"></div>
+
+                <div className="hero-right">
+                    <div className="login-card">
+                        <h2 className="login-title">시작하기</h2>
+                        <div id="googleSignInDiv" className="gsi-anchor" />
+                        <p className="login-hint">
+                            Google 계정으로 안전하게 로그인해
+                            <br />
+                            나만의 포트폴리오를 만들어 보세요.
+                        </p>
                     </div>
-                  </div>
                 </div>
-              </div>
-            </div>
+            </section>
         )}
 
         {/* 메인 페이지 */}
         {isLoggedIn && (
-            <div id="mainPage">
-              <div className="mac-titlebar">
-                <div className="mac-title">Portra</div>
-              </div>
+            <div id="mainPage" className="theme-ink">
+              {/* 상단 네비게이션 */}
+              <TopNav items={NAV_ITEMS} active={activeSection} onSelect={showSection} onLogout={logout} />
+
               <div className="mac-container">
-                <div className="mac-sidebar">
-                  {SECTION_LIST.map(section => (
-                      <div
-                          key={section}
-                          className={`sidebar-item${activeSection === section ? ' active' : ''}${section === 'myPage' ? '' : ''}`}
-                          onClick={() => showSection(section)}
-                      >
-                        {section === 'main' && (<><i className="fas fa-home"></i> <span>메인페이지</span></>)}
-                        {section === 'drive' && (<><i className="fab fa-google-drive"></i> <span>구글 드라이브</span></>)}
-                        {section === 'portal' && (<><i className="fas fa-university"></i> <span>학교 포털</span></>)}
-                        {section === 'pptMaker' && (<><i className="fas fa-file-powerpoint"></i> <span>PPT 제작</span></>)}
-                        {section === 'myPage' && (<><i className="fas fa-user"></i> <span>마이페이지</span></>)}
-                      </div>
-                  ))}
-                  <div className="sidebar-item mt-auto" onClick={logout}>
-                    <i className="fas fa-sign-out-alt"></i>
-                    <span>로그아웃</span>
-                  </div>
-                </div>
                 <div className="mac-content">
                   {/* 메인 섹션 */}
                   {activeSection === 'main' && (
-                      <div id="mainSection" className="content-section">
-                        {/* 통합 인증 상태 - 로그인되지 않은 상태에서만 표시 */}
-                        {!isLoggedIn && (
-                          <div className="auth-status mb-4">
-                            <div className={`status-indicator ${authStatus === 'connected' ? 'connected' : authStatus === 'error' ? 'error' : 'disconnected'}`}>
-                              <i className={`fas ${authStatus === 'connected' ? 'fa-check-circle' : authStatus === 'error' ? 'fa-exclamation-triangle' : 'fa-exclamation-circle'}`}></i>
+                      <div className="content-section content-main">
+                        <div className="container-xl">
+                          <HeroCarousel onSelect={showSection} />
+                          <div className="mac-grid mac-grid-2">
+                            <div className="mac-card" onClick={showAddExperienceModal}>
+                              <i className="fas fa-plus-circle"></i>
+                              <h3>이력 등록</h3>
+                              <p>새로운 경험을 추가하세요</p>
                             </div>
-                          </div>
-                        )}
-
-                        <div className="mac-grid">
-                          <div className="mac-card" onClick={showAddExperienceModal}>
-                            <i className="fas fa-plus-circle"></i>
-                            <h3>이력 등록</h3>
-                            <p>새로운 경험을 추가하세요</p>
-                          </div>
-                          <div className="mac-card" onClick={() => showSection('pptMaker')}>
-                            <i className="fas fa-file-powerpoint"></i>
-                            <h3>PPT 제작</h3>
-                            <p>포트폴리오 만들기</p>
+                            <div className="mac-card" onClick={() => showSection('pptMaker')}>
+                              <i className="fas fa-file-powerpoint"></i>
+                              <h3>PPT 제작</h3>
+                              <p>포트폴리오 만들기</p>
+                            </div>
                           </div>
                         </div>
                       </div>
