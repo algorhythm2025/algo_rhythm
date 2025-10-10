@@ -543,6 +543,285 @@ export function usePresentationLogic() {
         return baseProgress + slideContribution;
     }
 
+    // 기본 템플릿 슬라이드 생성
+    async function createBasicTemplateSlides(presId, currentToken, slidesArr, selectedExperiences, updatePptProgress, calculateSlideProgress) {
+        let idx = 1; // 표지 다음부터 시작
+        for (let i = 0; i < selectedExperiences.length; i++) {
+            const exp = selectedExperiences[i];
+            if (!slidesArr[idx]) break;
+            const s = slidesArr[idx];
+            
+            // 슬라이드 생성 완료
+            updatePptProgress(calculateSlideProgress(i, selectedExperiences.length), `슬라이드 ${i + 1} 생성중`, i + 1, selectedExperiences.length);
+            
+            // 슬라이드 내용 삽입 시작
+            updatePptProgress(calculateSlideProgress(i, selectedExperiences.length) + 5, `슬라이드 ${i + 1} 내용 삽입중`, i + 1, selectedExperiences.length);
+
+            // 제목, 기간, 설명을 위한 새로운 텍스트박스들을 생성
+            try {
+                // 1. 제목 텍스트박스 (제목 스타일 적용)
+                await addStyledTextBoxToSlide(presId, s.objectId, exp.title, currentToken, {
+                    x: 50,   // 왼쪽에서 50pt
+                    y: 50,   // 상단에서 50pt
+                    width: 400,
+                    height: 60
+                }, {
+                    bold: true,
+                    fontSize: { magnitude: 24, unit: 'PT' },
+                    fontFamily: 'Arial',
+                    color: { opaqueColor: { rgbColor: { red: 0, green: 0, blue: 0 } } }
+                });
+                console.log(`제목 텍스트박스가 슬라이드 ${idx}에 추가되었습니다:`, exp.title);
+
+                // 2. 기간 텍스트박스 (일반 스타일, 가로 길이 증가)
+                await addTextBoxToSlide(presId, s.objectId, exp.period, currentToken, {
+                    x: 50,   // 왼쪽에서 50pt
+                    y: 100,  // 제목 아래 간격을 줄임 (120 → 100)
+                    width: 350,  // 가로 길이를 늘림 (200 → 350)
+                    height: 40
+                });
+                console.log(`기간 텍스트박스가 슬라이드 ${idx}에 추가되었습니다:`, exp.period);
+
+                // 3. 설명 텍스트박스 (일반 스타일, 위치 조정)
+                await addTextBoxToSlide(presId, s.objectId, exp.description, currentToken, {
+                    x: 50,   // 왼쪽에서 50pt
+                    y: 150,  // 기간 아래 간격을 줄임 (170 → 150)
+                    width: 300,
+                    height: 80
+                });
+                console.log(`설명 텍스트박스가 슬라이드 ${idx}에 추가되었습니다:`, exp.description);
+
+            } catch (textBoxError) {
+                console.error(`슬라이드 ${idx}에 텍스트박스 추가 실패:`, textBoxError);
+                // 텍스트박스 추가 실패해도 PPT 생성은 계속 진행
+            }
+            
+            // 이미지가 있는 경우 슬라이드에 추가
+            if (exp.imageUrls && exp.imageUrls.length > 0) {
+                updatePptProgress(calculateSlideProgress(i, selectedExperiences.length) + 10, `슬라이드 ${i + 1} 이미지 삽입중`, i + 1, selectedExperiences.length, 0, exp.imageUrls.length);
+                try {
+                    // 모든 이미지를 추가 (세로로 일렬 배치)
+                    const imageCount = exp.imageUrls.length;
+                    const imageWidth = 250;
+                    const imageHeight = 150;
+                    const imageSpacing = 20;
+                    const startX = 400; // 텍스트 영역 오른쪽
+                    const startY = 100; // 상단에서 100pt
+                    
+                    for (let j = 0; j < imageCount; j++) {
+                        const imageUrl = exp.imageUrls[j];
+                        
+                        // 이미지 위치 계산 (세로로 일렬 배치)
+                        const imagePosition = {
+                            x: startX,
+                            y: startY + j * (imageHeight + imageSpacing),
+                            width: imageWidth,
+                            height: imageHeight
+                        };
+                        
+                        await addImageToSlide(presId, s.objectId, imageUrl, currentToken, imagePosition);
+                        updatePptProgress(calculateSlideProgress(i, selectedExperiences.length) + 10 + (j + 1) * 2, `이미지 ${j + 1} 삽입중`, i + 1, selectedExperiences.length, j + 1, imageCount);
+                        console.log(`이미지 ${j + 1}/${imageCount}가 슬라이드 ${i + 1}에 추가되었습니다:`, imageUrl);
+                    }
+                } catch (imageError) {
+                    console.error(`슬라이드 ${idx}에 이미지 추가 실패:`, imageError);
+                    // 이미지 추가 실패해도 PPT 생성은 계속 진행
+                }
+            }
+            
+            idx++;
+        }
+    }
+
+    // 타임라인 템플릿 슬라이드 생성
+    async function createTimelineTemplateSlides(presId, currentToken, slidesArr, selectedExperiences, updatePptProgress, calculateSlideProgress) {
+        // 이력을 시작일 기준으로 정렬 (오름차순 - 더 오래된 이력부터)
+        const sortedExperiences = [...selectedExperiences].sort((a, b) => {
+            const dateA = new Date(a.period.split(' - ')[0] || a.period.split('~')[0] || a.period);
+            const dateB = new Date(b.period.split(' - ')[0] || b.period.split('~')[0] || b.period);
+            return dateA - dateB;
+        });
+
+        let idx = 1; // 표지 다음부터 시작
+
+        // 1. 타임라인 개요 슬라이드 생성
+        if (slidesArr[idx]) {
+            const overviewSlide = slidesArr[idx];
+            updatePptProgress(10, '타임라인 개요 슬라이드 생성중');
+            
+            try {
+                // 타임라인 제목
+                await addStyledTextBoxToSlide(presId, overviewSlide.objectId, '타임라인', currentToken, {
+                    x: 50,
+                    y: 50,
+                    width: 500,
+                    height: 60
+                }, {
+                    bold: true,
+                    fontSize: { magnitude: 28, unit: 'PT' },
+                    fontFamily: 'Arial',
+                    color: { opaqueColor: { rgbColor: { red: 0, green: 0, blue: 0 } } }
+                });
+
+                // 타임라인 목록 생성
+                let timelineY = 150;
+                for (let i = 0; i < sortedExperiences.length; i++) {
+                    const exp = sortedExperiences[i];
+                    const timelineText = `${i + 1}. ${exp.title} (${exp.period})`;
+                    
+                    await addTextBoxToSlide(presId, overviewSlide.objectId, timelineText, currentToken, {
+                        x: 80,
+                        y: timelineY,
+                        width: 450,
+                        height: 30
+                    });
+                    
+                    timelineY += 40;
+                }
+            } catch (error) {
+                console.error('타임라인 개요 슬라이드 생성 실패:', error);
+            }
+            idx++;
+        }
+
+        // 2. 각 이력별 상세 슬라이드 생성
+        for (let i = 0; i < sortedExperiences.length; i++) {
+            const exp = sortedExperiences[i];
+            if (!slidesArr[idx]) break;
+            const s = slidesArr[idx];
+            
+            updatePptProgress(calculateSlideProgress(i, sortedExperiences.length), `타임라인 슬라이드 ${i + 1} 생성중`, i + 1, sortedExperiences.length);
+            
+            try {
+                // 제목 텍스트박스
+                await addStyledTextBoxToSlide(presId, s.objectId, exp.title, currentToken, {
+                    x: 50,
+                    y: 50,
+                    width: 400,
+                    height: 60
+                }, {
+                    bold: true,
+                    fontSize: { magnitude: 24, unit: 'PT' },
+                    fontFamily: 'Arial',
+                    color: { opaqueColor: { rgbColor: { red: 0, green: 0, blue: 0 } } }
+                });
+
+                // 기간 텍스트박스
+                await addTextBoxToSlide(presId, s.objectId, exp.period, currentToken, {
+                    x: 50,
+                    y: 100,
+                    width: 350,
+                    height: 40
+                });
+
+                // 설명 텍스트박스
+                await addTextBoxToSlide(presId, s.objectId, exp.description, currentToken, {
+                    x: 50,
+                    y: 150,
+                    width: 300,
+                    height: 80
+                });
+
+                // 이미지가 있는 경우 추가
+                if (exp.imageUrls && exp.imageUrls.length > 0) {
+                    const imageCount = exp.imageUrls.length;
+                    const imageWidth = 200;
+                    const imageHeight = 120;
+                    const startX = 400;
+                    const startY = 100;
+                    
+                    for (let j = 0; j < imageCount; j++) {
+                        const imageUrl = exp.imageUrls[j];
+                        const imagePosition = {
+                            x: startX,
+                            y: startY + j * (imageHeight + 20),
+                            width: imageWidth,
+                            height: imageHeight
+                        };
+                        
+                        await addImageToSlide(presId, s.objectId, imageUrl, currentToken, imagePosition);
+                    }
+                }
+            } catch (error) {
+                console.error(`타임라인 슬라이드 ${i + 1} 생성 실패:`, error);
+            }
+            
+            idx++;
+        }
+    }
+
+    // 사진강조 템플릿 슬라이드 생성
+    async function createPhotoTemplateSlides(presId, currentToken, slidesArr, selectedExperiences, updatePptProgress, calculateSlideProgress) {
+        // 이미지가 있는 이력들만 필터링
+        const experiencesWithImages = selectedExperiences.filter(exp => exp.imageUrls && exp.imageUrls.length > 0);
+        
+        let idx = 1; // 표지 다음부터 시작
+
+        // 각 이미지별 슬라이드 생성
+        let slideCount = 0;
+        const totalImages = experiencesWithImages.reduce((sum, exp) => sum + exp.imageUrls.length, 0);
+        
+        for (let i = 0; i < experiencesWithImages.length; i++) {
+            const exp = experiencesWithImages[i];
+            
+            for (let j = 0; j < exp.imageUrls.length; j++) {
+                if (!slidesArr[idx]) break;
+                const s = slidesArr[idx];
+                
+                slideCount++;
+                updatePptProgress(calculateSlideProgress(slideCount - 1, totalImages), `사진 슬라이드 ${slideCount} 생성중`, slideCount, totalImages);
+                
+                try {
+                    // 이력 제목
+                    await addStyledTextBoxToSlide(presId, s.objectId, exp.title, currentToken, {
+                        x: 50,
+                        y: 50,
+                        width: 400,
+                        height: 50
+                    }, {
+                        bold: true,
+                        fontSize: { magnitude: 20, unit: 'PT' },
+                        fontFamily: 'Arial',
+                        color: { opaqueColor: { rgbColor: { red: 0, green: 0, blue: 0 } } }
+                    });
+
+                    // 기간
+                    await addTextBoxToSlide(presId, s.objectId, exp.period, currentToken, {
+                        x: 50,
+                        y: 100,
+                        width: 300,
+                        height: 30
+                    });
+
+                    // 이미지 (중앙에 크게 배치)
+                    const imageUrl = exp.imageUrls[j];
+                    const imagePosition = {
+                        x: 100,
+                        y: 150,
+                        width: 400,
+                        height: 300
+                    };
+                    
+                    await addImageToSlide(presId, s.objectId, imageUrl, currentToken, imagePosition);
+                    
+                    // 이미지 설명 (선택적)
+                    if (exp.description) {
+                        await addTextBoxToSlide(presId, s.objectId, exp.description, currentToken, {
+                            x: 50,
+                            y: 470,
+                            width: 400,
+                            height: 60
+                        });
+                    }
+                } catch (error) {
+                    console.error(`사진 슬라이드 ${slideCount} 생성 실패:`, error);
+                }
+                
+                idx++;
+            }
+        }
+    }
+
     // PPT 생성 메인 함수
     async function handleTemplateSelect(templateName, token, {
         selectedExperiences,
@@ -678,7 +957,14 @@ export function usePresentationLogic() {
             }
 
             // 3) 템플릿별 슬라이드 추가 (기본 슬라이드만 먼저 생성)
-            const totalSlides = selectedExperiences.length;
+            let totalSlides = selectedExperiences.length;
+            if (templateName === 'timeline') {
+                totalSlides = selectedExperiences.length + 1; // 개요 슬라이드 1개 추가
+            } else if (templateName === 'photo') {
+                // 이미지가 있는 이력들의 이미지 개수만큼 슬라이드 생성
+                const experiencesWithImages = selectedExperiences.filter(exp => exp.imageUrls && exp.imageUrls.length > 0);
+                totalSlides = experiencesWithImages.reduce((sum, exp) => sum + exp.imageUrls.length, 0);
+            }
             
             if (templateName === 'basic') {
                 // 기본 템플릿: 이력별 슬라이드만 생성
@@ -686,18 +972,21 @@ export function usePresentationLogic() {
                     await addSlide(presId, currentToken);
                 }
             } else if (templateName === 'timeline') {
-                // 타임라인 템플릿: 추가 슬라이드 2개 + 이력별 슬라이드
-                await addSlide(presId, currentToken);
-                await addSlide(presId, currentToken);
+                // 타임라인 템플릿: 타임라인 개요 슬라이드 + 이력별 슬라이드 (시작일 기준 정렬)
+                await addSlide(presId, currentToken); // 타임라인 개요 슬라이드
                 for (let i = 0; i < selectedExperiences.length; i++) {
                     await addSlide(presId, currentToken);
                 }
             } else if (templateName === 'photo') {
-                // 사진강조 템플릿: 추가 슬라이드 2개 + 이력별 슬라이드
-                await addSlide(presId, currentToken);
-                await addSlide(presId, currentToken);
-                for (let i = 0; i < selectedExperiences.length; i++) {
-                    await addSlide(presId, currentToken);
+                // 사진강조 템플릿: 이미지별 슬라이드만 생성
+                // 이미지가 있는 이력들만 필터링하고 이미지별로 슬라이드 생성
+                const experiencesWithImages = selectedExperiences.filter(exp => exp.imageUrls && exp.imageUrls.length > 0);
+                for (let i = 0; i < experiencesWithImages.length; i++) {
+                    const exp = experiencesWithImages[i];
+                    // 이미지 개수만큼 슬라이드 생성
+                    for (let j = 0; j < exp.imageUrls.length; j++) {
+                        await addSlide(presId, currentToken);
+                    }
                 }
             }
 
@@ -721,92 +1010,13 @@ export function usePresentationLogic() {
                 }
             }
 
-            // 5) 각 이력 슬라이드별로 내용 추가
-            let idx = 1; // 표지 다음부터 시작
-            for (let i = 0; i < selectedExperiences.length; i++) {
-                const exp = selectedExperiences[i];
-                if (!slidesArr[idx]) break;
-                const s = slidesArr[idx];
-                
-                // 슬라이드 생성 완료
-                updatePptProgress(calculateSlideProgress(i, totalSlides), `슬라이드 ${i + 1} 생성중`, i + 1, totalSlides);
-                
-                // 슬라이드 내용 삽입 시작
-                updatePptProgress(calculateSlideProgress(i, totalSlides) + 5, `슬라이드 ${i + 1} 내용 삽입중`, i + 1, totalSlides);
-
-                // 제목, 기간, 설명을 위한 새로운 텍스트박스들을 생성
-                try {
-                    // 1. 제목 텍스트박스 (제목 스타일 적용)
-                    await addStyledTextBoxToSlide(presId, s.objectId, exp.title, currentToken, {
-                        x: 50,   // 왼쪽에서 50pt
-                        y: 50,   // 상단에서 50pt
-                        width: 400,
-                        height: 60
-                    }, {
-                        bold: true,
-                        fontSize: { magnitude: 24, unit: 'PT' },
-                        fontFamily: 'Arial',
-                        color: { opaqueColor: { rgbColor: { red: 0, green: 0, blue: 0 } } }
-                    });
-                    console.log(`제목 텍스트박스가 슬라이드 ${idx}에 추가되었습니다:`, exp.title);
-
-                    // 2. 기간 텍스트박스 (일반 스타일, 가로 길이 증가)
-                    await addTextBoxToSlide(presId, s.objectId, exp.period, currentToken, {
-                        x: 50,   // 왼쪽에서 50pt
-                        y: 100,  // 제목 아래 간격을 줄임 (120 → 100)
-                        width: 350,  // 가로 길이를 늘림 (200 → 350)
-                        height: 40
-                    });
-                    console.log(`기간 텍스트박스가 슬라이드 ${idx}에 추가되었습니다:`, exp.period);
-
-                    // 3. 설명 텍스트박스 (일반 스타일, 위치 조정)
-                    await addTextBoxToSlide(presId, s.objectId, exp.description, currentToken, {
-                        x: 50,   // 왼쪽에서 50pt
-                        y: 150,  // 기간 아래 간격을 줄임 (170 → 150)
-                        width: 300,
-                        height: 80
-                    });
-                    console.log(`설명 텍스트박스가 슬라이드 ${idx}에 추가되었습니다:`, exp.description);
-
-                } catch (textBoxError) {
-                    console.error(`슬라이드 ${idx}에 텍스트박스 추가 실패:`, textBoxError);
-                    // 텍스트박스 추가 실패해도 PPT 생성은 계속 진행
-                }
-                
-                // 이미지가 있는 경우 슬라이드에 추가
-                if (exp.imageUrls && exp.imageUrls.length > 0) {
-                    updatePptProgress(calculateSlideProgress(i, totalSlides) + 10, `슬라이드 ${i + 1} 이미지 삽입중`, i + 1, totalSlides, 0, exp.imageUrls.length);
-                    try {
-                        // 모든 이미지를 추가 (세로로 일렬 배치)
-                        const imageCount = exp.imageUrls.length;
-                        const imageWidth = 250;
-                        const imageHeight = 150;
-                        const imageSpacing = 20;
-                        const startX = 400; // 텍스트 영역 오른쪽
-                        const startY = 100; // 상단에서 100pt
-                        
-                        for (let j = 0; j < imageCount; j++) {
-                            const imageUrl = exp.imageUrls[j];
-                            
-                            // 이미지 위치 계산 (세로로 일렬 배치)
-                            const imagePosition = {
-                                x: startX,
-                                y: startY + j * (imageHeight + imageSpacing),
-                                width: imageWidth,
-                                height: imageHeight
-                            };
-                            
-                            await addImageToSlide(presId, s.objectId, imageUrl, currentToken, imagePosition);
-                            updatePptProgress(calculateSlideProgress(i, totalSlides) + 10 + (j + 1) * 2, `이미지 ${j + 1} 삽입중`, i + 1, totalSlides, j + 1, imageCount);
-                            console.log(`이미지 ${j + 1}/${imageCount}가 슬라이드 ${i + 1}에 추가되었습니다:`, imageUrl);
-                        }
-                    } catch (imageError) {
-                        console.error(`슬라이드 ${idx}에 이미지 추가 실패:`, imageError);
-                        // 이미지 추가 실패해도 PPT 생성은 계속 진행
-                    }
-                }
-                
-                idx++;
+            // 5) 템플릿별 슬라이드 내용 추가
+            if (templateName === 'basic') {
+                await createBasicTemplateSlides(presId, currentToken, slidesArr, selectedExperiences, updatePptProgress, calculateSlideProgress);
+            } else if (templateName === 'timeline') {
+                await createTimelineTemplateSlides(presId, currentToken, slidesArr, selectedExperiences, updatePptProgress, calculateSlideProgress);
+            } else if (templateName === 'photo') {
+                await createPhotoTemplateSlides(presId, currentToken, slidesArr, selectedExperiences, updatePptProgress, calculateSlideProgress);
             }
 
             // 6) 최종 상태 반영
@@ -845,6 +1055,9 @@ export function usePresentationLogic() {
         loadPptHistory,
         loadPptForEdit,
         calculateSlideProgress,
-        handleTemplateSelect
+        handleTemplateSelect,
+        createBasicTemplateSlides,
+        createTimelineTemplateSlides,
+        createPhotoTemplateSlides
     };
 }

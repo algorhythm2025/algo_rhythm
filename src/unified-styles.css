@@ -2349,7 +2349,7 @@ a.btn:hover,
     max-width: 500px;
     margin: 0 auto;
     max-height: 200px;
-    overflow-y: auto;
+    overflow-y: hidden;
 }
 
 .loading-log-item {

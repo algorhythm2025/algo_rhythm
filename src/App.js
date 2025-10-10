@@ -198,6 +198,7 @@ function App() {
     openExperienceModal,
     openImageModal,
     setImageLoadingState,
+    setImageErrorState,
     retryImageLoad,
     toggleSelect,
     setSelectedExperiences,
@@ -417,7 +418,7 @@ function App() {
                                                           try {
                                                             e.target.dataset.converting = 'true';
                                                             console.log('이미지 로딩 실패, 재시도 시작:', exp.imageUrls[0]);
-                                                            await retryImageLoad(e.target, exp.imageUrls[0]);
+                                                            await retryImageLoad(e.target, exp.imageUrls[0], 0, setImageLoadingState, setImageErrorState);
                                                           } catch (error) {
                                                             console.error('이미지 로딩 재시도 실패:', error);
                                                             e.target.style.display = 'none';
@@ -471,7 +472,7 @@ function App() {
                                 <div className="loading-progress-fill" style={{ width: `${pptProgress}%` }}></div>
                               </div>
                               <div className="loading-progress-text mt-2">
-                                <span className="white-text">{pptProgress}%</span>
+                                <span className="white-text">{Math.round(pptProgress)}%</span>
                               </div>
                             </div>
                             <div className="loading-log">
@@ -1126,7 +1127,7 @@ function App() {
                                                           try {
                                                             e.target.dataset.converting = 'true';
                                                             console.log('이미지 로딩 실패, 재시도 시작:', exp.imageUrls[0]);
-                                                            await retryImageLoad(e.target, exp.imageUrls[0]);
+                                                            await retryImageLoad(e.target, exp.imageUrls[0], 0, setImageLoadingState, setImageErrorState);
                                                           } catch (error) {
                                                             console.error('이미지 로딩 재시도 실패:', error);
                                                             e.target.style.display = 'none';
@@ -1425,7 +1426,7 @@ function App() {
                           try {
                             e.target.dataset.converting = 'true';
                             console.log('모달 이미지 로딩 실패, 재시도 시작:', selectedImageForModal.url);
-                            await retryImageLoad(e.target, selectedImageForModal.url);
+                            await retryImageLoad(e.target, selectedImageForModal.url, 0, setImageLoadingState, setImageErrorState);
                           } catch (error) {
                             console.error('모달 이미지 로딩 재시도 실패:', error);
                             e.target.style.display = 'none';
@@ -1537,7 +1538,7 @@ function App() {
                                       try {
                                         e.target.dataset.converting = 'true';
                                         console.log('이력 모달 이미지 로딩 실패, 재시도 시작:', imageUrl);
-                                        await retryImageLoad(e.target, imageUrl);
+                                        await retryImageLoad(e.target, imageUrl, 0, setImageLoadingState, setImageErrorState);
                                       } catch (error) {
                                         console.error('이력 모달 이미지 로딩 재시도 실패:', error);
                                         e.target.style.display = 'none';
