@@ -252,21 +252,28 @@ export function useUILogic() {
         console.log('이미지 에러 상태 설정:', imageKey);
     }
 
-    // 이미지 로딩 재시도 함수 (최적화됨)
+    // 이미지 로딩 재시도 함수 (개선됨)
     async function retryImageLoad(imgElement, originalUrl, retryCount = 0, setImageLoadingState, setImageErrorState) {
-        const maxRetries = 2; // 재시도 횟수 감소
+        const maxRetries = 2;
         const imageKey = `${originalUrl}_${imgElement.alt}`;
         
         const fileId = originalUrl.match(/[-\w]{25,}/)?.[0];
+        if (!fileId) {
+            console.error('파일 ID를 찾을 수 없습니다:', originalUrl);
+            imgElement.style.display = 'none';
+            return;
+        }
+        
+        // 더 안정적인 URL 순서로 재시도
         const alternativeUrls = [
-            `https://drive.google.com/thumbnail?id=${fileId}&sz=w400`, // 가장 빠른 썸네일
+            `https://drive.google.com/thumbnail?id=${fileId}&sz=w400`, // 가장 안정적인 썸네일
             `https://drive.google.com/thumbnail?id=${fileId}&sz=w200`, // 더 작은 썸네일
-            `https://drive.google.com/uc?export=view&id=${fileId}`
+            `https://drive.google.com/uc?export=view&id=${fileId}` // 원본 (마지막 시도)
         ];
         
         if (retryCount >= maxRetries) {
             console.error('이미지 로딩 실패 - 모든 재시도 소진:', originalUrl);
-            setImageErrorState(imageKey);
+            if (setImageErrorState) setImageErrorState(imageKey);
             imgElement.style.display = 'none';
             return;
         }
@@ -274,43 +281,53 @@ export function useUILogic() {
         const currentUrl = retryCount === 0 ? originalUrl : alternativeUrls[retryCount - 1];
         console.log(`이미지 로딩 재시도 ${retryCount + 1}/${maxRetries + 1}:`, currentUrl);
         
-        // 로딩 상태 설정
-        setImageLoadingState(imageKey, true);
+        // 로딩 상태 설정 (함수가 제공된 경우에만)
+        if (setImageLoadingState) {
+            setImageLoadingState(imageKey, true);
+        }
         
-        // 새로운 이미지 객체로 테스트 (타임아웃 설정)
-        const testImg = new Image();
-        let timeoutId;
-        
-        const cleanup = () => {
-            if (timeoutId) clearTimeout(timeoutId);
-            setImageLoadingState(imageKey, false);
-        };
-        
-        // 3초 타임아웃 설정 (더 빠른 응답)
-        timeoutId = setTimeout(() => {
-            console.log('이미지 로딩 타임아웃:', currentUrl);
-            cleanup();
-            setTimeout(() => retryImageLoad(imgElement, originalUrl, retryCount + 1, setImageLoadingState, setImageErrorState), 300); // 더 빠른 재시도
-        }, 3000);
-        
-        testImg.onload = () => {
-            cleanup();
-            imgElement.src = currentUrl;
-            console.log('이미지 로딩 성공:', currentUrl);
-        };
-        
-        testImg.onerror = () => {
-            cleanup();
-            setTimeout(() => retryImageLoad(imgElement, originalUrl, retryCount + 1, setImageLoadingState, setImageErrorState), 300); // 더 빠른 재시도
-        };
-        
-        testImg.src = currentUrl;
+        return new Promise((resolve, reject) => {
+            const testImg = new Image();
+            let timeoutId;
+            
+            const cleanup = () => {
+                if (timeoutId) clearTimeout(timeoutId);
+                if (setImageLoadingState) {
+                    setImageLoadingState(imageKey, false);
+                }
+            };
+            
+            // 5초 타임아웃 설정
+            timeoutId = setTimeout(() => {
+                console.log('이미지 로딩 타임아웃:', currentUrl);
+                cleanup();
+                retryImageLoad(imgElement, originalUrl, retryCount + 1, setImageLoadingState, setImageErrorState)
+                    .then(resolve)
+                    .catch(reject);
+            }, 5000);
+            
+            testImg.onload = () => {
+                cleanup();
+                imgElement.src = currentUrl;
+                console.log('이미지 로딩 성공:', currentUrl);
+                resolve();
+            };
+            
+            testImg.onerror = () => {
+                cleanup();
+                retryImageLoad(imgElement, originalUrl, retryCount + 1, setImageLoadingState, setImageErrorState)
+                    .then(resolve)
+                    .catch(reject);
+            };
+            
+            testImg.src = currentUrl;
+        });
     }
 
     // 기존 이미지 URL을 올바른 형식으로 변환
     async function convertImageUrl(imageUrl) {
-        // 이미 Base64 데이터 URL이거나 직접 접근 URL인 경우 그대로 반환
-        if (imageUrl.startsWith('data:') || imageUrl.includes('uc?export=view&id=')) {
+        // 이미 Base64 데이터 URL인 경우 그대로 반환
+        if (imageUrl.startsWith('data:')) {
             return imageUrl;
         }
 
@@ -323,20 +340,11 @@ export function useUILogic() {
 
         const fileId = fileIdMatch[0];
         
-        // 썸네일 크기로 최적화된 URL 우선 사용 (로딩 속도 향상)
-        const possibleUrls = [
-            `https://drive.google.com/thumbnail?id=${fileId}&sz=w400`, // 썸네일 크기로 최적화
-            `https://drive.google.com/uc?export=view&id=${fileId}`,
-            `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000`,
-            `https://lh3.googleusercontent.com/d/${fileId}`,
-            `https://drive.google.com/file/d/${fileId}/view?usp=sharing`
-        ];
+        // 썸네일 URL을 우선 사용 (더 안정적이고 빠름)
+        const thumbnailUrl = `https://drive.google.com/thumbnail?id=${fileId}&sz=w400`;
+        console.log('이미지 URL 변환 (썸네일 우선):', imageUrl, '→', thumbnailUrl);
         
-        // 첫 번째 URL을 기본으로 사용 (썸네일 크기로 빠른 로딩)
-        const directUrl = possibleUrls[0];
-        console.log('이미지 URL 변환 (최적화):', imageUrl, '→', directUrl);
-        
-        return directUrl;
+        return thumbnailUrl;
     }
 
     // 템플릿 모달 표시

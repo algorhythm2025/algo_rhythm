@@ -262,6 +262,21 @@ class GoogleSheetsService {
     }
   }
 
+  // 이미지 URL을 썸네일 형식으로 변환
+  convertImageUrlToThumbnail(imageUrl) {
+    if (!imageUrl || imageUrl.startsWith('data:')) {
+      return imageUrl;
+    }
+
+    const fileIdMatch = imageUrl.match(/[-\w]{25,}/);
+    if (!fileIdMatch) {
+      return imageUrl;
+    }
+
+    const fileId = fileIdMatch[0];
+    return `https://drive.google.com/thumbnail?id=${fileId}&sz=w400`;
+  }
+
   // 시트에서 이력 데이터 로드 (sheetsLogic에서 통합)
   async loadExperiencesFromSheets(spreadsheetId, setExperiences, preloadImage) {
     if (!spreadsheetId) return;
@@ -269,6 +284,14 @@ class GoogleSheetsService {
     try {
       const sheetData = await this.readData(spreadsheetId, 'A:E');
       const experiences = this.formatSheetToExperience(sheetData);
+      
+      // 이미지 URL을 썸네일 형식으로 미리 변환
+      experiences.forEach(exp => {
+        if (exp.imageUrls && exp.imageUrls.length > 0) {
+          exp.imageUrls = exp.imageUrls.map(url => this.convertImageUrlToThumbnail(url));
+        }
+      });
+      
       setExperiences(experiences);
       
       // 이미지 프리로딩 (백그라운드에서 미리 로딩)

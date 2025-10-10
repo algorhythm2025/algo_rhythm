@@ -648,6 +648,7 @@ function useAppLogic() {
       openExperienceModal: (experience) => uiLogic.openExperienceModal(experience, setSelectedExperience, setShowExperienceModal),
       openImageModal: (imageUrl, title) => uiLogic.openImageModal(imageUrl, title, setSelectedImageForModal, setShowImageModal),
       setImageLoadingState: (imageKey, isLoading) => uiLogic.setImageLoadingState(imageKey, isLoading, setImageLoadingStates),
+      setImageErrorState: (imageKey) => uiLogic.setImageErrorState(imageKey),
       retryImageLoad: (imgElement, originalUrl, retryCount) => uiLogic.retryImageLoad(imgElement, originalUrl, retryCount, (imageKey, isLoading) => uiLogic.setImageLoadingState(imageKey, isLoading, setImageLoadingStates), uiLogic.setImageErrorState),
       toggleSelect: (idx) => uiLogic.toggleSelect(idx, selected, setSelected),
       setSelectedExperiences,
