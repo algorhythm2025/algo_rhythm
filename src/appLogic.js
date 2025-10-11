@@ -210,7 +210,7 @@ function useAppLogic() {
 
           // 새로 생성된 시트에서 데이터 로드 (통합된 sheetsService 사용)
           if (sheetsService.current) {
-            await sheetsService.current.loadExperiencesFromSheets(currentSpreadsheetId, setExperiences, uiLogic.preloadImage);
+            await sheetsService.current.loadExperiencesFromSheets(currentSpreadsheetId, setExperiences, uiLogic.preloadImage, false); // 초기화 시에는 이미지 프리로딩 하지 않음
           }
           await loadDriveFiles();
         }
@@ -274,7 +274,7 @@ function useAppLogic() {
         console.log('driveService가 초기화되지 않았습니다.');
         return;
       }
-      await driveService.current.loadDriveFiles(driveViewMode, portfolioFolderId, spreadsheetId, sheetsService, setDriveFiles, setIsDriveLoading, setSpreadsheetId);
+      await driveService.current.loadDriveFiles(driveViewMode, portfolioFolderId, spreadsheetId, sheetsService, setDriveFiles, setIsDriveLoading, setSpreadsheetId, parentId);
     }
 
     // 파일 다운로드 (Access Token 사용) (통합된 driveService 사용)
@@ -309,7 +309,7 @@ function useAppLogic() {
 
     // 뒤로가기 (통합된 driveService 사용)
     async function goBack() {
-      await driveService.current.goBack(currentPath, setCurrentPath, loadDriveFiles, setIsViewModeLoading);
+      await driveService.current.goBack(currentPath, setCurrentPath, loadDriveFiles, setIsViewModeLoading, driveViewMode, portfolioFolderId);
     }
 
     // 파일 다운로드 (통합된 driveService 사용)
@@ -318,12 +318,12 @@ function useAppLogic() {
     }
 
     // 시트에서 이력 데이터 로드 (통합된 sheetsService 사용)
-    async function loadExperiencesFromSheets(spreadsheetIdToUse = null) {
+    async function loadExperiencesFromSheets(spreadsheetIdToUse = null, shouldPreloadImages = true) {
       if (!sheetsService.current) {
         console.log('sheetsService가 초기화되지 않았습니다.');
         return;
       }
-      await sheetsService.current.loadExperiencesFromSheets(spreadsheetIdToUse || spreadsheetId, setExperiences, uiLogic.preloadImage);
+      await sheetsService.current.loadExperiencesFromSheets(spreadsheetIdToUse || spreadsheetId, setExperiences, uiLogic.preloadImage, shouldPreloadImages);
     }
 
     // 구글 시트 데이터 새로고침 (통합된 sheetsService 사용)
@@ -446,9 +446,9 @@ function useAppLogic() {
     useEffect(() => {
       if (activeSection === 'myPage' && isDriveInitialized) {
         loadPptHistory();
-        // 이력 목록도 자동으로 새로고침
+        // 이력 목록도 자동으로 새로고침 (마이페이지에서만 이미지 프리로딩)
         if (isSheetsInitialized) {
-          loadExperiencesFromSheets();
+          loadExperiencesFromSheets(null, true); // 마이페이지에서는 이미지 프리로딩 활성화
         }
       }
     }, [activeSection, isDriveInitialized, isSheetsInitialized]);

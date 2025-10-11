@@ -278,7 +278,7 @@ class GoogleSheetsService {
   }
 
   // 시트에서 이력 데이터 로드 (sheetsLogic에서 통합)
-  async loadExperiencesFromSheets(spreadsheetId, setExperiences, preloadImage) {
+  async loadExperiencesFromSheets(spreadsheetId, setExperiences, preloadImage, shouldPreloadImages = true) {
     if (!spreadsheetId) return;
 
     try {
@@ -294,16 +294,18 @@ class GoogleSheetsService {
       
       setExperiences(experiences);
       
-      // 이미지 프리로딩 (백그라운드에서 미리 로딩)
-      experiences.forEach(exp => {
-        if (exp.imageUrls && exp.imageUrls.length > 0) {
-          exp.imageUrls.forEach(imageUrl => {
-            preloadImage(imageUrl).catch(err => {
-              console.log('이미지 프리로딩 실패 (무시됨):', imageUrl, err);
+      // 이미지 프리로딩 (조건부로 실행)
+      if (shouldPreloadImages) {
+        experiences.forEach(exp => {
+          if (exp.imageUrls && exp.imageUrls.length > 0) {
+            exp.imageUrls.forEach(imageUrl => {
+              preloadImage(imageUrl).catch(err => {
+                console.log('이미지 프리로딩 실패 (무시됨):', imageUrl, err);
+              });
             });
-          });
-        }
-      });
+          }
+        });
+      }
     } catch (error) {
       console.error('이력 데이터 로드 오류:', error);
       // 시트가 존재하지 않는 경우 로그만 출력하고 새로 생성하지 않음
@@ -319,7 +321,7 @@ class GoogleSheetsService {
   async refreshSheetsData(loadExperiencesFromSheets, setIsExperienceLoading) {
     try {
       setIsExperienceLoading(true);
-      await loadExperiencesFromSheets();
+      await loadExperiencesFromSheets(null, true); // 새로고침 시에는 이미지 프리로딩 활성화
     } catch (error) {
       console.error('시트 데이터 새로고침 오류:', error);
       alert('데이터 새로고침에 실패했습니다: ' + (error?.message || error));

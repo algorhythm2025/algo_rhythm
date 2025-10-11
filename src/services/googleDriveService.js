@@ -422,10 +422,10 @@ class GoogleDriveService {
   }
 
   // 드라이브 파일 목록 로드 (driveLogic에서 통합)
-  async loadDriveFiles(driveViewMode, portfolioFolderId, spreadsheetId, sheetsService, setDriveFiles, setIsDriveLoading, setSpreadsheetId) {
+  async loadDriveFiles(driveViewMode, portfolioFolderId, spreadsheetId, sheetsService, setDriveFiles, setIsDriveLoading, setSpreadsheetId, parentId = null) {
     try {
       setIsDriveLoading(true);
-      console.log('드라이브 파일 불러오기 시작, 뷰 모드:', driveViewMode);
+      console.log('드라이브 파일 불러오기 시작, 뷰 모드:', driveViewMode, 'parentId:', parentId);
 
       // 시트가 있다면 실제로 존재하는지 확인
       if (spreadsheetId && sheetsService.current) {
@@ -444,7 +444,11 @@ class GoogleDriveService {
       }
 
       let files;
-      if (driveViewMode === 'portfolio' && portfolioFolderId) {
+      if (parentId) {
+        // 특정 폴더 내 파일만 로드
+        files = await this.listFiles(50, parentId);
+        console.log('특정 폴더 파일:', files);
+      } else if (driveViewMode === 'portfolio' && portfolioFolderId) {
         // 포트폴리오 폴더 내 파일만 로드
         files = await this.listFiles(50, portfolioFolderId);
         console.log('포트폴리오 폴더 파일:', files);
@@ -519,10 +523,12 @@ class GoogleDriveService {
 
     try {
       setIsUploadLoading(true);
-      await this.uploadFile(file.name, file, file.type);
+      
+      // 현재 경로를 유지하면서 파일 업로드
+      const currentParentId = currentPath.length > 0 ? currentPath[currentPath.length - 1].id : null;
+      await this.uploadFile(file.name, file, file.type, currentParentId);
       
       // 현재 경로를 유지하면서 파일 목록 새로고침
-      const currentParentId = currentPath.length > 0 ? currentPath[currentPath.length - 1].id : null;
       await loadDriveFiles(currentParentId);
       
       alert('파일이 업로드되었습니다!');
@@ -604,16 +610,16 @@ class GoogleDriveService {
         if (portfolioFolderId && folderId === portfolioFolderId) {
           // 포트폴리오 폴더인 경우 작업영역을 포트폴리오 폴더로 전환
           setDriveViewMode('portfolio');
-          setCurrentPath([]); // 경로 초기화
-          await loadDriveFiles(); // 포트폴리오 폴더 내용 로드
+          setCurrentPath([{ id: folderId, name: folderName }]); // 포트폴리오 폴더를 경로에 추가
+          await loadDriveFiles(folderId); // 포트폴리오 폴더 내용 로드
         } else {
           // 포트폴리오 폴더 ID가 설정되지 않은 경우, 폴더 이름으로만 확인
           // 이 경우 포트폴리오 폴더 ID를 설정하고 작업영역 전환
           setPortfolioFolderId(folderId);
           localStorage.setItem('portfolioFolderId', folderId);
           setDriveViewMode('portfolio');
-          setCurrentPath([]); // 경로 초기화
-          await loadDriveFiles(); // 포트폴리오 폴더 내용 로드
+          setCurrentPath([{ id: folderId, name: folderName }]); // 포트폴리오 폴더를 경로에 추가
+          await loadDriveFiles(folderId); // 포트폴리오 폴더 내용 로드
         }
       } else {
         // 일반 폴더인 경우 기존 로직 유지
@@ -626,7 +632,7 @@ class GoogleDriveService {
   }
 
   // 뒤로가기 - driveLogic에서 통합
-  async goBack(currentPath, setCurrentPath, loadDriveFiles, setIsViewModeLoading) {
+  async goBack(currentPath, setCurrentPath, loadDriveFiles, setIsViewModeLoading, driveViewMode, portfolioFolderId) {
     if (currentPath.length === 0) return;
 
     try {
@@ -636,7 +642,13 @@ class GoogleDriveService {
 
       if (newPath.length === 0) {
         // 루트로 돌아가기
-        await loadDriveFiles();
+        if (driveViewMode === 'portfolio' && portfolioFolderId) {
+          // 포트폴리오 모드에서는 포트폴리오 폴더로 돌아가기
+          await loadDriveFiles(portfolioFolderId);
+        } else {
+          // 전체 모드에서는 루트로 돌아가기
+          await loadDriveFiles();
+        }
       } else {
         // 이전 폴더로 돌아가기
         const parentFolderId = newPath[newPath.length - 1].id;
