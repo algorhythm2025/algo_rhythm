@@ -237,10 +237,178 @@ class GoogleDriveService {
           }
       );
       const result = await response.json();
+      
+      // 이미지 파일인 경우 공개 권한 설정
+      if (result.id && mimeType.startsWith('image/')) {
+        try {
+          await this.setFilePublic(result.id);
+          console.log('이미지 파일 공개 권한 설정 완료:', result.id);
+        } catch (permissionError) {
+          console.warn('공개 권한 설정 실패 (무시됨):', permissionError);
+        }
+      }
+      
       return result;
     } catch (error) {
       console.error('파일 업로드 오류:', error);
       throw new Error('파일 업로드에 실패했습니다.');
+    }
+  }
+
+  // 파일 공개 권한 설정
+  async setFilePublic(fileId) {
+    try {
+      await this.ensureAuthenticated();
+
+      const gapiClient = this.authService.getAuthenticatedGapiClient();
+
+      // 모든 사용자에게 읽기 권한 부여
+      await gapiClient.drive.permissions.create({
+        fileId: fileId,
+        resource: {
+          role: 'reader',
+          type: 'anyone'
+        }
+      });
+
+      // 개별 파일 로그 제거 - 너무 많은 로그 생성 방지
+      return true;
+    } catch (error) {
+      console.error('파일 공개 권한 설정 오류:', error);
+      throw new Error('파일 공개 권한 설정에 실패했습니다.');
+    }
+  }
+
+  // 이미지 파일의 공개 URL 생성
+  async getImagePublicUrl(fileId) {
+    try {
+      await this.ensureAuthenticated();
+
+      const gapiClient = this.authService.getAuthenticatedGapiClient();
+
+      // 파일 정보 가져오기
+      const fileInfo = await gapiClient.drive.files.get({
+        fileId: fileId,
+        fields: 'id,name,mimeType,webViewLink,webContentLink'
+      });
+
+      const file = fileInfo.result;
+
+      // 이미지 파일인지 확인
+      if (!file.mimeType || !file.mimeType.startsWith('image/')) {
+        throw new Error('이미지 파일이 아닙니다.');
+      }
+
+      // 공개 URL 생성
+      const publicUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
+      
+      console.log('이미지 공개 URL 생성:', publicUrl);
+      return publicUrl;
+    } catch (error) {
+      console.error('이미지 공개 URL 생성 오류:', error);
+      throw new Error('이미지 공개 URL 생성에 실패했습니다.');
+    }
+  }
+
+  // 기존 이미지 파일들에 공개 권한 설정 (중복 방지)
+  async setExistingImagesPublic() {
+    // 이미 실행 중인지 확인
+    if (this._settingPermissionsInProgress) {
+      console.log('이미지 공개 권한 설정이 이미 진행 중입니다.');
+      return 0;
+    }
+
+    // 이미 실행된 파일 ID들을 저장
+    if (!this._processedImageIds) {
+      this._processedImageIds = new Set();
+    }
+
+    try {
+      this._settingPermissionsInProgress = true;
+      await this.ensureAuthenticated();
+
+      // 포트폴리오 폴더 찾기
+      const portfolioFolder = await this.ensurePortfolioFolder();
+      if (!portfolioFolder) {
+        console.log('포트폴리오 폴더를 찾을 수 없습니다.');
+        return 0;
+      }
+
+      // 이미지 폴더 찾기
+      const imageFolder = await this.ensureImageFolder(portfolioFolder.id);
+      if (!imageFolder) {
+        console.log('이미지 폴더를 찾을 수 없습니다.');
+        return 0;
+      }
+
+      // 이미지 폴더 내 모든 파일 가져오기
+      const files = await this.getFilesInFolder(imageFolder.id);
+      const imageFiles = files.filter(file => file.mimeType && file.mimeType.startsWith('image/'));
+
+      let processedCount = 0;
+      const totalFiles = imageFiles.length;
+
+      // 각 이미지 파일에 공개 권한 설정 (중복 방지)
+      for (let i = 0; i < imageFiles.length; i++) {
+        const file = imageFiles[i];
+        if (this._processedImageIds.has(file.id)) {
+          continue; // 이미 처리된 파일은 건너뛰기
+        }
+
+        try {
+          await this.setFilePublic(file.id);
+          this._processedImageIds.add(file.id);
+          processedCount++;
+          
+          // 진행 상황 로그 (10개마다 또는 마지막에)
+          if ((i + 1) % 10 === 0 || i === imageFiles.length - 1) {
+            console.log(`이미지 공개 권한 설정 진행: ${i + 1}/${totalFiles} (${Math.round((i + 1) / totalFiles * 100)}%)`);
+          }
+        } catch (error) {
+          console.warn(`이미지 공개 권한 설정 실패: ${file.name} (${file.id})`, error);
+        }
+      }
+
+      // 이력별 하위 폴더들도 확인
+      const subFolders = files.filter(file => file.mimeType === 'application/vnd.google-apps.folder');
+      let subFolderProcessedCount = 0;
+      
+      for (const subFolder of subFolders) {
+        try {
+          const subFiles = await this.getFilesInFolder(subFolder.id);
+          const subImageFiles = subFiles.filter(file => file.mimeType && file.mimeType.startsWith('image/'));
+          
+          for (const subFile of subImageFiles) {
+            if (this._processedImageIds.has(subFile.id)) {
+              continue; // 이미 처리된 파일은 건너뛰기
+            }
+
+            try {
+              await this.setFilePublic(subFile.id);
+              this._processedImageIds.add(subFile.id);
+              processedCount++;
+              subFolderProcessedCount++;
+              // 개별 파일 로그 제거 - 너무 많은 로그 생성 방지
+            } catch (error) {
+              console.warn(`하위 폴더 이미지 공개 권한 설정 실패: ${subFile.name} (${subFile.id})`, error);
+            }
+          }
+        } catch (error) {
+          console.warn(`하위 폴더 ${subFolder.name} 처리 실패:`, error);
+        }
+      }
+
+      if (subFolderProcessedCount > 0) {
+        console.log(`기존 이미지 파일들 공개 권한 설정 완료 (루트: ${processedCount - subFolderProcessedCount}개, 하위폴더: ${subFolderProcessedCount}개, 총 ${processedCount}개)`);
+      } else {
+        console.log(`기존 이미지 파일들 공개 권한 설정 완료 (처리된 파일: ${processedCount}개)`);
+      }
+      return processedCount;
+    } catch (error) {
+      console.error('기존 이미지 파일들 공개 권한 설정 오류:', error);
+      throw new Error('기존 이미지 파일들 공개 권한 설정에 실패했습니다.');
+    } finally {
+      this._settingPermissionsInProgress = false;
     }
   }
 

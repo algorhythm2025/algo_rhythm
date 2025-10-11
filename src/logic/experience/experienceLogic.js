@@ -160,9 +160,9 @@ export function useExperienceLogic() {
             // 권한 설정 후 충분한 대기 시간 (권한 변경이 반영되도록)
             await new Promise(resolve => setTimeout(resolve, 3000));
 
-            // 썸네일 크기로 최적화된 URL 반환 (빠른 로딩)
-            const directUrl = `https://drive.google.com/thumbnail?id=${uploadResult.id}&sz=w400`;
-            console.log('생성된 이미지 URL (최적화):', directUrl);
+            // 직접 링크 URL 반환 (공개 권한이 설정된 후 더 안정적)
+            const directUrl = `https://drive.google.com/uc?export=view&id=${uploadResult.id}`;
+            console.log('생성된 이미지 URL (직접 링크):', directUrl);
             return directUrl;
         } catch (error) {
             console.error('이미지 업로드 오류:', error);

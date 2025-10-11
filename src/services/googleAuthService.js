@@ -412,12 +412,15 @@ class GoogleAuthService {
     const hasToken = this.accessToken !== null;
     const gapiHasToken = window.gapi && window.gapi.client && window.gapi.client.getToken();
 
-    console.log('인증 상태 확인:', {
-      gisInited: this.gisInited,
-      gapiInited: this.gapiInited,
-      hasAccessToken: hasToken,
-      gapiHasToken: !!gapiHasToken
-    });
+    // 로그를 줄이기 위해 디버그 모드에서만 출력
+    if (this._debugMode) {
+      console.log('인증 상태 확인:', {
+        gisInited: this.gisInited,
+        gapiInited: this.gapiInited,
+        hasAccessToken: hasToken,
+        gapiHasToken: !!gapiHasToken
+      });
+    }
 
     return this.gisInited && this.gapiInited && (hasToken || gapiHasToken);
   }
@@ -488,7 +491,10 @@ class GoogleAuthService {
   // 서비스별 인증 상태 확인
   isServiceAuthenticated(serviceName) {
     const isAuth = this.isAuthenticated();
-    console.log(`${serviceName} 서비스 인증 상태:`, isAuth);
+    // 로그를 줄이기 위해 디버그 모드에서만 출력
+    if (this._debugMode) {
+      console.log(`${serviceName} 서비스 인증 상태:`, isAuth);
+    }
     return isAuth;
   }
 

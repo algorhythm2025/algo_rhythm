@@ -274,11 +274,11 @@ class GoogleSheetsService {
     }
 
     const fileId = fileIdMatch[0];
-    return `https://drive.google.com/thumbnail?id=${fileId}&sz=w400`;
+    return `https://drive.google.com/uc?export=view&id=${fileId}`;
   }
 
   // 시트에서 이력 데이터 로드 (sheetsLogic에서 통합)
-  async loadExperiencesFromSheets(spreadsheetId, setExperiences, preloadImage, shouldPreloadImages = true) {
+  async loadExperiencesFromSheets(spreadsheetId, setExperiences, preloadImage = null, shouldPreloadImages = false) {
     if (!spreadsheetId) return;
 
     try {
@@ -294,18 +294,8 @@ class GoogleSheetsService {
       
       setExperiences(experiences);
       
-      // 이미지 프리로딩 (조건부로 실행)
-      if (shouldPreloadImages) {
-        experiences.forEach(exp => {
-          if (exp.imageUrls && exp.imageUrls.length > 0) {
-            exp.imageUrls.forEach(imageUrl => {
-              preloadImage(imageUrl).catch(err => {
-                console.log('이미지 프리로딩 실패 (무시됨):', imageUrl, err);
-              });
-            });
-          }
-        });
-      }
+      // 이미지 프리로딩 제거 - 필요할 때 로딩하는 것이 더 효율적
+      // 프리로딩은 권한 설정 전에 실패할 가능성이 높고 불필요한 로그를 생성함
     } catch (error) {
       console.error('이력 데이터 로드 오류:', error);
       // 시트가 존재하지 않는 경우 로그만 출력하고 새로 생성하지 않음

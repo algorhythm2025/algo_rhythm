@@ -224,14 +224,10 @@ export function useUILogic() {
         setSelectedImageForModal(null);
     }
 
-    // 이미지 프리로딩 함수 (백그라운드에서 미리 로딩)
+    // 이미지 프리로딩 함수 (사용하지 않음 - 필요할 때 로딩하는 것이 더 효율적)
     function preloadImage(imageUrl) {
-        return new Promise((resolve, reject) => {
-            const img = new Image();
-            img.onload = () => resolve();
-            img.onerror = reject;
-            img.src = imageUrl;
-        });
+        // 프리로딩 제거 - 이미지는 필요할 때 로딩됨
+        return Promise.resolve();
     }
 
     // 이미지 로딩 상태 관리 함수들
@@ -254,7 +250,7 @@ export function useUILogic() {
 
     // 이미지 로딩 재시도 함수 (개선됨)
     async function retryImageLoad(imgElement, originalUrl, retryCount = 0, setImageLoadingState, setImageErrorState) {
-        const maxRetries = 2;
+        const maxRetries = 4;
         const imageKey = `${originalUrl}_${imgElement.alt}`;
         
         const fileId = originalUrl.match(/[-\w]{25,}/)?.[0];
@@ -266,9 +262,11 @@ export function useUILogic() {
         
         // 더 안정적인 URL 순서로 재시도
         const alternativeUrls = [
-            `https://drive.google.com/thumbnail?id=${fileId}&sz=w400`, // 가장 안정적인 썸네일
+            `https://drive.google.com/uc?export=view&id=${fileId}`, // 가장 안정적인 직접 링크
+            `https://drive.google.com/thumbnail?id=${fileId}&sz=w400`, // 썸네일
             `https://drive.google.com/thumbnail?id=${fileId}&sz=w200`, // 더 작은 썸네일
-            `https://drive.google.com/uc?export=view&id=${fileId}` // 원본 (마지막 시도)
+            `https://lh3.googleusercontent.com/d/${fileId}`, // Google Photos 스타일 링크
+            `https://drive.google.com/file/d/${fileId}/view?usp=sharing` // 공유 링크
         ];
         
         if (retryCount >= maxRetries) {
@@ -340,11 +338,11 @@ export function useUILogic() {
 
         const fileId = fileIdMatch[0];
         
-        // 썸네일 URL을 우선 사용 (더 안정적이고 빠름)
-        const thumbnailUrl = `https://drive.google.com/thumbnail?id=${fileId}&sz=w400`;
-        console.log('이미지 URL 변환 (썸네일 우선):', imageUrl, '→', thumbnailUrl);
+        // 직접 링크 URL을 우선 사용 (공개 권한이 설정된 후 더 안정적)
+        const directUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
+        console.log('이미지 URL 변환 (직접 링크 우선):', imageUrl, '→', directUrl);
         
-        return thumbnailUrl;
+        return directUrl;
     }
 
     // 템플릿 모달 표시

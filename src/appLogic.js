@@ -210,9 +210,31 @@ function useAppLogic() {
 
           // 새로 생성된 시트에서 데이터 로드 (통합된 sheetsService 사용)
           if (sheetsService.current) {
-            await sheetsService.current.loadExperiencesFromSheets(currentSpreadsheetId, setExperiences, uiLogic.preloadImage, false); // 초기화 시에는 이미지 프리로딩 하지 않음
+            await sheetsService.current.loadExperiencesFromSheets(currentSpreadsheetId, setExperiences, null, false); // 이미지 프리로딩 제거
           }
           await loadDriveFiles();
+        }
+
+        // 기존 이미지 파일들에 공개 권한 설정 (백그라운드에서 실행, 중복 방지)
+        if (driveService.current && !driveService.current._permissionSettingScheduled) {
+          const currentDriveService = driveService.current; // 안전한 참조 저장
+          currentDriveService._permissionSettingScheduled = true;
+          console.log('기존 이미지 파일들 공개 권한 설정 시작...');
+          currentDriveService.setExistingImagesPublic()
+            .then(count => {
+              console.log(`기존 이미지 ${count}개에 공개 권한 설정 완료`);
+              
+              // 권한 설정 완료 - 이미지는 필요할 때 로딩됨
+            })
+            .catch(error => {
+              console.warn('기존 이미지 공개 권한 설정 실패 (무시됨):', error);
+            })
+            .finally(() => {
+              // driveService.current가 여전히 존재하는지 확인 후 속성 설정
+              if (driveService.current) {
+                driveService.current._permissionSettingScheduled = false;
+              }
+            });
         }
 
         console.log('모든 서비스 초기화 완료');
@@ -318,12 +340,12 @@ function useAppLogic() {
     }
 
     // 시트에서 이력 데이터 로드 (통합된 sheetsService 사용)
-    async function loadExperiencesFromSheets(spreadsheetIdToUse = null, shouldPreloadImages = true) {
+    async function loadExperiencesFromSheets(spreadsheetIdToUse = null) {
       if (!sheetsService.current) {
         console.log('sheetsService가 초기화되지 않았습니다.');
         return;
       }
-      await sheetsService.current.loadExperiencesFromSheets(spreadsheetIdToUse || spreadsheetId, setExperiences, uiLogic.preloadImage, shouldPreloadImages);
+      await sheetsService.current.loadExperiencesFromSheets(spreadsheetIdToUse || spreadsheetId, setExperiences, null, false);
     }
 
     // 구글 시트 데이터 새로고침 (통합된 sheetsService 사용)
@@ -446,9 +468,9 @@ function useAppLogic() {
     useEffect(() => {
       if (activeSection === 'myPage' && isDriveInitialized) {
         loadPptHistory();
-        // 이력 목록도 자동으로 새로고침 (마이페이지에서만 이미지 프리로딩)
+        // 이력 목록도 자동으로 새로고침
         if (isSheetsInitialized) {
-          loadExperiencesFromSheets(null, true); // 마이페이지에서는 이미지 프리로딩 활성화
+          loadExperiencesFromSheets(null);
         }
       }
     }, [activeSection, isDriveInitialized, isSheetsInitialized]);
@@ -456,7 +478,14 @@ function useAppLogic() {
     // 페이지 로드 시 로그인 상태 복원 및 초기화
     useEffect(() => {
       const initializeApp = async () => {
+        // 중복 실행 방지
+        if (window._appInitializing) {
+          console.log('앱 초기화가 이미 진행 중입니다.');
+          return;
+        }
+        
         try {
+          window._appInitializing = true;
           console.log('앱 초기화 시작...');
 
           // localStorage에서 로그인 상태 확인
@@ -482,6 +511,8 @@ function useAppLogic() {
           // 초기화 실패 시 로그인 상태를 false로 설정
           setIsLoggedIn(false);
           setAuthStatus('error');
+        } finally {
+          window._appInitializing = false;
         }
       };
 
