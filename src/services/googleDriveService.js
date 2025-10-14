@@ -846,6 +846,51 @@ class GoogleDriveService {
     }
   }
 
+  // 파일을 새 탭에서 열기 - driveLogic에서 통합
+  async openFileInNewTab(file, authService) {
+    try {
+      // 구글 문서 파일인지 확인 (Google Docs, Sheets, Slides 등)
+      const isGoogleDoc = file.mimeType && file.mimeType.includes('application/vnd.google-apps');
+
+      if (isGoogleDoc) {
+        // 구글 문서 파일은 webViewLink 사용
+        const webViewLink = await this.getWebViewLink(file.id);
+        if (webViewLink) {
+          window.open(webViewLink, '_blank');
+        } else {
+          throw new Error('파일을 열 수 있는 링크를 가져올 수 없습니다.');
+        }
+      } else {
+        // 일반 파일은 구글 드라이브 뷰어 링크 사용
+        const viewerLink = `https://drive.google.com/file/d/${file.id}/view`;
+        window.open(viewerLink, '_blank');
+      }
+    } catch (error) {
+      console.error('파일 열기 오류:', error);
+      alert('파일을 열 수 없습니다: ' + (error?.message || error));
+    }
+  }
+
+  // 파일의 webViewLink 가져오기
+  async getWebViewLink(fileId) {
+    try {
+      await this.ensureAuthenticated();
+
+      const gapiClient = this.authService.getAuthenticatedGapiClient();
+
+      const response = await gapiClient.drive.files.get({
+        fileId: fileId,
+        fields: 'webViewLink'
+      });
+
+      return response.result.webViewLink;
+    } catch (error) {
+      console.error('webViewLink 가져오기 오류:', error);
+      throw error;
+    }
+  }
+
+
   // 구글 문서 파일 다운로드 - driveLogic에서 통합
   async downloadGoogleDoc(file, authService) {
     try {
@@ -948,6 +993,127 @@ class GoogleDriveService {
       console.error('일반 파일 다운로드 오류:', error);
       throw error;
     }
+  }
+
+  // 파일 크기 포맷팅
+  formatFileSize(bytes) {
+    if (!bytes || bytes === 0) return '-';
+    
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    
+    if (i === 0) return `${bytes} ${sizes[i]}`;
+    return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${sizes[i]}`;
+  }
+
+  // 파일 타입 결정 (확장자 기반)
+  getFileTypeDisplay(file) {
+    // 구글 문서 파일들
+    if (file.mimeType === 'application/vnd.google-apps.spreadsheet') {
+      return '스프레드시트';
+    } else if (file.mimeType === 'application/vnd.google-apps.document') {
+      return '문서';
+    } else if (file.mimeType === 'application/vnd.google-apps.presentation') {
+      return '프레젠테이션';
+    }
+    
+    // 파일명에서 확장자 추출
+    const fileName = file.name || '';
+    const lastDotIndex = fileName.lastIndexOf('.');
+    
+    if (lastDotIndex === -1 || lastDotIndex === fileName.length - 1) {
+      return '파일';
+    }
+    
+    const extension = fileName.substring(lastDotIndex + 1).toLowerCase();
+    
+    // 확장자별 타입 매핑
+    const extensionMap = {
+      // 이미지
+      'jpg': 'JPG 파일',
+      'jpeg': 'JPEG 파일',
+      'png': 'PNG 파일',
+      'gif': 'GIF 파일',
+      'bmp': 'BMP 파일',
+      'svg': 'SVG 파일',
+      'webp': 'WebP 파일',
+      'tiff': 'TIFF 파일',
+      'ico': 'ICO 파일',
+      
+      // 문서
+      'pdf': 'PDF 파일',
+      'doc': 'DOC 파일',
+      'docx': 'DOCX 파일',
+      'txt': 'TXT 파일',
+      'rtf': 'RTF 파일',
+      'odt': 'ODT 파일',
+      
+      // 스프레드시트
+      'xls': 'XLS 파일',
+      'xlsx': 'XLSX 파일',
+      'csv': 'CSV 파일',
+      'ods': 'ODS 파일',
+      
+      // 프레젠테이션
+      'ppt': 'PPT 파일',
+      'pptx': 'PPTX 파일',
+      'odp': 'ODP 파일',
+      
+      // 압축
+      'zip': 'ZIP 파일',
+      'rar': 'RAR 파일',
+      '7z': '7Z 파일',
+      'tar': 'TAR 파일',
+      'gz': 'GZ 파일',
+      
+      // 비디오
+      'mp4': 'MP4 파일',
+      'avi': 'AVI 파일',
+      'mov': 'MOV 파일',
+      'wmv': 'WMV 파일',
+      'flv': 'FLV 파일',
+      'webm': 'WebM 파일',
+      'mkv': 'MKV 파일',
+      
+      // 오디오
+      'mp3': 'MP3 파일',
+      'wav': 'WAV 파일',
+      'flac': 'FLAC 파일',
+      'aac': 'AAC 파일',
+      'ogg': 'OGG 파일',
+      'm4a': 'M4A 파일',
+      
+      // 코드
+      'js': 'JS 파일',
+      'html': 'HTML 파일',
+      'css': 'CSS 파일',
+      'json': 'JSON 파일',
+      'xml': 'XML 파일',
+      'py': 'Python 파일',
+      'java': 'Java 파일',
+      'cpp': 'C++ 파일',
+      'c': 'C 파일',
+      'php': 'PHP 파일',
+      'rb': 'Ruby 파일',
+      'go': 'Go 파일',
+      'rs': 'Rust 파일',
+      'swift': 'Swift 파일',
+      'kt': 'Kotlin 파일',
+      'ts': 'TypeScript 파일',
+      'jsx': 'JSX 파일',
+      'tsx': 'TSX 파일',
+      'vue': 'Vue 파일',
+      'svelte': 'Svelte 파일',
+      
+      // 기타
+      'exe': '실행 파일',
+      'dmg': 'DMG 파일',
+      'iso': 'ISO 파일',
+      'apk': 'APK 파일',
+      'ipa': 'IPA 파일'
+    };
+    
+    return extensionMap[extension] || `${extension.toUpperCase()} 파일`;
   }
 
   // 에러 메시지 포맷팅
