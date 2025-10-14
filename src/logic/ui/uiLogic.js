@@ -1,5 +1,5 @@
 // UI 상태 관리 관련 로직
-export function useUILogic() {
+export function useUILogic(driveService = null) {
     // 섹션 전환
     function showSection(section, setActiveSection) {
         setActiveSection(section);
@@ -243,12 +243,18 @@ export function useUILogic() {
         });
     }
 
-    function setImageErrorState(imageKey) {
-        // 이 함수는 현재 사용되지 않으므로 빈 함수로 유지
+    function setImageErrorState(imageKey, setImageLoadingStates) {
+        if (setImageLoadingStates) {
+            setImageLoadingStates(prev => {
+                const newMap = new Map(prev);
+                newMap.set(imageKey, 'error');
+                return newMap;
+            });
+        }
     }
 
-    // 이미지 로딩 재시도 함수 (개선됨)
-    async function retryImageLoad(imgElement, originalUrl, retryCount = 0, setImageLoadingState, setImageErrorState) {
+    // 이미지 로딩 재시도 함수 (API 기반으로 개선)
+    async function retryImageLoad(imgElement, originalUrl, retryCount = 0, setImageLoadingState, setImageErrorState, driveService = null) {
         const maxRetries = 4;
         const imageKey = `${originalUrl}_${imgElement.alt}`;
         
@@ -259,16 +265,6 @@ export function useUILogic() {
             return;
         }
         
-        // 고화질 우선 URL 순서로 재시도
-        const alternativeUrls = [
-            `https://drive.google.com/uc?export=view&id=${fileId}`, // 가장 안정적인 직접 링크
-            `https://drive.google.com/thumbnail?id=${fileId}&sz=w2000`, // 초고화질 썸네일
-            `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000`, // 고화질 썸네일
-            `https://drive.google.com/thumbnail?id=${fileId}&sz=w800`, // 중간 화질 썸네일
-            `https://lh3.googleusercontent.com/d/${fileId}`, // Google Photos 스타일 링크
-            `https://drive.google.com/file/d/${fileId}/view?usp=sharing` // 공유 링크
-        ];
-        
         if (retryCount >= maxRetries) {
             console.error('이미지 로딩 실패 - 모든 재시도 소진:', originalUrl);
             if (setImageErrorState) setImageErrorState(imageKey);
@@ -276,51 +272,74 @@ export function useUILogic() {
             return;
         }
         
-        const currentUrl = retryCount === 0 ? originalUrl : alternativeUrls[retryCount - 1];
-        
-        // 로딩 상태 설정 (함수가 제공된 경우에만)
+        // 로딩 상태 설정
         if (setImageLoadingState) {
             setImageLoadingState(imageKey, true);
         }
         
-        return new Promise((resolve, reject) => {
-            const testImg = new Image();
-            let timeoutId;
+        try {
+            let imageUrl;
             
-            const cleanup = () => {
-                if (timeoutId) clearTimeout(timeoutId);
-                if (setImageLoadingState) {
-                    setImageLoadingState(imageKey, false);
-                }
-            };
+            if (retryCount === 0 && driveService) {
+                // 첫 번째 시도: API를 통한 Blob URL 생성
+                imageUrl = await driveService.getImageAsBlobUrl(fileId);
+            } else if (retryCount === 1 && driveService) {
+                // 두 번째 시도: Base64 변환
+                imageUrl = await driveService.getImageAsBase64(fileId);
+            } else {
+                // 나머지 시도: 기존 URL 방식
+                const alternativeUrls = [
+                    `https://drive.google.com/uc?export=view&id=${fileId}`,
+                    `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000`,
+                    `https://drive.google.com/thumbnail?id=${fileId}&sz=w400`
+                ];
+                imageUrl = alternativeUrls[retryCount - 2] || alternativeUrls[0];
+            }
             
-            // 5초 타임아웃 설정
-            timeoutId = setTimeout(() => {
-                cleanup();
-                retryImageLoad(imgElement, originalUrl, retryCount + 1, setImageLoadingState, setImageErrorState)
-                    .then(resolve)
-                    .catch(reject);
-            }, 5000);
+            // 이미지 로딩 테스트
+            await new Promise((resolve, reject) => {
+                const testImg = new Image();
+                const timeoutId = setTimeout(() => {
+                    reject(new Error('이미지 로딩 타임아웃'));
+                }, 5000);
+                
+                testImg.onload = () => {
+                    clearTimeout(timeoutId);
+                    imgElement.src = imageUrl;
+                    resolve();
+                };
+                
+                testImg.onerror = () => {
+                    clearTimeout(timeoutId);
+                    reject(new Error('이미지 로딩 실패'));
+                };
+                
+                testImg.src = imageUrl;
+            });
             
-            testImg.onload = () => {
-                cleanup();
-                imgElement.src = currentUrl;
-                resolve();
-            };
+            // 로딩 상태 해제
+            if (setImageLoadingState) {
+                setImageLoadingState(imageKey, false);
+            }
             
-            testImg.onerror = () => {
-                cleanup();
-                retryImageLoad(imgElement, originalUrl, retryCount + 1, setImageLoadingState, setImageErrorState)
-                    .then(resolve)
-                    .catch(reject);
-            };
+        } catch (error) {
+            // 재시도 실패 시에만 로그 출력 (마지막 시도가 아닌 경우)
+            if (retryCount + 1 < maxRetries) {
+                console.log(`이미지 로딩 실패 (${retryCount + 1}/${maxRetries}):`, error.message);
+            }
             
-            testImg.src = currentUrl;
-        });
+            // 로딩 상태 해제
+            if (setImageLoadingState) {
+                setImageLoadingState(imageKey, false);
+            }
+            
+            // 재시도
+            await retryImageLoad(imgElement, originalUrl, retryCount + 1, setImageLoadingState, setImageErrorState, driveService);
+        }
     }
 
-    // 기존 이미지 URL을 올바른 형식으로 변환 (고화질 우선)
-    async function convertImageUrl(imageUrl) {
+    // 기존 이미지 URL을 올바른 형식으로 변환 (API 기반)
+    async function convertImageUrl(imageUrl, driveService = null) {
         // 이미 Base64 데이터 URL인 경우 그대로 반환
         if (imageUrl.startsWith('data:')) {
             return imageUrl;
@@ -335,9 +354,18 @@ export function useUILogic() {
 
         const fileId = fileIdMatch[0];
         
-        // 고화질 직접 링크 URL 우선 사용
-        const directUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
+        // API를 통한 이미지 변환 시도
+        if (driveService) {
+            try {
+                const blobUrl = await driveService.getImageAsBlobUrl(fileId);
+                return blobUrl;
+            } catch (error) {
+                console.warn('API 이미지 변환 실패, 직접 링크 사용:', error.message);
+            }
+        }
         
+        // 폴백: 직접 링크 URL 사용
+        const directUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
         return directUrl;
     }
 

@@ -107,7 +107,7 @@ function useAppLogic() {
     // 통합된 로직들 (services에 통합된 것들은 제거)
     const experienceLogic = useExperienceLogic();
     const presentationLogic = usePresentationLogic();
-    const uiLogic = useUILogic();
+    const uiLogic = useUILogic(driveService.current);
 
     // 서비스들 초기화
     async function initializeServices() {
@@ -710,8 +710,8 @@ function useAppLogic() {
       openExperienceModal: (experience) => uiLogic.openExperienceModal(experience, setSelectedExperience, setShowExperienceModal),
       openImageModal: (imageUrl, title) => uiLogic.openImageModal(imageUrl, title, setSelectedImageForModal, setShowImageModal),
       setImageLoadingState: (imageKey, isLoading) => uiLogic.setImageLoadingState(imageKey, isLoading, setImageLoadingStates),
-      setImageErrorState: (imageKey) => uiLogic.setImageErrorState(imageKey),
-      retryImageLoad: (imgElement, originalUrl, retryCount) => uiLogic.retryImageLoad(imgElement, originalUrl, retryCount, (imageKey, isLoading) => uiLogic.setImageLoadingState(imageKey, isLoading, setImageLoadingStates), uiLogic.setImageErrorState),
+      setImageErrorState: (imageKey) => uiLogic.setImageErrorState(imageKey, setImageLoadingStates),
+      retryImageLoad: (imgElement, originalUrl, retryCount) => uiLogic.retryImageLoad(imgElement, originalUrl, retryCount, (imageKey, isLoading) => uiLogic.setImageLoadingState(imageKey, isLoading, setImageLoadingStates), (imageKey) => uiLogic.setImageErrorState(imageKey, setImageLoadingStates), driveService.current),
       toggleSelect: (idx) => uiLogic.toggleSelect(idx, selected, setSelected),
       setSelectedExperiences,
       openTemplateModal: (templateName) => uiLogic.openTemplateModal(templateName, setSelectedTemplateForModal, setShowTemplateModal),
@@ -752,7 +752,9 @@ function useAppLogic() {
       setSlides,
       setForm,
       setSelectedImageForModal,
-      setShowImageModal
+      setShowImageModal,
+      // 서비스들
+      driveService: driveService.current
     };
 }
 

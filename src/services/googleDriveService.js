@@ -279,6 +279,34 @@ class GoogleDriveService {
     }
   }
 
+  // 파일의 공개 권한 확인
+  async checkFilePublicPermission(fileId) {
+    try {
+      await this.ensureAuthenticated();
+
+      const gapiClient = this.authService.getAuthenticatedGapiClient();
+
+      // 파일의 권한 목록 가져오기
+      const response = await gapiClient.drive.permissions.list({
+        fileId: fileId,
+        fields: 'permissions(id,type,role)'
+      });
+
+      const permissions = response.result.permissions || [];
+      
+      // 'anyone' 타입의 'reader' 권한이 있는지 확인
+      const hasPublicPermission = permissions.some(permission => 
+        permission.type === 'anyone' && permission.role === 'reader'
+      );
+
+      return hasPublicPermission;
+    } catch (error) {
+      console.warn('파일 공개 권한 확인 실패:', fileId, error);
+      // 권한 확인 실패 시 false 반환 (권한 설정 시도)
+      return false;
+    }
+  }
+
   // 이미지 파일의 공개 URL 생성
   async getImagePublicUrl(fileId) {
     try {
@@ -307,6 +335,72 @@ class GoogleDriveService {
     } catch (error) {
       console.error('이미지 공개 URL 생성 오류:', error);
       throw new Error('이미지 공개 URL 생성에 실패했습니다.');
+    }
+  }
+
+  // 이미지를 프록시로 가져와서 Blob URL 생성
+  async getImageAsBlobUrl(fileId) {
+    try {
+      await this.ensureAuthenticated();
+
+      const accessToken = this.authService.getAccessToken();
+      if (!accessToken) {
+        throw new Error('인증 토큰이 없습니다.');
+      }
+
+      // 구글 드라이브 API를 통해 이미지 다운로드
+      const response = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`이미지 다운로드 실패: ${response.status} ${response.statusText}`);
+      }
+
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      
+      return blobUrl;
+    } catch (error) {
+      console.error('이미지 Blob URL 생성 오류:', error);
+      throw new Error('이미지 Blob URL 생성에 실패했습니다.');
+    }
+  }
+
+  // 이미지를 Base64로 변환
+  async getImageAsBase64(fileId) {
+    try {
+      await this.ensureAuthenticated();
+
+      const accessToken = this.authService.getAccessToken();
+      if (!accessToken) {
+        throw new Error('인증 토큰이 없습니다.');
+      }
+
+      // 구글 드라이브 API를 통해 이미지 다운로드
+      const response = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`이미지 다운로드 실패: ${response.status} ${response.statusText}`);
+      }
+
+      const blob = await response.blob();
+      
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch (error) {
+      console.error('이미지 Base64 변환 오류:', error);
+      throw new Error('이미지 Base64 변환에 실패했습니다.');
     }
   }
 
@@ -356,12 +450,20 @@ class GoogleDriveService {
         }
 
         try {
-          await this.setFilePublic(file.id);
+          // 권한 설정 전에 이미 공개 권한이 있는지 확인
+          const hasPublicPermission = await this.checkFilePublicPermission(file.id);
+          if (!hasPublicPermission) {
+            await this.setFilePublic(file.id);
+            console.log(`이미지 공개 권한 설정 완료: ${file.name} (${file.id})`);
+          } else {
+            console.log(`이미지 이미 공개 권한 있음: ${file.name} (${file.id})`);
+          }
+          
           this._processedImageIds.add(file.id);
           processedCount++;
           
-          // 진행 상황 로그 (10개마다 또는 마지막에)
-          if ((i + 1) % 10 === 0 || i === imageFiles.length - 1) {
+          // 진행 상황 로그 (5개마다 또는 마지막에)
+          if ((i + 1) % 5 === 0 || i === imageFiles.length - 1) {
             console.log(`이미지 공개 권한 설정 진행: ${i + 1}/${totalFiles} (${Math.round((i + 1) / totalFiles * 100)}%)`);
           }
         } catch (error) {
@@ -384,11 +486,18 @@ class GoogleDriveService {
             }
 
             try {
-              await this.setFilePublic(subFile.id);
+              // 권한 설정 전에 이미 공개 권한이 있는지 확인
+              const hasPublicPermission = await this.checkFilePublicPermission(subFile.id);
+              if (!hasPublicPermission) {
+                await this.setFilePublic(subFile.id);
+                console.log(`하위 폴더 이미지 공개 권한 설정 완료: ${subFile.name} (${subFile.id})`);
+              } else {
+                console.log(`하위 폴더 이미지 이미 공개 권한 있음: ${subFile.name} (${subFile.id})`);
+              }
+              
               this._processedImageIds.add(subFile.id);
               processedCount++;
               subFolderProcessedCount++;
-              // 개별 파일 로그 제거 - 너무 많은 로그 생성 방지
             } catch (error) {
               console.warn(`하위 폴더 이미지 공개 권한 설정 실패: ${subFile.name} (${subFile.id})`, error);
             }
@@ -1027,7 +1136,7 @@ class GoogleDriveService {
 
     const fileId = fileIdMatch[0];
     
-    // 빠른 로딩을 위한 썸네일 URL 사용
+    // 빠른 로딩을 위한 썸네일 URL 사용 (공개 권한이 설정된 파일에 최적화)
     const thumbnailUrl = `https://drive.google.com/thumbnail?id=${fileId}&sz=w400`;
     
     return thumbnailUrl;
@@ -1049,7 +1158,7 @@ class GoogleDriveService {
 
     const fileId = fileIdMatch[0];
     
-    // 고화질 직접 링크 URL 사용
+    // 고화질 직접 링크 URL 사용 (공개 권한이 설정된 파일에 최적화)
     const directUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
     
     return directUrl;
