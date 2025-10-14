@@ -77,12 +77,12 @@ export function useUILogic(driveService = null) {
         // 2. form 상태 초기화 (날짜 입력 필드의 value 역할)
         setForm({
             title: expToEdit.title || '',
-            startDate: startDate, // ⭐ 기존 데이터를 사용하여 달력 필드에 표시
-            endDate: endDate,     // ⭐ 기존 데이터를 사용하여 달력 필드에 표시
+            startDate: startDate, 
+            endDate: endDate,
             description: expToEdit.description || ''
         });
 
-        // ⭐ [핵심] 기존 설정 기간을 저장합니다. ⭐
+        //    기존 설정 기간을 저장
         //    모달이 열리자마자 이 값이 '기존 설정 기간' 텍스트에 사용됩니다.
         setOriginalPeriod({
             start: startDate, // "2025.06.30"
