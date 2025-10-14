@@ -354,6 +354,21 @@ function useAppLogic() {
       return driveService.current.getFileTypeDisplay(file);
     }
 
+    // 이미지 URL 변환 (통합된 driveService 사용)
+    function convertImageUrl(imageUrl) {
+      return driveService.current.convertImageUrl(imageUrl);
+    }
+
+    // 썸네일용 이미지 URL 변환 (빠른 로딩)
+    function convertImageUrlToThumbnail(imageUrl) {
+      return driveService.current.convertImageUrlToThumbnail(imageUrl);
+    }
+
+    // 고화질용 이미지 URL 변환 (확대 모달용)
+    function convertImageUrlToFullSize(imageUrl) {
+      return driveService.current.convertImageUrlToFullSize(imageUrl);
+    }
+
 
     // 시트에서 이력 데이터 로드 (통합된 sheetsService 사용)
     async function loadExperiencesFromSheets(spreadsheetIdToUse = null) {
@@ -724,6 +739,9 @@ function useAppLogic() {
       openFileInNewTab,
       formatFileSize,
       getFileTypeDisplay,
+      convertImageUrl,
+      convertImageUrlToThumbnail,
+      convertImageUrlToFullSize,
       loadPptHistory,
       loadPptForEdit,
       getTextFromElement: presentationLogic.getTextFromElement,
