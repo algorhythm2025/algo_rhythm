@@ -179,6 +179,7 @@ function App() {
     selectedExperience,
     showTemplateModal,
     selectedTemplateForModal,
+    selectedThemeColor,
     showExperienceModal,
     showModal,
     form,
@@ -206,6 +207,7 @@ function App() {
     openTemplateModal,
     handleTemplateCancel,
     handleTemplateUse,
+    handleThemeColorSelect,
     closeModal,
     saveExperience,
     closeImageModal,
@@ -1694,6 +1696,23 @@ function App() {
                               </p>
                             </div>
                           )}
+                        </div>
+                      </div>
+                      
+                      {/* 테마 색상 선택 */}
+                      <div className="theme-color-selector">
+                        <h6>테마 색상</h6>
+                        <div className="theme-color-options">
+                          <div 
+                            className={`theme-color-option light ${selectedThemeColor === 'light' ? 'selected' : ''}`}
+                            onClick={() => handleThemeColorSelect('light')}
+                            title="밝은 테마 (흰색 배경, 검정 글씨)"
+                          ></div>
+                          <div 
+                            className={`theme-color-option dark ${selectedThemeColor === 'dark' ? 'selected' : ''}`}
+                            onClick={() => handleThemeColorSelect('dark')}
+                            title="어두운 테마 (검정 배경, 흰 글씨)"
+                          ></div>
                         </div>
                       </div>
                       
