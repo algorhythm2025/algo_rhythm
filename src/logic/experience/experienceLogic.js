@@ -1,7 +1,7 @@
 // 이력 관리 관련 로직
 export function useExperienceLogic() {
     // 이력 저장
-    async function saveExperience(e, form, selectedImages, editingIndex, experiences, spreadsheetId, sheetsService, driveService, authService, setExperiences, setIsExperienceLoading, closeModal) {
+    async function saveExperience(e, form, selectedImages, editingIndex, experiences, spreadsheetId, sheetsService, driveService, authService, setExperiences, setIsExperienceLoading, closeModal, existingImageUrls = []) {
         e.preventDefault();
         if (form.title && form.startDate && form.endDate && form.description) {
             // 날짜 유효성 검사
@@ -25,14 +25,24 @@ export function useExperienceLogic() {
                 let experienceToSave;
 
                 if (editingIndex !== null) {
-                    // ⭐ 수정 모드 (Editing Mode)
-                    const existingImageUrls = experiences[editingIndex].imageUrls || [];
+   
+                    // 삭제되지 않은 기존 이미지 URL들만 사용
+                    const remainingExistingUrls = existingImageUrls || [];
+                    
+                    // 삭제된 이미지 파일들을 드라이브에서도 삭제
+                    const originalImageUrls = experiences[editingIndex].imageUrls || [];
+                    const deletedImageUrls = originalImageUrls.filter(url => !remainingExistingUrls.includes(url));
+                    
+                    if (deletedImageUrls.length > 0) {
+                        console.log('삭제할 이미지 파일들:', deletedImageUrls);
+                        await deleteImageFiles(deletedImageUrls, driveService);
+                    }
 
                     experienceToSave = {
                         ...form,
                         period,
-                        // 기존 이미지 URL에 새로 업로드한 이미지 URL을 합칩니다.
-                        imageUrls: existingImageUrls.concat(newImageUrls)
+                        // 삭제되지 않은 기존 이미지 URL과 새로 업로드한 이미지 URL을 합칩니다.
+                        imageUrls: remainingExistingUrls.concat(newImageUrls)
                     };
 
                     const rowNumber = editingIndex + 2;
@@ -173,18 +183,43 @@ export function useExperienceLogic() {
     // 이미지 URL에서 파일 ID 추출하는 헬퍼 함수
     function extractFileIdFromImageUrl(imageUrl) {
         try {
-            // Google Drive 썸네일 URL에서 파일 ID 추출
-            // 예: https://drive.google.com/thumbnail?id=FILE_ID&sz=w400
-            const match = imageUrl.match(/[?&]id=([^&]+)/);
-            if (match) {
-                return match[1];
+            // Base64 데이터 URL인 경우 null 반환 (로컬 파일)
+            if (imageUrl.startsWith('data:')) {
+                return null;
             }
             
-            // 직접 파일 URL에서 파일 ID 추출
+            // Google Drive 직접 링크 URL에서 파일 ID 추출
+            // 예: https://drive.google.com/uc?export=view&id=FILE_ID
+            const ucMatch = imageUrl.match(/[?&]id=([^&]+)/);
+            if (ucMatch) {
+                return ucMatch[1];
+            }
+            
+            // Google Drive 썸네일 URL에서 파일 ID 추출
+            // 예: https://drive.google.com/thumbnail?id=FILE_ID&sz=w400
+            const thumbnailMatch = imageUrl.match(/thumbnail\?id=([^&]+)/);
+            if (thumbnailMatch) {
+                return thumbnailMatch[1];
+            }
+            
+            // Google Drive 파일 URL에서 파일 ID 추출
             // 예: https://drive.google.com/file/d/FILE_ID/view
-            const directMatch = imageUrl.match(/\/file\/d\/([^\/]+)/);
-            if (directMatch) {
-                return directMatch[1];
+            const fileMatch = imageUrl.match(/\/file\/d\/([^\/]+)/);
+            if (fileMatch) {
+                return fileMatch[1];
+            }
+            
+            // Google Drive 공유 링크에서 파일 ID 추출
+            // 예: https://drive.google.com/open?id=FILE_ID
+            const openMatch = imageUrl.match(/open\?id=([^&]+)/);
+            if (openMatch) {
+                return openMatch[1];
+            }
+            
+            // 일반적인 파일 ID 패턴 (25자 이상의 영숫자와 하이픈)
+            const generalMatch = imageUrl.match(/[-\w]{25,}/);
+            if (generalMatch) {
+                return generalMatch[0];
             }
             
             return null;
@@ -196,23 +231,41 @@ export function useExperienceLogic() {
 
     // 이미지 파일들을 삭제하는 헬퍼 함수
     async function deleteImageFiles(imageUrls, driveService) {
-        if (!imageUrls || imageUrls.length === 0 || !driveService.current) return;
+        if (!imageUrls || imageUrls.length === 0 || !driveService.current) {
+            console.log('삭제할 이미지가 없거나 드라이브 서비스가 없습니다.');
+            return;
+        }
+        
+        console.log(`총 ${imageUrls.length}개의 이미지 파일 삭제 시작`);
         
         const deletePromises = imageUrls.map(async (imageUrl) => {
             try {
                 const fileId = extractFileIdFromImageUrl(imageUrl);
                 if (fileId) {
-                    console.log('이미지 파일 삭제 시도:', fileId);
+                    console.log('이미지 파일 삭제 시도:', fileId, 'URL:', imageUrl);
                     await driveService.current.deleteFile(fileId);
                     console.log('이미지 파일 삭제 완료:', fileId);
+                    return { success: true, fileId, url: imageUrl };
+                } else {
+                    console.warn('파일 ID를 추출할 수 없습니다:', imageUrl);
+                    return { success: false, fileId: null, url: imageUrl, error: '파일 ID 추출 실패' };
                 }
             } catch (error) {
                 console.error('이미지 파일 삭제 실패:', imageUrl, error);
-                // 개별 이미지 삭제 실패해도 전체 프로세스는 계속 진행
+                return { success: false, fileId: null, url: imageUrl, error: error.message };
             }
         });
         
-        await Promise.allSettled(deletePromises);
+        const results = await Promise.allSettled(deletePromises);
+        const successful = results.filter(r => r.status === 'fulfilled' && r.value.success).length;
+        const failed = results.length - successful;
+        
+        console.log(`이미지 파일 삭제 완료: 성공 ${successful}개, 실패 ${failed}개`);
+        
+        if (failed > 0) {
+            console.warn('일부 이미지 파일 삭제에 실패했습니다. 실패한 파일들:', 
+                results.filter(r => r.status === 'fulfilled' && !r.value.success).map(r => r.value.url));
+        }
     }
 
     // 이력 폴더를 삭제하는 헬퍼 함수

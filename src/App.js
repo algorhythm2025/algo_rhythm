@@ -200,6 +200,7 @@ function App() {
     setImageLoadingState,
     setImageErrorState,
     retryImageLoad,
+    driveService,
     toggleSelect,
     setSelectedExperiences,
     openTemplateModal,
@@ -423,10 +424,11 @@ function App() {
                                                         
                                                           try {
                                                             e.target.dataset.converting = 'true';
-                                                            console.log('이미지 로딩 실패, 재시도 시작:', exp.imageUrls[0]);
-                                                            await retryImageLoad(e.target, exp.imageUrls[0], 0, setImageLoadingState, setImageErrorState);
+                                                            await retryImageLoad(e.target, exp.imageUrls[0], 0, setImageLoadingState, setImageErrorState, driveService);
                                                           } catch (error) {
                                                             console.error('이미지 로딩 재시도 실패:', error);
+                                                            // 에러 상태 표시
+                                                            setImageErrorState(`${exp.imageUrls[0]}_${exp.title} 이미지 1`);
                                                             e.target.style.display = 'none';
                                                           } finally {
                                                             e.target.dataset.converting = 'false';
@@ -1155,10 +1157,11 @@ function App() {
                                                         
                                                           try {
                                                             e.target.dataset.converting = 'true';
-                                                            console.log('이미지 로딩 실패, 재시도 시작:', exp.imageUrls[0]);
-                                                            await retryImageLoad(e.target, exp.imageUrls[0], 0, setImageLoadingState, setImageErrorState);
+                                                            await retryImageLoad(e.target, exp.imageUrls[0], 0, setImageLoadingState, setImageErrorState, driveService);
                                                           } catch (error) {
                                                             console.error('이미지 로딩 재시도 실패:', error);
+                                                            // 에러 상태 표시
+                                                            setImageErrorState(`${exp.imageUrls[0]}_${exp.title} 이미지 1`);
                                                             e.target.style.display = 'none';
                                                           } finally {
                                                             e.target.dataset.converting = 'false';
@@ -1354,6 +1357,26 @@ function App() {
                                             alt={`이미지 ${index + 1}`}
                                             className="img-fluid rounded"
                                             style={{ width: '100%', height: '150px', objectFit: 'cover' }}
+                                            onError={async (e) => {
+                                              if (e.target.dataset.converting === 'true') { return; }
+                                              try {
+                                                e.target.dataset.converting = 'true';
+                                                await retryImageLoad(e.target, preview, 0, setImageLoadingState, setImageErrorState, driveService);
+                                              } catch (error) {
+                                                console.error('이력 수정 모달 이미지 로딩 재시도 실패:', error);
+                                                // 에러 상태 표시
+                                                setImageErrorState(`${preview}_이미지 ${index + 1}`);
+                                                e.target.style.display = 'none';
+                                                // 에러 메시지 표시
+                                                const errorDiv = document.createElement('div');
+                                                errorDiv.className = 'experience-image-error';
+                                                errorDiv.style.width = '100%';
+                                                errorDiv.style.height = '150px';
+                                                e.target.parentNode.appendChild(errorDiv);
+                                              } finally {
+                                                e.target.dataset.converting = 'false';
+                                              }
+                                            }}
                                         />
                                         <button
                                             type="button"
@@ -1455,8 +1478,7 @@ function App() {
                           
                           try {
                             e.target.dataset.converting = 'true';
-                            console.log('모달 이미지 로딩 실패, 재시도 시작:', selectedImageForModal.url);
-                            await retryImageLoad(e.target, selectedImageForModal.url, 0, setImageLoadingState, setImageErrorState);
+                            await retryImageLoad(e.target, selectedImageForModal.url, 0, setImageLoadingState, setImageErrorState, driveService);
                           } catch (error) {
                             console.error('모달 이미지 로딩 재시도 실패:', error);
                             e.target.style.display = 'none';
@@ -1567,8 +1589,7 @@ function App() {
                                       
                                       try {
                                         e.target.dataset.converting = 'true';
-                                        console.log('이력 모달 이미지 로딩 실패, 재시도 시작:', imageUrl);
-                                        await retryImageLoad(e.target, imageUrl, 0, setImageLoadingState, setImageErrorState);
+                                        await retryImageLoad(e.target, imageUrl, 0, setImageLoadingState, setImageErrorState, driveService);
                                       } catch (error) {
                                         console.error('이력 모달 이미지 로딩 재시도 실패:', error);
                                         e.target.style.display = 'none';
