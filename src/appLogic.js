@@ -75,6 +75,7 @@ function useAppLogic() {
     const [authStatus, setAuthStatus] = useState('disconnected');
     const [selectedImages, setSelectedImages] = useState([]); // 선택된 이미지 파일들
     const [imagePreviews, setImagePreviews] = useState([]); // 이미지 미리보기 URL들
+    const [existingImageUrls, setExistingImageUrls] = useState([]); // 기존 이미지 URL들 (수정 모드에서 삭제 추적용)
     const [showImageModal, setShowImageModal] = useState(false);
     const [pptHistory, setPptHistory] = useState([]); // PPT 생성 기록 // 이미지 확대 모달
     const [selectedImageForModal, setSelectedImageForModal] = useState(null); // 모달에 표시할 이미지
@@ -277,7 +278,7 @@ function useAppLogic() {
     // 이력 저장
     async function saveExperience(e) {
       await experienceLogic.saveExperience(e, form, selectedImages, editingIndex, experiences, spreadsheetId, sheetsService, driveService, authService, setExperiences, setIsExperienceLoading, 
-        () => uiLogic.closeModal(setShowModal, setForm, setSelectedImages, setImagePreviews, setEditingIndex, setOriginalPeriod));
+        () => uiLogic.closeModal(setShowModal, setForm, setSelectedImages, setImagePreviews, setEditingIndex, setOriginalPeriod), existingImageUrls);
     }
 
     // 선택된 이력 삭제
@@ -717,15 +718,18 @@ function useAppLogic() {
       openTemplateModal: (templateName) => uiLogic.openTemplateModal(templateName, setSelectedTemplateForModal, setShowTemplateModal),
       handleTemplateCancel: () => uiLogic.handleTemplateCancel(setShowTemplateModal, setSelectedTemplateForModal),
       handleTemplateUse,
-      closeModal: () => uiLogic.closeModal(setShowModal, setForm, setSelectedImages, setImagePreviews, setEditingIndex, setOriginalPeriod),
+      closeModal: () => {
+        uiLogic.closeModal(setShowModal, setForm, setSelectedImages, setImagePreviews, setEditingIndex, setOriginalPeriod);
+        setExistingImageUrls([]);
+      },
       saveExperience,
       closeImageModal: () => uiLogic.closeImageModal(setShowImageModal, setSelectedImageForModal),
       closeExperienceModal: () => uiLogic.closeExperienceModal(setSelectedExperience, setShowExperienceModal),
-      showEditExperienceModal: (index) => uiLogic.showEditExperienceModal(index, experiences, setForm, setImagePreviews, setEditingIndex, setShowModal, setOriginalPeriod),
+      showEditExperienceModal: (index) => uiLogic.showEditExperienceModal(index, experiences, setForm, setImagePreviews, setEditingIndex, setShowModal, setOriginalPeriod, setExistingImageUrls),
       deleteIndividualExperience,
       handleImageSelect: (event) => uiLogic.handleImageSelect(event, setSelectedImages, setImagePreviews),
       handleDroppedFiles: (files) => uiLogic.handleDroppedFiles(files, setSelectedImages, setImagePreviews),
-      removeImage: (index) => uiLogic.removeImage(index, setSelectedImages, setImagePreviews),
+      removeImage: (index) => uiLogic.removeImage(index, setSelectedImages, setImagePreviews, existingImageUrls, setExistingImageUrls, imagePreviews),
       formatPeriod: experienceLogic.formatPeriod,
       createSheet,
       deleteSheet,

@@ -7,7 +7,7 @@ export function useUILogic(driveService = null) {
     }
 
     // 이력 편집 모달 표시
-    function showEditExperienceModal(index, experiences, setForm, setImagePreviews, setEditingIndex, setShowModal, setOriginalPeriod) {
+    function showEditExperienceModal(index, experiences, setForm, setImagePreviews, setEditingIndex, setShowModal, setOriginalPeriod, setExistingImageUrls) {
         if (index === null || index < 0 || index >= experiences.length) {
             console.error('유효하지 않은 이력 인덱스:', index);
             alert('수정할 이력이 존재하지 않습니다.');
@@ -92,6 +92,11 @@ export function useUILogic(driveService = null) {
         // 3. 이미지 및 모드 설정
         const existingUrls = expToEdit.imageUrls || [];
         setImagePreviews(existingUrls);
+        
+        // 기존 이미지 URL들을 별도로 저장 (삭제 추적용)
+        if (setExistingImageUrls) {
+            setExistingImageUrls([...existingUrls]);
+        }
 
         setEditingIndex(index);
         setShowModal(true);
@@ -194,9 +199,22 @@ export function useUILogic(driveService = null) {
         });
     }
 
-    // 이미지 제거
-    function removeImage(index, setSelectedImages, setImagePreviews) {
-        setSelectedImages(prev => prev.filter((_, i) => i !== index));
+    // 이미지 제거 (기존 이미지와 새 이미지 구분 처리)
+    function removeImage(index, setSelectedImages, setImagePreviews, existingImageUrls = [], setExistingImageUrls = null, currentImagePreviews = []) {
+        // 기존 이미지인지 새 이미지인지 구분
+        const imageToRemove = currentImagePreviews[index];
+        
+        if (existingImageUrls.includes(imageToRemove)) {
+            // 기존 이미지 삭제 - existingImageUrls에서 제거
+            if (setExistingImageUrls) {
+                setExistingImageUrls(prev => prev.filter(url => url !== imageToRemove));
+            }
+        } else {
+            // 새 이미지 삭제 - selectedImages에서 제거
+            setSelectedImages(prev => prev.filter((_, i) => i !== index));
+        }
+        
+        // imagePreviews에서 제거
         setImagePreviews(prev => prev.filter((_, i) => i !== index));
     }
 
