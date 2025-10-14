@@ -81,8 +81,9 @@ function useAppLogic() {
     const [selectedImageForModal, setSelectedImageForModal] = useState(null); // 모달에 표시할 이미지
     const [imageLoadingStates, setImageLoadingStates] = useState(new Map()); // 이미지 로딩 상태 추적
     const [selectedExperience, setSelectedExperience] = useState(null); // 선택된 이력
-    const [showTemplateModal, setShowTemplateModal] = useState(false); // 템플릿 모달 표시 상태
-    const [selectedTemplateForModal, setSelectedTemplateForModal] = useState(null); // 모달에서 선택된 템플릿
+  const [showTemplateModal, setShowTemplateModal] = useState(false); // 템플릿 모달 표시 상태
+  const [selectedTemplateForModal, setSelectedTemplateForModal] = useState(null); // 모달에서 선택된 템플릿
+  const [selectedThemeColor, setSelectedThemeColor] = useState('light'); // 선택된 테마 색상 (light/dark)
     const [showExperienceModal, setShowExperienceModal] = useState(false); // 이력 상세 모달 표시 여부
     const [accessToken, setAccessToken] = useState('');
     const [slides, setSlides] = useState([]);
@@ -432,7 +433,8 @@ function useAppLogic() {
         loadPptHistory,
         setActiveSection,
         setAccessToken,
-        accessToken
+        accessToken,
+        selectedThemeColor
       });
     }
 
@@ -461,6 +463,11 @@ function useAppLogic() {
       }
       
       await handleTemplateSelect(selectedTemplateForModal, token);
+    }
+
+    // 테마 색상 선택 함수
+    function handleThemeColorSelect(themeColor) {
+      setSelectedThemeColor(themeColor);
     }
 
     // 포트폴리오 폴더 ID 설정
@@ -690,6 +697,7 @@ function useAppLogic() {
       selectedExperience,
       showTemplateModal,
       selectedTemplateForModal,
+      selectedThemeColor,
       showExperienceModal,
       showModal,
       form,
@@ -718,6 +726,7 @@ function useAppLogic() {
       openTemplateModal: (templateName) => uiLogic.openTemplateModal(templateName, setSelectedTemplateForModal, setShowTemplateModal),
       handleTemplateCancel: () => uiLogic.handleTemplateCancel(setShowTemplateModal, setSelectedTemplateForModal),
       handleTemplateUse,
+      handleThemeColorSelect,
       closeModal: () => {
         uiLogic.closeModal(setShowModal, setForm, setSelectedImages, setImagePreviews, setEditingIndex, setOriginalPeriod);
         setExistingImageUrls([]);

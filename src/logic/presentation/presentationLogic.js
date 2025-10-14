@@ -39,8 +39,14 @@ export function usePresentationLogic() {
     }
 
     // 첫 슬라이드에 제목/부제목 설정 (레이아웃 변경 없이)
-    async function makeTitleAndBody(presId, slideId, token, title, subtitle) {
+    async function makeTitleAndBody(presId, slideId, token, title, subtitle, selectedThemeColor = 'light') {
         try {
+            // 테마 색상 스타일 가져오기
+            const themeStyles = getThemeStyles(selectedThemeColor);
+            
+            // 슬라이드 배경색 설정
+            await setSlideBackground(presId, slideId, themeStyles.backgroundColor, token);
+            
             // 슬라이드 데이터를 가져와서 텍스트 요소들을 찾기
             const slideData = await getPresentationData(presId, token);
             const slide = slideData.slides.find(s => s.objectId === slideId);
@@ -103,6 +109,43 @@ export function usePresentationLogic() {
                     body: JSON.stringify({ requests: textRequests })
                 });
                 console.log('제목과 부제목이 성공적으로 설정되었습니다.');
+                
+                // 텍스트 색상 설정
+                const styleRequests = [];
+                if (titleElement) {
+                    styleRequests.push({
+                        updateTextStyle: {
+                            objectId: titleElement.objectId,
+                            style: {
+                                foregroundColor: themeStyles.textColor
+                            },
+                            fields: 'foregroundColor'
+                        }
+                    });
+                }
+                if (subtitleElement) {
+                    styleRequests.push({
+                        updateTextStyle: {
+                            objectId: subtitleElement.objectId,
+                            style: {
+                                foregroundColor: themeStyles.textColor
+                            },
+                            fields: 'foregroundColor'
+                        }
+                    });
+                }
+                
+                if (styleRequests.length > 0) {
+                    await fetch(`https://slides.googleapis.com/v1/presentations/${presId}:batchUpdate`, {
+                        method: 'POST',
+                        headers: {
+                            Authorization: `Bearer ${token}`,
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ requests: styleRequests })
+                    });
+                    console.log('텍스트 색상이 성공적으로 설정되었습니다.');
+                }
             } else {
                 console.log('설정할 텍스트 요소를 찾을 수 없습니다.');
             }
@@ -543,8 +586,51 @@ export function usePresentationLogic() {
         return baseProgress + slideContribution;
     }
 
+    // 테마 색상에 따른 스타일 반환 함수
+    function getThemeStyles(selectedThemeColor) {
+        if (selectedThemeColor === 'dark') {
+            return {
+                backgroundColor: { rgbColor: { red: 0, green: 0, blue: 0 } },
+                textColor: { opaqueColor: { rgbColor: { red: 1, green: 1, blue: 1 } } }
+            };
+        } else {
+            // light 테마 (기본값)
+            return {
+                backgroundColor: { rgbColor: { red: 1, green: 1, blue: 1 } },
+                textColor: { opaqueColor: { rgbColor: { red: 0, green: 0, blue: 0 } } }
+            };
+        }
+    }
+
+    // 슬라이드 배경색 설정 함수
+    async function setSlideBackground(presId, slideId, backgroundColor, token) {
+        try {
+            const requests = [{
+                updatePageProperties: {
+                    objectId: slideId,
+                    pageProperties: {
+                        pageBackgroundFill: {
+                            solidFill: {
+                                color: backgroundColor
+                            }
+                        }
+                    },
+                    fields: 'pageBackgroundFill'
+                }
+            }];
+
+            await window.gapi.client.slides.presentations.batchUpdate({
+                presentationId: presId,
+                requests: requests
+            });
+        } catch (error) {
+            console.error('슬라이드 배경색 설정 실패:', error);
+        }
+    }
+
     // 기본 템플릿 슬라이드 생성
-    async function createBasicTemplateSlides(presId, currentToken, slidesArr, selectedExperiences, updatePptProgress, calculateSlideProgress) {
+    async function createBasicTemplateSlides(presId, currentToken, slidesArr, selectedExperiences, updatePptProgress, calculateSlideProgress, selectedThemeColor = 'light') {
+        const themeStyles = getThemeStyles(selectedThemeColor);
         let idx = 1; // 표지 다음부터 시작
         for (let i = 0; i < selectedExperiences.length; i++) {
             const exp = selectedExperiences[i];
@@ -556,6 +642,9 @@ export function usePresentationLogic() {
             
             // 슬라이드 내용 삽입 시작
             updatePptProgress(calculateSlideProgress(i, selectedExperiences.length) + 5, `슬라이드 ${i + 1} 내용 삽입중`, i + 1, selectedExperiences.length);
+
+            // 슬라이드 배경색 설정
+            await setSlideBackground(presId, s.objectId, themeStyles.backgroundColor, currentToken);
 
             // 제목, 기간, 설명을 위한 새로운 텍스트박스들을 생성
             try {
@@ -569,25 +658,33 @@ export function usePresentationLogic() {
                     bold: true,
                     fontSize: { magnitude: 24, unit: 'PT' },
                     fontFamily: 'Arial',
-                    color: { opaqueColor: { rgbColor: { red: 0, green: 0, blue: 0 } } }
+                    color: themeStyles.textColor
                 });
                 console.log(`제목 텍스트박스가 슬라이드 ${idx}에 추가되었습니다:`, exp.title);
 
                 // 2. 기간 텍스트박스 (일반 스타일, 가로 길이 증가)
-                await addTextBoxToSlide(presId, s.objectId, exp.period, currentToken, {
+                await addStyledTextBoxToSlide(presId, s.objectId, exp.period, currentToken, {
                     x: 50,   // 왼쪽에서 50pt
                     y: 100,  // 제목 아래 간격을 줄임 (120 → 100)
                     width: 350,  // 가로 길이를 늘림 (200 → 350)
                     height: 40
+                }, {
+                    fontSize: { magnitude: 14, unit: 'PT' },
+                    fontFamily: 'Arial',
+                    color: themeStyles.textColor
                 });
                 console.log(`기간 텍스트박스가 슬라이드 ${idx}에 추가되었습니다:`, exp.period);
 
                 // 3. 설명 텍스트박스 (일반 스타일, 위치 조정)
-                await addTextBoxToSlide(presId, s.objectId, exp.description, currentToken, {
+                await addStyledTextBoxToSlide(presId, s.objectId, exp.description, currentToken, {
                     x: 50,   // 왼쪽에서 50pt
                     y: 150,  // 기간 아래 간격을 줄임 (170 → 150)
                     width: 300,
                     height: 80
+                }, {
+                    fontSize: { magnitude: 12, unit: 'PT' },
+                    fontFamily: 'Arial',
+                    color: themeStyles.textColor
                 });
                 console.log(`설명 텍스트박스가 슬라이드 ${idx}에 추가되었습니다:`, exp.description);
 
@@ -634,7 +731,8 @@ export function usePresentationLogic() {
     }
 
     // 타임라인 템플릿 슬라이드 생성
-    async function createTimelineTemplateSlides(presId, currentToken, slidesArr, selectedExperiences, updatePptProgress, calculateSlideProgress) {
+    async function createTimelineTemplateSlides(presId, currentToken, slidesArr, selectedExperiences, updatePptProgress, calculateSlideProgress, selectedThemeColor = 'light') {
+        const themeStyles = getThemeStyles(selectedThemeColor);
         // 이력을 시작일 기준으로 정렬 (오름차순 - 더 오래된 이력부터)
         const sortedExperiences = [...selectedExperiences].sort((a, b) => {
             const dateA = new Date(a.period.split(' - ')[0] || a.period.split('~')[0] || a.period);
@@ -649,6 +747,9 @@ export function usePresentationLogic() {
             const overviewSlide = slidesArr[idx];
             updatePptProgress(10, '타임라인 개요 슬라이드 생성중');
             
+            // 슬라이드 배경색 설정
+            await setSlideBackground(presId, overviewSlide.objectId, themeStyles.backgroundColor, currentToken);
+            
             try {
                 // 타임라인 제목
                 await addStyledTextBoxToSlide(presId, overviewSlide.objectId, '타임라인', currentToken, {
@@ -660,7 +761,7 @@ export function usePresentationLogic() {
                     bold: true,
                     fontSize: { magnitude: 28, unit: 'PT' },
                     fontFamily: 'Arial',
-                    color: { opaqueColor: { rgbColor: { red: 0, green: 0, blue: 0 } } }
+                    color: themeStyles.textColor
                 });
 
                 // 타임라인 목록 생성
@@ -669,11 +770,15 @@ export function usePresentationLogic() {
                     const exp = sortedExperiences[i];
                     const timelineText = `${i + 1}. ${exp.title} (${exp.period})`;
                     
-                    await addTextBoxToSlide(presId, overviewSlide.objectId, timelineText, currentToken, {
+                    await addStyledTextBoxToSlide(presId, overviewSlide.objectId, timelineText, currentToken, {
                         x: 80,
                         y: timelineY,
                         width: 450,
                         height: 30
+                    }, {
+                        fontSize: { magnitude: 14, unit: 'PT' },
+                        fontFamily: 'Arial',
+                        color: themeStyles.textColor
                     });
                     
                     timelineY += 40;
@@ -692,6 +797,9 @@ export function usePresentationLogic() {
             
             updatePptProgress(calculateSlideProgress(i, sortedExperiences.length), `타임라인 슬라이드 ${i + 1} 생성중`, i + 1, sortedExperiences.length);
             
+            // 슬라이드 배경색 설정
+            await setSlideBackground(presId, s.objectId, themeStyles.backgroundColor, currentToken);
+            
             try {
                 // 제목 텍스트박스
                 await addStyledTextBoxToSlide(presId, s.objectId, exp.title, currentToken, {
@@ -703,23 +811,31 @@ export function usePresentationLogic() {
                     bold: true,
                     fontSize: { magnitude: 24, unit: 'PT' },
                     fontFamily: 'Arial',
-                    color: { opaqueColor: { rgbColor: { red: 0, green: 0, blue: 0 } } }
+                    color: themeStyles.textColor
                 });
 
                 // 기간 텍스트박스
-                await addTextBoxToSlide(presId, s.objectId, exp.period, currentToken, {
+                await addStyledTextBoxToSlide(presId, s.objectId, exp.period, currentToken, {
                     x: 50,
                     y: 100,
                     width: 350,
                     height: 40
+                }, {
+                    fontSize: { magnitude: 14, unit: 'PT' },
+                    fontFamily: 'Arial',
+                    color: themeStyles.textColor
                 });
 
                 // 설명 텍스트박스
-                await addTextBoxToSlide(presId, s.objectId, exp.description, currentToken, {
+                await addStyledTextBoxToSlide(presId, s.objectId, exp.description, currentToken, {
                     x: 50,
                     y: 150,
                     width: 300,
                     height: 80
+                }, {
+                    fontSize: { magnitude: 12, unit: 'PT' },
+                    fontFamily: 'Arial',
+                    color: themeStyles.textColor
                 });
 
                 // 이미지가 있는 경우 추가
@@ -751,7 +867,8 @@ export function usePresentationLogic() {
     }
 
     // 사진강조 템플릿 슬라이드 생성
-    async function createPhotoTemplateSlides(presId, currentToken, slidesArr, selectedExperiences, updatePptProgress, calculateSlideProgress) {
+    async function createPhotoTemplateSlides(presId, currentToken, slidesArr, selectedExperiences, updatePptProgress, calculateSlideProgress, selectedThemeColor = 'light') {
+        const themeStyles = getThemeStyles(selectedThemeColor);
         // 이미지가 있는 이력들만 필터링
         const experiencesWithImages = selectedExperiences.filter(exp => exp.imageUrls && exp.imageUrls.length > 0);
         
@@ -771,6 +888,9 @@ export function usePresentationLogic() {
                 slideCount++;
                 updatePptProgress(calculateSlideProgress(slideCount - 1, totalImages), `사진 슬라이드 ${slideCount} 생성중`, slideCount, totalImages);
                 
+                // 슬라이드 배경색 설정
+                await setSlideBackground(presId, s.objectId, themeStyles.backgroundColor, currentToken);
+                
                 try {
                     // 이력 제목
                     await addStyledTextBoxToSlide(presId, s.objectId, exp.title, currentToken, {
@@ -782,15 +902,19 @@ export function usePresentationLogic() {
                         bold: true,
                         fontSize: { magnitude: 20, unit: 'PT' },
                         fontFamily: 'Arial',
-                        color: { opaqueColor: { rgbColor: { red: 0, green: 0, blue: 0 } } }
+                        color: themeStyles.textColor
                     });
 
                     // 기간
-                    await addTextBoxToSlide(presId, s.objectId, exp.period, currentToken, {
+                    await addStyledTextBoxToSlide(presId, s.objectId, exp.period, currentToken, {
                         x: 50,
                         y: 100,
                         width: 300,
                         height: 30
+                    }, {
+                        fontSize: { magnitude: 14, unit: 'PT' },
+                        fontFamily: 'Arial',
+                        color: themeStyles.textColor
                     });
 
                     // 이미지 (중앙에 크게 배치)
@@ -806,11 +930,15 @@ export function usePresentationLogic() {
                     
                     // 이미지 설명 (선택적)
                     if (exp.description) {
-                        await addTextBoxToSlide(presId, s.objectId, exp.description, currentToken, {
+                        await addStyledTextBoxToSlide(presId, s.objectId, exp.description, currentToken, {
                             x: 50,
                             y: 470,
                             width: 400,
                             height: 60
+                        }, {
+                            fontSize: { magnitude: 12, unit: 'PT' },
+                            fontFamily: 'Arial',
+                            color: themeStyles.textColor
                         });
                     }
                 } catch (error) {
@@ -836,7 +964,8 @@ export function usePresentationLogic() {
         loadPptHistory,
         setActiveSection,
         setAccessToken,
-        accessToken
+        accessToken,
+        selectedThemeColor = 'light'
     }) {
         const title = prompt('슬라이드 제목을 입력하세요:', '나의 포트폴리오');
         if (!title) {
@@ -953,7 +1082,7 @@ export function usePresentationLogic() {
                     console.warn('사용자 이름 가져오기 실패, 기본값 사용:', error);
                 }
                 
-                await makeTitleAndBody(presId, data.slides[0].objectId, currentToken, cleanTitle, userName);
+                await makeTitleAndBody(presId, data.slides[0].objectId, currentToken, cleanTitle, userName, selectedThemeColor);
             }
 
             // 3) 템플릿별 슬라이드 추가 (기본 슬라이드만 먼저 생성)
@@ -1012,11 +1141,11 @@ export function usePresentationLogic() {
 
             // 5) 템플릿별 슬라이드 내용 추가
             if (templateName === 'basic') {
-                await createBasicTemplateSlides(presId, currentToken, slidesArr, selectedExperiences, updatePptProgress, calculateSlideProgress);
+                await createBasicTemplateSlides(presId, currentToken, slidesArr, selectedExperiences, updatePptProgress, calculateSlideProgress, selectedThemeColor);
             } else if (templateName === 'timeline') {
-                await createTimelineTemplateSlides(presId, currentToken, slidesArr, selectedExperiences, updatePptProgress, calculateSlideProgress);
+                await createTimelineTemplateSlides(presId, currentToken, slidesArr, selectedExperiences, updatePptProgress, calculateSlideProgress, selectedThemeColor);
             } else if (templateName === 'photo') {
-                await createPhotoTemplateSlides(presId, currentToken, slidesArr, selectedExperiences, updatePptProgress, calculateSlideProgress);
+                await createPhotoTemplateSlides(presId, currentToken, slidesArr, selectedExperiences, updatePptProgress, calculateSlideProgress, selectedThemeColor);
             }
 
             // 6) 최종 상태 반영

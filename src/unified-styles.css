@@ -2558,3 +2558,69 @@ a.btn:hover,
     transform: translate(-50%, -50%);
     font-weight: bold;
 }
+
+/* 테마 색상 선택 아이콘 스타일 */
+.theme-color-selector {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 20px 0;
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+}
+
+.theme-color-selector h6 {
+    color: var(--ink-text);
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.theme-color-options {
+    display: flex;
+    gap: 8px;
+}
+
+.theme-color-option {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.theme-color-option:hover {
+    transform: scale(1.1);
+    border-color: rgba(255, 255, 255, 0.4);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.theme-color-option.selected {
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.3);
+}
+
+.theme-color-option.light {
+    background-color: #ffffff;
+    color: #000000;
+}
+
+.theme-color-option.dark {
+    background-color: #000000;
+    color: #ffffff;
+}
+
+.theme-color-option::before {
+    content: "A";
+    font-size: 18px;
+    font-weight: bold;
+}
