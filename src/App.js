@@ -224,6 +224,9 @@ function App() {
     handleDriveFileDelete,
     enterFolder,
     downloadFile,
+    openFileInNewTab,
+    formatFileSize,
+    getFileTypeDisplay,
     loadPptHistory,
     loadPptForEdit,
     getTextFromElement,
@@ -855,7 +858,17 @@ function App() {
                                                             {file.name}
                                                           </h6>
                                                           <small className="white-text">
-                                                            폴더 • {new Date(file.createdTime).toLocaleDateString()}
+                                                            폴더
+                                                          </small>
+                                                        </div>
+                                                        <div className="file-size">
+                                                          <small className="white-text">
+                                                            -
+                                                          </small>
+                                                        </div>
+                                                        <div className="file-modification-date">
+                                                          <small className="white-text">
+                                                            수정날짜 {new Date(file.modifiedTime).toLocaleDateString()}
                                                           </small>
                                                         </div>
                                                         <div className="file-actions d-flex align-items-center">
@@ -919,19 +932,32 @@ function App() {
                                                         <div className="flex-grow-1">
                                                           <h6
                                                               className="mb-1 file-name file-item"
-                                                              onClick={() => downloadFile(file)}
+                                                              onClick={() => openFileInNewTab(file)}
                                                           >
                                                             {file.name}
                                                           </h6>
                                                           <small className="white-text">
-                                                            {file.mimeType === 'application/vnd.google-apps.spreadsheet' ? '스프레드시트' :
-                                                                file.mimeType === 'application/vnd.google-apps.document' ? '문서' :
-                                                                    file.mimeType === 'application/vnd.google-apps.presentation' ? '프레젠테이션' :
-                                                                        file.mimeType.startsWith('image/') ? '이미지' : '파일'} •
-                                                            {new Date(file.createdTime).toLocaleDateString()}
+                                                            {getFileTypeDisplay(file)}
+                                                          </small>
+                                                        </div>
+                                                        <div className="file-size">
+                                                          <small className="white-text">
+                                                            {formatFileSize(file.size)}
+                                                          </small>
+                                                        </div>
+                                                        <div className="file-modification-date">
+                                                          <small className="white-text">
+                                                            수정날짜 {new Date(file.modifiedTime).toLocaleDateString()}
                                                           </small>
                                                         </div>
                                                         <div className="file-actions d-flex align-items-center">
+                                                          <button
+                                                              className="btn btn-sm btn-outline-primary"
+                                                              onClick={() => downloadFile(file)}
+                                                              title="파일 다운로드"
+                                                          >
+                                                            <i className="fas fa-download"></i> 다운로드
+                                                          </button>
                                                           <button
                                                               className="btn btn-sm btn-outline-danger"
                                                               onClick={() => handleDriveFileDelete(file.id)}

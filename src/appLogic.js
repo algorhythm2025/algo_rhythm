@@ -339,6 +339,22 @@ function useAppLogic() {
       await driveService.current.downloadFile(file, authService.current);
     }
 
+    // 파일을 새 탭에서 열기 (통합된 driveService 사용)
+    async function openFileInNewTab(file) {
+      await driveService.current.openFileInNewTab(file, authService.current);
+    }
+
+    // 파일 크기 포맷팅 (통합된 driveService 사용)
+    function formatFileSize(bytes) {
+      return driveService.current.formatFileSize(bytes);
+    }
+
+    // 파일 타입 표시 (통합된 driveService 사용)
+    function getFileTypeDisplay(file) {
+      return driveService.current.getFileTypeDisplay(file);
+    }
+
+
     // 시트에서 이력 데이터 로드 (통합된 sheetsService 사용)
     async function loadExperiencesFromSheets(spreadsheetIdToUse = null) {
       if (!sheetsService.current) {
@@ -705,6 +721,9 @@ function useAppLogic() {
       handleDriveFileDelete,
       enterFolder,
       downloadFile,
+      openFileInNewTab,
+      formatFileSize,
+      getFileTypeDisplay,
       loadPptHistory,
       loadPptForEdit,
       getTextFromElement: presentationLogic.getTextFromElement,
