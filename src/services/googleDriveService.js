@@ -1006,6 +1006,55 @@ class GoogleDriveService {
     return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${sizes[i]}`;
   }
 
+  // 이미지 URL을 올바른 형식으로 변환 (고화질 우선) - 기존 호환성 유지
+  convertImageUrl(imageUrl) {
+    return this.convertImageUrlToFullSize(imageUrl);
+  }
+
+  // 썸네일용 이미지 URL 변환 (빠른 로딩)
+  convertImageUrlToThumbnail(imageUrl) {
+    // 이미 Base64 데이터 URL인 경우 그대로 반환
+    if (imageUrl.startsWith('data:')) {
+      return imageUrl;
+    }
+
+    // 구글 드라이브 파일 ID 추출
+    const fileIdMatch = imageUrl.match(/[-\w]{25,}/);
+    if (!fileIdMatch) {
+      console.warn('구글 드라이브 파일 ID를 찾을 수 없습니다:', imageUrl);
+      return imageUrl;
+    }
+
+    const fileId = fileIdMatch[0];
+    
+    // 빠른 로딩을 위한 썸네일 URL 사용
+    const thumbnailUrl = `https://drive.google.com/thumbnail?id=${fileId}&sz=w400`;
+    
+    return thumbnailUrl;
+  }
+
+  // 고화질용 이미지 URL 변환 (확대 모달용)
+  convertImageUrlToFullSize(imageUrl) {
+    // 이미 Base64 데이터 URL인 경우 그대로 반환
+    if (imageUrl.startsWith('data:')) {
+      return imageUrl;
+    }
+
+    // 구글 드라이브 파일 ID 추출
+    const fileIdMatch = imageUrl.match(/[-\w]{25,}/);
+    if (!fileIdMatch) {
+      console.warn('구글 드라이브 파일 ID를 찾을 수 없습니다:', imageUrl);
+      return imageUrl;
+    }
+
+    const fileId = fileIdMatch[0];
+    
+    // 고화질 직접 링크 URL 사용
+    const directUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
+    
+    return directUrl;
+  }
+
   // 파일 타입 결정 (확장자 기반)
   getFileTypeDisplay(file) {
     // 구글 문서 파일들

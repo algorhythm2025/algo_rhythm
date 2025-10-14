@@ -227,6 +227,9 @@ function App() {
     openFileInNewTab,
     formatFileSize,
     getFileTypeDisplay,
+    convertImageUrl,
+    convertImageUrlToThumbnail,
+    convertImageUrlToFullSize,
     loadPptHistory,
     loadPptForEdit,
     getTextFromElement,
@@ -392,7 +395,7 @@ function App() {
                                                       className="experience-image-wrapper ppt-size"
                                                       onClick={(e) => {
                                                         e.stopPropagation();
-                                                        openImageModal(exp.imageUrls[0], `${exp.title} - 이미지 1`);
+                                                        openImageModal(convertImageUrlToFullSize(exp.imageUrls[0]), `${exp.title} - 이미지 1`);
                                                       }}
                                                   >
                                                     {imageLoadingStates.get(`${exp.imageUrls[0]}_${exp.title} 이미지 1`) === 'loading' && (
@@ -406,7 +409,7 @@ function App() {
                                                       </div>
                                                     )}
                                                     <img
-                                                        src={exp.imageUrls[0]}
+                                                        src={convertImageUrlToThumbnail(exp.imageUrls[0])}
                                                         alt={`${exp.title} 이미지 1`}
                                                         loading="lazy"
                                                         decoding="async"
@@ -1124,7 +1127,7 @@ function App() {
                                                       className="experience-image-wrapper"
                                                       onClick={(e) => {
                                                         e.stopPropagation();
-                                                        openImageModal(exp.imageUrls[0], `${exp.title} - 이미지 1`);
+                                                        openImageModal(convertImageUrlToFullSize(exp.imageUrls[0]), `${exp.title} - 이미지 1`);
                                                       }}
                                                   >
                                                     {imageLoadingStates.get(`${exp.imageUrls[0]}_${exp.title} 이미지 1`) === 'loading' && (
@@ -1138,7 +1141,7 @@ function App() {
                                                       </div>
                                                     )}
                                                     <img
-                                                        src={exp.imageUrls[0]}
+                                                        src={convertImageUrlToThumbnail(exp.imageUrls[0])}
                                                         alt={`${exp.title} 이미지 1`}
                                                         loading="lazy"
                                                         decoding="async"
@@ -1354,10 +1357,11 @@ function App() {
                                         />
                                         <button
                                             type="button"
-                                            className="btn btn-sm btn-outline-danger position-absolute top-0 end-0 m-1"
+                                            className="btn btn-sm btn-outline-danger position-absolute top-0 end-0 m-1 image-delete-btn"
                                             onClick={() => removeImage(index)}
                                             style={{ zIndex: 10 }}
-                                        />
+                                        >
+                                        </button>
                                       </div>
                                     </div>
                                 ))}
@@ -1432,7 +1436,7 @@ function App() {
                       </div>
                     )}
                     <img
-                        src={selectedImageForModal.url}
+                        src={convertImageUrlToFullSize(selectedImageForModal.url)}
                         alt={selectedImageForModal.title}
                         className="img-fluid"
                         loading="eager"
@@ -1518,7 +1522,7 @@ function App() {
                                   }}
                                   onMouseEnter={(e) => e.currentTarget.style.borderColor = '#007bff'}
                                   onMouseLeave={(e) => e.currentTarget.style.borderColor = 'transparent'}
-                                  onClick={() => openImageModal(imageUrl, `${selectedExperience.title} - 이미지 ${imgIdx + 1}`)}
+                                  onClick={() => openImageModal(convertImageUrlToFullSize(imageUrl), `${selectedExperience.title} - 이미지 ${imgIdx + 1}`)}
                                 >
                                   {imageLoadingStates.get(`${imageUrl}_${selectedExperience.title} 이미지 ${imgIdx + 1}`) === 'loading' && (
                                     <div style={{
@@ -1545,7 +1549,7 @@ function App() {
                                     </div>
                                   )}
                                   <img
-                                    src={imageUrl}
+                                    src={convertImageUrlToThumbnail(imageUrl)}
                                     alt={`${selectedExperience.title} 이미지 ${imgIdx + 1}`}
                                     loading="lazy"
                                     decoding="async"

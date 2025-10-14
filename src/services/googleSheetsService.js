@@ -285,12 +285,12 @@ class GoogleSheetsService {
       const sheetData = await this.readData(spreadsheetId, 'A:E');
       const experiences = this.formatSheetToExperience(sheetData);
       
-      // 이미지 URL을 썸네일 형식으로 미리 변환
-      experiences.forEach(exp => {
-        if (exp.imageUrls && exp.imageUrls.length > 0) {
-          exp.imageUrls = exp.imageUrls.map(url => this.convertImageUrlToThumbnail(url));
-        }
-      });
+      // 이미지 URL은 원본 그대로 유지 (표시할 때 적절한 함수 사용)
+      // experiences.forEach(exp => {
+      //   if (exp.imageUrls && exp.imageUrls.length > 0) {
+      //     exp.imageUrls = exp.imageUrls.map(url => this.convertImageUrlToThumbnail(url));
+      //   }
+      // });
       
       setExperiences(experiences);
       
