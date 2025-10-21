@@ -241,6 +241,13 @@ class GoogleAuthService {
         console.log('단일 팝업에서 로그인과 권한 요청합니다...');
         this.tokenClient.requestAccessToken({ prompt: 'consent' });
 
+        // 팝업이 뜨는 시점을 감지하여 스피너 중지
+        // 팝업이 뜨면 스피너가 중지되도록 이벤트 발생
+        setTimeout(() => {
+          // 팝업이 뜨는 시점 (약 500ms 후)
+          window.dispatchEvent(new CustomEvent('loginPopupOpened'));
+        }, 500);
+
       } catch (error) {
         reject(error);
       }
@@ -607,7 +614,6 @@ class GoogleAuthService {
   // GIS 기반 로그인 (단일 팝업에서 로그인+권한 처리) (authLogic에서 통합)
   async handleGISLogin(setIsLoading, saveLoginState, setActiveSection, initializeServices, setAccessToken) {
     try {
-      setIsLoading(true);
       console.log('GIS 기반 로그인 시작...');
 
       // 통합 인증 시스템 초기화
@@ -640,9 +646,8 @@ class GoogleAuthService {
       console.error('GIS 로그인 오류:', error);
       const errorMessage = error?.message || '로그인에 실패했습니다.';
       alert(errorMessage);
-    } finally {
-      setIsLoading(false);
     }
+    // setIsLoading은 appLogic.js에서 관리하므로 여기서는 제거
   }
 
   // 로그아웃 (authLogic에서 통합)

@@ -259,6 +259,23 @@ function useAppLogic() {
 
     // GIS 기반 로그인 (단일 팝업에서 로그인+권한 처리) (통합된 authService 사용)
     async function handleGISLogin() {
+      // 로그인 버튼 스피너 시작
+      setIsLoading(true);
+      
+      // 팝업이 뜨는 시점을 감지하여 스피너 중지
+      const handlePopupOpened = () => {
+        setIsLoading(false);
+        window.removeEventListener('loginPopupOpened', handlePopupOpened);
+      };
+      
+      window.addEventListener('loginPopupOpened', handlePopupOpened);
+      
+      // 최대 3초 후에는 강제로 스피너 중지 (안전장치)
+      setTimeout(() => {
+        setIsLoading(false);
+        window.removeEventListener('loginPopupOpened', handlePopupOpened);
+      }, 3000);
+      
       await authService.current.handleGISLogin(setIsLoading, 
         (loggedIn, spreadsheetIdValue) => authService.current.saveLoginState(loggedIn, spreadsheetIdValue, setIsLoggedIn, setSpreadsheetId),
         setActiveSection, initializeServices, setAccessToken);
