@@ -26,7 +26,6 @@ class GoogleSheetsService {
         throw new Error('구글 시트 API가 로드되지 않았습니다. 페이지를 새로고침해주세요.');
       }
 
-      console.log('Sheets API 로드 확인됨, 스프레드시트 생성 시작...');
 
       const response = await gapiClient.sheets.spreadsheets.create({
         properties: {
@@ -42,7 +41,6 @@ class GoogleSheetsService {
             addParents: parentId,
             removeParents: 'root'
           });
-          console.log('스프레드시트가 지정된 폴더로 이동됨');
         } catch (moveError) {
           console.warn('스프레드시트 폴더 이동 실패:', moveError);
           // 폴더 이동 실패해도 시트 생성은 성공으로 처리
@@ -85,7 +83,6 @@ class GoogleSheetsService {
   // 데이터 읽기
   async readData(spreadsheetId, range) {
     try {
-      console.log('시트 데이터 읽기 시작:', { spreadsheetId, range });
 
       await this.ensureAuthenticated();
 
@@ -96,21 +93,17 @@ class GoogleSheetsService {
         throw new Error('구글 시트 API가 로드되지 않았습니다. 페이지를 새로고침해주세요.');
       }
 
-      console.log('Sheets API 로드 확인됨, 데이터 읽기 시작...');
 
       const response = await gapiClient.sheets.spreadsheets.values.get({
         spreadsheetId: spreadsheetId,
         range: range,
       });
 
-      console.log('시트 API 응답:', response);
 
       if (!response.result.values) {
-        console.log('시트에 데이터가 없습니다.');
         return [];
       }
 
-      console.log('읽어온 데이터:', response.result.values);
       return response.result.values;
     } catch (error) {
       console.error('데이터 읽기 오류 상세:', error);
@@ -247,7 +240,6 @@ class GoogleSheetsService {
 
       return response.result && response.result.spreadsheetId === spreadsheetId;
     } catch (error) {
-      console.log('스프레드시트 존재 여부 확인 실패:', error.message);
       return false;
     }
   }
@@ -300,7 +292,6 @@ class GoogleSheetsService {
       console.error('이력 데이터 로드 오류:', error);
       // 시트가 존재하지 않는 경우 로그만 출력하고 새로 생성하지 않음
       if (error.message.includes('찾을 수 없습니다') || error.status === 404) {
-        console.log('시트가 존재하지 않습니다. 시트를 다시 생성해주세요.');
         // 사용자에게 알림
         alert('포트폴리오 시트가 삭제되었습니다. 로그아웃 후 다시 로그인해주세요.');
       }
@@ -374,7 +365,6 @@ class GoogleSheetsService {
       if (portfolioFolderId) {
         try {
           await driveService.current.deleteFile(portfolioFolderId);
-          console.log('포트폴리오 이력 폴더도 삭제됨');
         } catch (folderError) {
           console.warn('포트폴리오 폴더 삭제 실패:', folderError);
         }

@@ -26,7 +26,6 @@ class GoogleDriveService {
         throw new Error('구글 드라이브 API가 로드되지 않았습니다. 페이지를 새로고침해주세요.');
       }
 
-      console.log('Drive API 로드 확인됨, 파일 목록 가져오기 시작...');
 
       let query = 'trashed=false';
       if (parentId) {
@@ -124,14 +123,12 @@ class GoogleDriveService {
       if (!portfolioFolder) {
         // 폴더가 없으면 생성
         portfolioFolder = await this.createFolder('포트폴리오 이력');
-        console.log('포트폴리오 이력 폴더 생성됨:', portfolioFolder.id);
         
         // 포트폴리오 폴더 생성 시 하위 폴더들도 함께 생성
         await this.createFolder('image', portfolioFolder.id);
         await this.createFolder('PPT', portfolioFolder.id);
-        console.log('포트폴리오 하위 폴더들 생성됨: image, PPT');
       } else {
-        console.log('기존 포트폴리오 이력 폴더 발견:', portfolioFolder.id);
+        // 폴더 발견 로그 간소화
       }
 
       return portfolioFolder;
@@ -150,9 +147,8 @@ class GoogleDriveService {
       if (!imageFolder) {
         // 폴더가 없으면 생성
         imageFolder = await this.createFolder('image', portfolioFolderId);
-        console.log('이미지 폴더 생성됨:', imageFolder.id);
       } else {
-        console.log('기존 이미지 폴더 발견:', imageFolder.id);
+        // 폴더 발견 로그 간소화
       }
 
       return imageFolder;
@@ -171,9 +167,7 @@ class GoogleDriveService {
       if (!pptFolder) {
         // 폴더가 없으면 생성
         pptFolder = await this.createFolder('PPT', portfolioFolderId);
-        console.log('PPT 폴더 생성됨:', pptFolder.id);
       } else {
-        console.log('기존 PPT 폴더 발견:', pptFolder.id);
       }
 
       return pptFolder;
@@ -195,9 +189,7 @@ class GoogleDriveService {
       if (!experienceFolder) {
         // 폴더가 없으면 생성
         experienceFolder = await this.createFolder(folderName, imageFolderId);
-        console.log(`이력 이미지 폴더 생성됨: ${folderName}`, experienceFolder.id);
       } else {
-        console.log(`기존 이력 이미지 폴더 발견: ${folderName}`, experienceFolder.id);
       }
 
       return experienceFolder;
@@ -207,7 +199,7 @@ class GoogleDriveService {
     }
   }
 
-  // 파일 업로드
+  // 파일 업로드 (청크 업로드 방식)
   async uploadFile(name, file, mimeType = 'application/octet-stream', parentId = null) {
     try {
       await this.ensureAuthenticated();
@@ -217,41 +209,155 @@ class GoogleDriveService {
         mimeType: mimeType,
       };
 
-      // 부모 폴더가 지정된 경우 parents 배열에 추가
       if (parentId) {
         metadata.parents = [parentId];
       }
 
       const accessToken = this.authService.getAccessToken();
 
-      const form = new FormData();
-      form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-      form.append('file', file);
+      // 작은 파일은 기존 방식 사용
+      if (file.size < 5 * 1024 * 1024) { // 5MB 미만
+        const form = new FormData();
+        form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+        form.append('file', file);
 
-      const response = await fetch(
+        const response = await fetch(
           'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,mimeType',
           {
             method: 'POST',
             headers: new Headers({ Authorization: 'Bearer ' + accessToken }),
             body: form,
           }
-      );
-      const result = await response.json();
+        );
+        
+        const result = await response.json();
+        
+        // 권한 설정을 비동기로 처리
+        if (result.id && mimeType.startsWith('image/')) {
+          setTimeout(() => {
+            this.setFilePublic(result.id)
+              .catch(permissionError => console.warn('공개 권한 설정 실패 (무시됨):', permissionError));
+          }, 0);
+        }
+        
+        return result;
+      }
+
+      // 큰 파일은 청크 업로드 사용
       
-      // 이미지 파일인 경우 공개 권한 설정
-      if (result.id && mimeType.startsWith('image/')) {
-        try {
-          await this.setFilePublic(result.id);
-          console.log('이미지 파일 공개 권한 설정 완료:', result.id);
-        } catch (permissionError) {
-          console.warn('공개 권한 설정 실패 (무시됨):', permissionError);
+      // 1단계: 업로드 세션 시작
+      const sessionResponse = await fetch(
+        'https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable',
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+            'X-Upload-Content-Type': mimeType,
+            'X-Upload-Content-Length': file.size.toString()
+          },
+          body: JSON.stringify(metadata)
+        }
+      );
+
+      const sessionUrl = sessionResponse.headers.get('Location');
+      if (!sessionUrl) {
+        throw new Error('업로드 세션을 시작할 수 없습니다.');
+      }
+
+      // 2단계: 청크 단위로 파일 업로드
+      const chunkSize = 256 * 1024; // 256KB 청크
+      let uploadedBytes = 0;
+      
+      while (uploadedBytes < file.size) {
+        const chunk = file.slice(uploadedBytes, uploadedBytes + chunkSize);
+        
+        const chunkResponse = await fetch(sessionUrl, {
+          method: 'PUT',
+          headers: {
+            'Content-Length': chunk.size.toString(),
+            'Content-Range': `bytes ${uploadedBytes}-${uploadedBytes + chunk.size - 1}/${file.size}`
+          },
+          body: chunk
+        });
+
+        if (chunkResponse.status === 308) {
+          // 계속 업로드
+          uploadedBytes += chunk.size;
+        } else if (chunkResponse.status === 200 || chunkResponse.status === 201) {
+          // 업로드 완료
+          const result = await chunkResponse.json();
+          
+          // 권한 설정을 비동기로 처리
+          if (result.id && mimeType.startsWith('image/')) {
+            setTimeout(() => {
+              this.setFilePublic(result.id)
+                .catch(permissionError => console.warn('공개 권한 설정 실패 (무시됨):', permissionError));
+            }, 0);
+          }
+          
+          return result;
+        } else {
+          throw new Error(`청크 업로드 실패: ${chunkResponse.status}`);
         }
       }
-      
-      return result;
+
     } catch (error) {
       console.error('파일 업로드 오류:', error);
       throw new Error('파일 업로드에 실패했습니다.');
+    }
+  }
+
+  // 여러 파일을 병렬로 업로드하는 최적화된 함수
+  async uploadMultipleFiles(files, parentId = null) {
+    try {
+      await this.ensureAuthenticated();
+
+      const accessToken = this.authService.getAccessToken();
+      const uploadPromises = files.map(({ name, file, mimeType }) => {
+        const metadata = {
+          name: name,
+          mimeType: mimeType || file.type,
+        };
+
+        if (parentId) {
+          metadata.parents = [parentId];
+        }
+
+        const form = new FormData();
+        form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+        form.append('file', file);
+
+        return fetch(
+          'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,mimeType',
+          {
+            method: 'POST',
+            headers: new Headers({ Authorization: 'Bearer ' + accessToken }),
+            body: form,
+          }
+        ).then(response => response.json());
+      });
+
+      const results = await Promise.all(uploadPromises);
+      
+      // 이미지 파일들의 공개 권한을 병렬로 설정
+      const permissionPromises = results
+        .filter(result => result.id && result.mimeType && result.mimeType.startsWith('image/'))
+        .map(result => 
+          this.setFilePublic(result.id)
+            .then(() => console.log('이미지 파일 공개 권한 설정 완료:', result.id))
+            .catch(error => console.warn('공개 권한 설정 실패 (무시됨):', error))
+        );
+
+      // 권한 설정을 비동기로 처리하여 업로드 완료를 기다리지 않음
+      Promise.all(permissionPromises).catch(error => 
+        console.warn('일부 파일의 권한 설정 실패:', error)
+      );
+
+      return results;
+    } catch (error) {
+      console.error('다중 파일 업로드 오류:', error);
+      throw new Error('다중 파일 업로드에 실패했습니다.');
     }
   }
 
@@ -330,7 +436,6 @@ class GoogleDriveService {
       // 공개 URL 생성
       const publicUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
       
-      console.log('이미지 공개 URL 생성:', publicUrl);
       return publicUrl;
     } catch (error) {
       console.error('이미지 공개 URL 생성 오류:', error);
@@ -408,7 +513,6 @@ class GoogleDriveService {
   async setExistingImagesPublic() {
     // 이미 실행 중인지 확인
     if (this._settingPermissionsInProgress) {
-      console.log('이미지 공개 권한 설정이 이미 진행 중입니다.');
       return 0;
     }
 
@@ -424,14 +528,12 @@ class GoogleDriveService {
       // 포트폴리오 폴더 찾기
       const portfolioFolder = await this.ensurePortfolioFolder();
       if (!portfolioFolder) {
-        console.log('포트폴리오 폴더를 찾을 수 없습니다.');
         return 0;
       }
 
       // 이미지 폴더 찾기
       const imageFolder = await this.ensureImageFolder(portfolioFolder.id);
       if (!imageFolder) {
-        console.log('이미지 폴더를 찾을 수 없습니다.');
         return 0;
       }
 
@@ -449,22 +551,20 @@ class GoogleDriveService {
           continue; // 이미 처리된 파일은 건너뛰기
         }
 
-        try {
-          // 권한 설정 전에 이미 공개 권한이 있는지 확인
-          const hasPublicPermission = await this.checkFilePublicPermission(file.id);
-          if (!hasPublicPermission) {
-            await this.setFilePublic(file.id);
-            console.log(`이미지 공개 권한 설정 완료: ${file.name} (${file.id})`);
-          } else {
-            console.log(`이미지 이미 공개 권한 있음: ${file.name} (${file.id})`);
-          }
+            try {
+              // 권한 설정 전에 이미 공개 권한이 있는지 확인
+              const hasPublicPermission = await this.checkFilePublicPermission(file.id);
+              if (!hasPublicPermission) {
+                await this.setFilePublic(file.id);
+                // 개별 파일 로그 제거 - 너무 많은 로그 생성 방지
+              }
+              // 이미 공개 권한이 있는 경우 로그 제거
           
           this._processedImageIds.add(file.id);
           processedCount++;
           
-          // 진행 상황 로그 (5개마다 또는 마지막에)
-          if ((i + 1) % 5 === 0 || i === imageFiles.length - 1) {
-            console.log(`이미지 공개 권한 설정 진행: ${i + 1}/${totalFiles} (${Math.round((i + 1) / totalFiles * 100)}%)`);
+          // 진행 상황 로그 (10개마다 또는 마지막에만)
+          if ((i + 1) % 10 === 0 || i === imageFiles.length - 1) {
           }
         } catch (error) {
           console.warn(`이미지 공개 권한 설정 실패: ${file.name} (${file.id})`, error);
@@ -490,10 +590,9 @@ class GoogleDriveService {
               const hasPublicPermission = await this.checkFilePublicPermission(subFile.id);
               if (!hasPublicPermission) {
                 await this.setFilePublic(subFile.id);
-                console.log(`하위 폴더 이미지 공개 권한 설정 완료: ${subFile.name} (${subFile.id})`);
-              } else {
-                console.log(`하위 폴더 이미지 이미 공개 권한 있음: ${subFile.name} (${subFile.id})`);
+                // 개별 파일 로그 제거 - 너무 많은 로그 생성 방지
               }
+              // 이미 공개 권한이 있는 경우 로그 제거
               
               this._processedImageIds.add(subFile.id);
               processedCount++;
@@ -507,10 +606,8 @@ class GoogleDriveService {
         }
       }
 
-      if (subFolderProcessedCount > 0) {
-        console.log(`기존 이미지 파일들 공개 권한 설정 완료 (루트: ${processedCount - subFolderProcessedCount}개, 하위폴더: ${subFolderProcessedCount}개, 총 ${processedCount}개)`);
-      } else {
-        console.log(`기존 이미지 파일들 공개 권한 설정 완료 (처리된 파일: ${processedCount}개)`);
+      // 최종 요약 로그만 출력
+      if (processedCount > 0) {
       }
       return processedCount;
     } catch (error) {
@@ -652,7 +749,6 @@ class GoogleDriveService {
         downloadUrl = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`;
       }
 
-      console.log('다운로드 URL:', downloadUrl);
 
       const response = await fetch(downloadUrl, {
         headers: {
@@ -702,19 +798,16 @@ class GoogleDriveService {
   async loadDriveFiles(driveViewMode, portfolioFolderId, spreadsheetId, sheetsService, setDriveFiles, setIsDriveLoading, setSpreadsheetId, parentId = null) {
     try {
       setIsDriveLoading(true);
-      console.log('드라이브 파일 불러오기 시작, 뷰 모드:', driveViewMode, 'parentId:', parentId);
 
       // 시트가 있다면 실제로 존재하는지 확인
       if (spreadsheetId && sheetsService.current) {
         try {
           const exists = await sheetsService.current.checkSpreadsheetExists(spreadsheetId);
           if (!exists) {
-            console.log('저장된 시트가 존재하지 않습니다. 상태를 초기화합니다.');
             setSpreadsheetId(null);
             localStorage.removeItem('spreadsheetId');
           }
         } catch (error) {
-          console.log('시트 존재 확인 중 오류:', error);
           setSpreadsheetId(null);
           localStorage.removeItem('spreadsheetId');
         }
@@ -724,15 +817,12 @@ class GoogleDriveService {
       if (parentId) {
         // 특정 폴더 내 파일만 로드
         files = await this.listFiles(50, parentId);
-        console.log('특정 폴더 파일:', files);
       } else if (driveViewMode === 'portfolio' && portfolioFolderId) {
         // 포트폴리오 폴더 내 파일만 로드
         files = await this.listFiles(50, portfolioFolderId);
-        console.log('포트폴리오 폴더 파일:', files);
       } else {
         // 전체 파일 로드
         files = await this.listFiles(20);
-        console.log('전체 드라이브 파일:', files);
       }
 
       setDriveFiles(files);
@@ -829,7 +919,6 @@ class GoogleDriveService {
       if (isFromPptHistory) {
         // PPT 기록에서 삭제한 경우 PPT 기록 새로고침
         await loadPptHistory();
-        console.log('PPT 기록이 새로고침되었습니다.');
       } else {
         // 드라이브 파일에서 삭제한 경우 드라이브 파일 목록 새로고침
         const currentParentId = currentPath.length > 0 ? currentPath[currentPath.length - 1].id : null;
@@ -887,7 +976,7 @@ class GoogleDriveService {
         if (portfolioFolderId && folderId === portfolioFolderId) {
           // 포트폴리오 폴더인 경우 작업영역을 포트폴리오 폴더로 전환
           setDriveViewMode('portfolio');
-          setCurrentPath([{ id: folderId, name: folderName }]); // 포트폴리오 폴더를 경로에 추가
+          setCurrentPath([]); // 경로 초기화 (포트폴리오 폴더가 루트)
           await loadDriveFiles(folderId); // 포트폴리오 폴더 내용 로드
         } else {
           // 포트폴리오 폴더 ID가 설정되지 않은 경우, 폴더 이름으로만 확인
@@ -895,7 +984,7 @@ class GoogleDriveService {
           setPortfolioFolderId(folderId);
           localStorage.setItem('portfolioFolderId', folderId);
           setDriveViewMode('portfolio');
-          setCurrentPath([{ id: folderId, name: folderName }]); // 포트폴리오 폴더를 경로에 추가
+          setCurrentPath([]); // 경로 초기화 (포트폴리오 폴더가 루트)
           await loadDriveFiles(folderId); // 포트폴리오 폴더 내용 로드
         }
       } else {

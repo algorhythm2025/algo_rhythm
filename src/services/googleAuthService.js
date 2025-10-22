@@ -61,15 +61,12 @@ class GoogleAuthService {
   // 실제 초기화 수행
   async _performInitialization() {
     try {
-      console.log('GIS 기반 인증 시스템 초기화 시작...');
 
       // 1. GAPI 초기화
       await this._initializeGapi();
-      console.log('GAPI 초기화 완료');
 
       // 2. GIS 초기화
       await this._initializeGis();
-      console.log('GIS 초기화 완료');
 
       // 3. 저장된 토큰 불러오기
       const tokenLoaded = this._loadTokenFromStorage();
@@ -79,7 +76,6 @@ class GoogleAuthService {
         this._setTokenToGapi(tokenData);
       }
 
-      console.log('GIS 기반 인증 시스템 초기화 완료');
       this.emitAuthStateChange(this.isAuthenticated());
 
     } catch (error) {
@@ -98,16 +94,13 @@ class GoogleAuthService {
     return new Promise((resolve, reject) => {
       // 이미 스크립트가 로드되어 있는지 확인
       if (window.gapi) {
-        console.log('기존 GAPI 스크립트 사용');
         this._setupGapi(resolve, reject);
         return;
       }
 
-      console.log('새 GAPI 스크립트 로드 중...');
       const script = document.createElement('script');
       script.src = 'https://apis.google.com/js/api.js';
       script.onload = () => {
-        console.log('GAPI 스크립트 로드 완료');
         this._setupGapi(resolve, reject);
       };
       script.onerror = (error) => {
@@ -123,7 +116,6 @@ class GoogleAuthService {
     try {
       window.gapi.load('client', async () => {
         try {
-          console.log('GAPI 클라이언트 초기화 중...');
           await window.gapi.client.init({
             apiKey: this.apiKey,
           });
@@ -134,7 +126,6 @@ class GoogleAuthService {
           await window.gapi.client.load('slides', 'v1');
           await window.gapi.client.load('people', 'v1');
 
-          console.log('GAPI 클라이언트 초기화 완료 (Sheets, Drive, Slides API 로드됨)');
           this.gapiInited = true;
           resolve();
         } catch (error) {
@@ -156,16 +147,13 @@ class GoogleAuthService {
     return new Promise((resolve, reject) => {
       // 이미 스크립트가 로드되어 있는지 확인
       if (window.google && window.google.accounts) {
-        console.log('기존 GIS 스크립트 사용');
         this._setupGis(resolve, reject);
         return;
       }
 
-      console.log('새 GIS 스크립트 로드 중...');
       const script = document.createElement('script');
       script.src = 'https://accounts.google.com/gsi/client';
       script.onload = () => {
-        console.log('GIS 스크립트 로드 완료');
         this._setupGis(resolve, reject);
       };
       script.onerror = (error) => {
@@ -186,7 +174,6 @@ class GoogleAuthService {
           if (tokenResponse && tokenResponse.access_token) {
             this.accessToken = tokenResponse.access_token;
             this._setTokenToGapi(tokenResponse);
-            console.log('토큰 획득 및 설정 완료');
             this.emitAuthStateChange(true);
           }
           this.gisInited = true;
@@ -208,26 +195,21 @@ class GoogleAuthService {
 
     // 이미 토큰이 있으면 새로 요청하지 않음
     if (this.accessToken) {
-      console.log('이미 토큰이 있습니다.');
       return;
     }
 
     return new Promise((resolve, reject) => {
       try {
-        console.log('단일 팝업에서 로그인과 권한 요청 시작...');
 
         // 토큰 요청 콜백을 직접 처리
         const originalCallback = this.tokenClient.callback;
         this.tokenClient.callback = (tokenResponse) => {
-          console.log('토큰 응답 받음:', tokenResponse);
           if (tokenResponse && tokenResponse.access_token) {
             this.accessToken = tokenResponse.access_token;
             this._setTokenToGapi(tokenResponse);
-            console.log('토큰 설정 완료');
             this.emitAuthStateChange(true);
             resolve();
           } else {
-            console.log('토큰 응답에 액세스 토큰이 없음');
             reject(new Error('토큰 획득 실패'));
           }
 
@@ -238,7 +220,6 @@ class GoogleAuthService {
         };
 
         // 단일 팝업에서 로그인과 권한 요청
-        console.log('단일 팝업에서 로그인과 권한 요청합니다...');
         this.tokenClient.requestAccessToken({ prompt: 'consent' });
 
         // 팝업이 뜨는 시점을 감지하여 스피너 중지
@@ -262,16 +243,13 @@ class GoogleAuthService {
 
     return new Promise((resolve, reject) => {
       try {
-        console.log('토큰 갱신 시도 (팝업 없이)...');
 
         // 토큰 요청 콜백을 직접 처리
         const originalCallback = this.tokenClient.callback;
         this.tokenClient.callback = (tokenResponse) => {
-          console.log('토큰 갱신 응답 받음:', tokenResponse);
 
           // interaction_required 오류 처리
           if (tokenResponse && tokenResponse.error === 'interaction_required') {
-            console.log('사용자 상호작용이 필요합니다. 토큰 갱신을 건너뜁니다.');
             reject(new Error('interaction_required'));
             return;
           }
@@ -279,11 +257,9 @@ class GoogleAuthService {
           if (tokenResponse && tokenResponse.access_token) {
             this.accessToken = tokenResponse.access_token;
             this._setTokenToGapi(tokenResponse);
-            console.log('토큰 갱신 완료');
             this.emitAuthStateChange(true);
             resolve();
           } else {
-            console.log('토큰 갱신 실패 - 액세스 토큰이 없음');
             reject(new Error('토큰 갱신 실패'));
           }
 
@@ -310,21 +286,17 @@ class GoogleAuthService {
 
     return new Promise((resolve, reject) => {
       try {
-        console.log('팝업 없이 토큰 요청 시도...');
 
         // 토큰 요청 콜백을 직접 처리
         const originalCallback = this.tokenClient.callback;
         this.tokenClient.callback = (tokenResponse) => {
-          console.log('자동 토큰 요청 응답 받음:', tokenResponse);
 
           if (tokenResponse && tokenResponse.access_token) {
             this.accessToken = tokenResponse.access_token;
             this._setTokenToGapi(tokenResponse);
-            console.log('자동 토큰 요청 완료');
             this.emitAuthStateChange(true);
             resolve();
           } else {
-            console.log('자동 토큰 요청 실패 - 액세스 토큰이 없음');
             reject(new Error('자동 토큰 요청 실패'));
           }
 
@@ -347,7 +319,6 @@ class GoogleAuthService {
   _setTokenToGapi(tokenResponse) {
     if (window.gapi && window.gapi.client && tokenResponse) {
       window.gapi.client.setToken(tokenResponse);
-      console.log('GAPI 클라이언트에 토큰 설정 완료');
 
       // 토큰을 localStorage에 저장
       this._saveTokenToStorage(tokenResponse);
@@ -367,7 +338,6 @@ class GoogleAuthService {
         saved_at: Date.now()
       };
       localStorage.setItem('google_token', JSON.stringify(tokenData));
-      console.log('토큰을 localStorage에 저장 완료');
     } catch (error) {
       console.error('토큰 저장 오류:', error);
     }
@@ -387,10 +357,8 @@ class GoogleAuthService {
         // 토큰이 아직 유효한지 확인 (5분 여유를 둠)
         if (now < expirationTime - 300000) {
           this.accessToken = parsed.access_token;
-          console.log('localStorage에서 토큰 불러오기 완료');
           return true;
         } else {
-          console.log('저장된 토큰이 만료되었습니다.');
           localStorage.removeItem('google_token');
         }
       }
@@ -437,17 +405,19 @@ class GoogleAuthService {
     const hasToken = this.accessToken !== null;
     const gapiHasToken = window.gapi && window.gapi.client && window.gapi.client.getToken();
 
-    console.log('기존 토큰 확인:', {
-      hasAccessToken: hasToken,
-      gapiHasToken: !!gapiHasToken
-    });
+    // 로그를 줄이기 위해 디버그 모드에서만 출력
+    if (this._debugMode) {
+      console.log('기존 토큰 확인:', {
+        hasAccessToken: hasToken,
+        gapiHasToken: !!gapiHasToken
+      });
+    }
 
     return hasToken || gapiHasToken;
   }
 
   // 로그아웃
   logout() {
-    console.log('GIS 로그아웃 시작...');
 
     // 로컬 상태 정리
     this.accessToken = null;
@@ -466,14 +436,11 @@ class GoogleAuthService {
     this.gapiInited = false;
 
     this.emitAuthStateChange(false);
-    console.log('GIS 로그아웃 완료');
   }
 
   // 인증 상태 검증 및 복구
   async validateAndRepairAuth() {
     if (!this.isAuthenticated()) {
-      console.log('인증 상태가 유효하지 않습니다. 복구를 시도합니다...');
-
       try {
         // 토큰 갱신 시도
         await this.requestToken();
@@ -533,7 +500,6 @@ class GoogleAuthService {
       const person = response.result;
       const name = person.names && person.names[0] ? person.names[0].displayName : '사용자';
       
-      console.log('사용자 정보 가져오기 성공:', name);
       return name;
     } catch (error) {
       console.error('사용자 정보 가져오기 실패:', error);
@@ -545,12 +511,9 @@ class GoogleAuthService {
   // 통합 인증 시스템 초기화 (authLogic에서 통합)
   async initializeGoogleAuth(setAuthStatus, setIsSheetsInitialized, setIsDriveInitialized, initializeServices) {
     try {
-      console.log('통합 인증 시스템 초기화 시작...');
-
       // 인증 상태 변경 리스너 등록
       this.addAuthStateListener((isAuthenticated) => {
         setAuthStatus(isAuthenticated ? 'connected' : 'disconnected');
-        console.log('인증 상태 변경:', isAuthenticated);
       });
 
       // 에러 리스너 등록
@@ -561,27 +524,20 @@ class GoogleAuthService {
 
       // 통합 인증 초기화
       await this.initialize();
-      console.log('통합 인증 시스템 초기화 완료');
 
       // 인증 상태 확인 및 토큰 갱신 시도
       if (!this.isAuthenticated()) {
-        console.log('인증 상태가 유효하지 않습니다. 토큰 갱신을 시도합니다...');
         try {
           // 토큰 갱신 시도 (팝업 없이)
           await this.refreshToken();
-          console.log('토큰 갱신 완료');
         } catch (tokenError) {
-          console.log('토큰 갱신 실패:', tokenError);
 
           // interaction_required 오류는 정상적인 상황으로 처리
           if (tokenError.message === 'interaction_required') {
-            console.log('사용자 상호작용이 필요한 상황입니다. 로그인 상태는 유지합니다.');
 
             // 토큰 갱신이 실패해도 기존 토큰이 있다면 서비스 초기화를 시도
             if (this.hasExistingToken()) {
-              console.log('기존 토큰이 있습니다. 서비스 초기화를 시도합니다.');
             } else {
-              console.log('기존 토큰이 없습니다. 서비스 초기화를 건너뜁니다.');
               // 토큰이 없으면 서비스 초기화를 건너뜀 (로그인 상태는 유지)
               setAuthStatus('disconnected');
               setIsSheetsInitialized(false);
@@ -614,15 +570,11 @@ class GoogleAuthService {
   // GIS 기반 로그인 (단일 팝업에서 로그인+권한 처리) (authLogic에서 통합)
   async handleGISLogin(setIsLoading, saveLoginState, setActiveSection, initializeServices, setAccessToken) {
     try {
-      console.log('GIS 기반 로그인 시작...');
-
       // 통합 인증 시스템 초기화
       await this.initialize();
-      console.log('인증 시스템 초기화 완료');
 
       // 단일 팝업에서 로그인과 권한 요청
       await this.requestToken();
-      console.log('GIS 로그인 및 권한 요청 완료');
 
       // 로그인 상태 저장 (이미 isLoggedIn이 true로 설정되어 있으므로 스프레드시트 ID만 전달)
       saveLoginState(true);
@@ -639,7 +591,7 @@ class GoogleAuthService {
         const token = this.getAccessToken();
         setAccessToken(token);
       } catch (error) {
-        console.log('토큰 가져오기 실패:', error);
+        console.error('토큰 가져오기 실패:', error);
       }
 
     } catch (error) {
@@ -675,7 +627,6 @@ class GoogleAuthService {
 
   // 내부 로그아웃 수행 (무한 재귀 방지)
   _performLogout() {
-    console.log('GIS 로그아웃 시작...');
 
     // 로컬 상태 정리
     this.accessToken = null;
@@ -694,7 +645,6 @@ class GoogleAuthService {
     this.gapiInited = false;
 
     this.emitAuthStateChange(false);
-    console.log('GIS 로그아웃 완료');
   }
 
   // 로그인 상태 저장 (authLogic에서 통합)
