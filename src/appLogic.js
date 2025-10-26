@@ -6,27 +6,30 @@ import { useExperienceLogic } from './logic/experience/experienceLogic';
 import { usePresentationLogic } from './logic/presentation/presentationLogic';
 import { useUILogic } from './logic/ui/uiLogic';
 
-export const SECTION_LIST = [
-  'main', 'drive', 'portal', 'pptMaker', 'myPage'
-];
+export const SECTION_LIST = ['main', 'drive', 'portal', 'pptMaker', 'myPage'];
 
-function useAppLogic() {
+function useAppLogic()
+{
     // 상태 관리
     const [isLoggedIn, setIsLoggedIn] = useState(false);
-    const [activeSection, setActiveSection] = useState(() => {
+    const [activeSection, setActiveSection] = useState(() =>
+    {
       // localStorage에서 저장된 섹션 복원
       return localStorage.getItem('activeSection') || 'main';
     });
+
     // App.js 상단 상태 관리 섹션에 추가
     const [originalPeriod, setOriginalPeriod] = useState(null); // 기존 설정 기간을 저장
     const [showModal, setShowModal] = useState(false);
     const [experiences, setExperiences] = useState([]);
     const [form, setForm] = useState({ title: '', startDate: '', endDate: '', description: '' });
     const [selected, setSelected] = useState([]);
-    const [spreadsheetId, setSpreadsheetId] = useState(() => {
+    const [spreadsheetId, setSpreadsheetId] = useState(() =>
+    {
       // localStorage에서 스프레드시트 ID 복원
       return localStorage.getItem('spreadsheetId') || null;
     });
+
     const [isSheetsInitialized, setIsSheetsInitialized] = useState(false);
     const [isDriveInitialized, setIsDriveInitialized] = useState(false);
     const [isInitializing, setIsInitializing] = useState(false); // 서비스 초기화 중 상태
@@ -42,6 +45,7 @@ function useAppLogic() {
     const [deletingFileIds, setDeletingFileIds] = useState(new Set()); // 삭제 중인 파일 ID들
     const [isViewModeLoading, setIsViewModeLoading] = useState(false);
     const [isPptCreating, setIsPptCreating] = useState(false); // PPT 생성 로딩 상태
+
     // PPT 생성 진행 상황을 위한 상태
     const [pptProgress, setPptProgress] = useState(0);
     const [pptMessages, setPptMessages] = useState([]); // 스크롤링 메시지 배열
@@ -51,7 +55,8 @@ function useAppLogic() {
     const [pptTotalImages, setPptTotalImages] = useState(0);
     
     // PPT 진행 상황 업데이트 함수
-    const updatePptProgress = (progress, message, slide = 0, totalSlides = 0, image = 0, totalImages = 0) => {
+    const updatePptProgress = (progress, message, slide = 0, totalSlides = 0, image = 0, totalImages = 0) =>
+      {
         setPptProgress(progress);
         setPptCurrentSlide(slide);
         setPptTotalSlides(totalSlides);
@@ -59,8 +64,10 @@ function useAppLogic() {
         setPptTotalImages(totalImages);
         
         // 메시지를 배열에 추가 (최대 7개 유지)
-        setPptMessages(prev => {
-            const newMessage = {
+        setPptMessages(prev =>
+          {
+            const newMessage =
+            {
                 id: Date.now() + Math.random(),
                 text: message,
                 timestamp: Date.now()
@@ -69,7 +76,6 @@ function useAppLogic() {
             return newMessages.length > 7 ? newMessages.slice(-7) : newMessages;
         });
     };
-    
     
     const [currentPath, setCurrentPath] = useState([]); // 현재 경로 추적
     const [authStatus, setAuthStatus] = useState('disconnected');
@@ -81,20 +87,23 @@ function useAppLogic() {
     const [selectedImageForModal, setSelectedImageForModal] = useState(null); // 모달에 표시할 이미지
     const [imageLoadingStates, setImageLoadingStates] = useState(new Map()); // 이미지 로딩 상태 추적
     const [selectedExperience, setSelectedExperience] = useState(null); // 선택된 이력
-  const [showTemplateModal, setShowTemplateModal] = useState(false); // 템플릿 모달 표시 상태
-  const [selectedTemplateForModal, setSelectedTemplateForModal] = useState(null); // 모달에서 선택된 템플릿
-  const [selectedThemeColor, setSelectedThemeColor] = useState('light'); // 선택된 테마 색상 (light/dark)
+    const [showTemplateModal, setShowTemplateModal] = useState(false); // 템플릿 모달 표시 상태
+    const [selectedTemplateForModal, setSelectedTemplateForModal] = useState(null); // 모달에서 선택된 템플릿
+    const [selectedThemeColor, setSelectedThemeColor] = useState('light'); // 선택된 테마 색상 (light/dark)
     const [showExperienceModal, setShowExperienceModal] = useState(false); // 이력 상세 모달 표시 여부
     const [accessToken, setAccessToken] = useState('');
     const [slides, setSlides] = useState([]);
     const [presentationId, setPresentationId] = useState(null);
     const [selectedTemplate, setSelectedTemplate] = useState('');
     const [selectedExperiences, setSelectedExperiences] = useState([]);
-    const [driveViewMode, setDriveViewMode] = useState(() => {
+    const [driveViewMode, setDriveViewMode] = useState(() =>
+    {
       // localStorage에서 저장된 뷰 모드 복원
       return localStorage.getItem('driveViewMode') || 'all';
-    }); // 'all' 또는 'portfolio'
-    const [portfolioFolderId, setPortfolioFolderId] = useState(() => {
+    });// 'all' 또는 'portfolio'
+
+    const [portfolioFolderId, setPortfolioFolderId] = useState(() =>
+    {
       // localStorage에서 저장된 포트폴리오 폴더 ID 복원
       return localStorage.getItem('portfolioFolderId') || null;
     }); // 포트폴리오 폴더 ID
