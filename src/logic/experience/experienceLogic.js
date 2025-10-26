@@ -13,12 +13,9 @@ export function useExperienceLogic() {
                 setIsExperienceLoading(true);
 
                 let newImageUrls = [];
-                // 1. 새 이미지가 있다면 드라이브에 업로드
+                // 1. 새 이미지가 있다면 드라이브에 병렬 업로드 (성능 최적화)
                 if (selectedImages.length > 0) {
-                    for (const imageFile of selectedImages) {
-                        const imageUrl = await uploadImageToDrive(imageFile, form.title, driveService, authService);
-                        newImageUrls.push(imageUrl);
-                    }
+                    newImageUrls = await uploadMultipleImagesToDrive(selectedImages, form.title, driveService, authService);
                 }
 
                 const period = formatPeriod(form.startDate, form.endDate);
@@ -34,7 +31,6 @@ export function useExperienceLogic() {
                     const deletedImageUrls = originalImageUrls.filter(url => !remainingExistingUrls.includes(url));
                     
                     if (deletedImageUrls.length > 0) {
-                        console.log('삭제할 이미지 파일들:', deletedImageUrls);
                         await deleteImageFiles(deletedImageUrls, driveService);
                     }
 
@@ -124,26 +120,31 @@ export function useExperienceLogic() {
         return true;
     }
 
-    // 이미지를 구글 드라이브에 업로드하고 공개 링크 생성
-    async function uploadImageToDrive(imageFile, experienceTitle, driveService, authService) {
+    // 이미지를 구글 드라이브에 업로드하고 공개 링크 생성 (초고속 버전)
+    async function uploadImageToDrive(imageFile, experienceTitle, driveService, authService, folderCache = null) {
         if (!driveService.current) {
             throw new Error('구글 드라이브 서비스가 초기화되지 않았습니다.');
         }
 
         try {
-            // 포트폴리오 이력 폴더와 이미지 폴더 확인/생성
-            const portfolioFolder = await driveService.current.ensurePortfolioFolder();
-            const imageFolder = await driveService.current.ensureImageFolder(portfolioFolder.id);
-
-            // 이력별 이미지 폴더 생성 또는 찾기
-            const experienceFolder = await driveService.current.ensureExperienceImageFolder(experienceTitle, imageFolder.id);
+            let portfolioFolder, imageFolder, experienceFolder;
+            
+            // 폴더 캐시가 있으면 사용, 없으면 새로 생성
+            if (folderCache) {
+                ({ portfolioFolder, imageFolder, experienceFolder } = folderCache);
+            } else {
+                // 포트폴리오 이력 폴더와 이미지 폴더 확인/생성
+                portfolioFolder = await driveService.current.ensurePortfolioFolder();
+                imageFolder = await driveService.current.ensureImageFolder(portfolioFolder.id);
+                // 이력별 이미지 폴더 생성 또는 찾기
+                experienceFolder = await driveService.current.ensureExperienceImageFolder(experienceTitle, imageFolder.id);
+            }
 
             // 해당 이력 폴더의 기존 파일 목록 가져오기
             const existingFiles = await driveService.current.getFilesInFolder(experienceFolder.id);
             
             // 순차적 번호가 포함된 파일명 생성
             const finalFileName = driveService.current.generateSequentialFileName(imageFile.name, existingFiles);
-            console.log(`원본 파일명: ${imageFile.name} → 최종 파일명: ${finalFileName}`);
 
             // 이미지 파일을 해당 이력 폴더에 업로드
             const uploadResult = await driveService.current.uploadFile(
@@ -157,22 +158,21 @@ export function useExperienceLogic() {
                 throw new Error('이미지 업로드에 실패했습니다.');
             }
 
-            // 파일을 공개로 설정 (링크 공유 가능하게)
+            // 파일을 공개로 설정 (비동기로 처리하여 대기 시간 제거)
             const gapiClient = authService.current.getAuthenticatedGapiClient();
-            await gapiClient.drive.permissions.create({
+            gapiClient.drive.permissions.create({
                 fileId: uploadResult.id,
                 resource: {
                     role: 'reader',
                     type: 'anyone'
                 }
+            }).then(() => {
+            }).catch(error => {
+                console.warn('공개 권한 설정 실패 (무시됨):', error);
             });
 
-            // 권한 설정 후 충분한 대기 시간 (권한 변경이 반영되도록)
-            await new Promise(resolve => setTimeout(resolve, 3000));
-
-            // 직접 링크 URL 반환 (공개 권한이 설정된 후 더 안정적)
+            // 대기 시간 완전 제거 - 즉시 URL 반환
             const directUrl = `https://drive.google.com/uc?export=view&id=${uploadResult.id}`;
-            console.log('생성된 이미지 URL (직접 링크):', directUrl);
             return directUrl;
         } catch (error) {
             console.error('이미지 업로드 오류:', error);
@@ -180,71 +180,313 @@ export function useExperienceLogic() {
         }
     }
 
-    // 이미지 URL에서 파일 ID 추출하는 헬퍼 함수
-    function extractFileIdFromImageUrl(imageUrl) {
-        try {
-            // Base64 데이터 URL인 경우 null 반환 (로컬 파일)
-            if (imageUrl.startsWith('data:')) {
-                return null;
-            }
+    // 이미지 압축 함수 (업로드 속도 향상을 위해)
+    async function compressImage(file, maxWidth = 1920, quality = 0.8) {
+        return new Promise((resolve) => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const img = new Image();
             
-            // Google Drive 직접 링크 URL에서 파일 ID 추출
-            // 예: https://drive.google.com/uc?export=view&id=FILE_ID
-            const ucMatch = imageUrl.match(/[?&]id=([^&]+)/);
-            if (ucMatch) {
-                return ucMatch[1];
-            }
+            img.onload = () => {
+                // 원본 비율 유지하면서 크기 조정
+                const ratio = Math.min(maxWidth / img.width, maxWidth / img.height);
+                const newWidth = img.width * ratio;
+                const newHeight = img.height * ratio;
+                
+                canvas.width = newWidth;
+                canvas.height = newHeight;
+                
+                // 이미지 그리기
+                ctx.drawImage(img, 0, 0, newWidth, newHeight);
+                
+                // 압축된 이미지를 Blob으로 변환
+                canvas.toBlob((blob) => {
+                    const compressedFile = new File([blob], file.name, {
+                        type: file.type,
+                        lastModified: Date.now()
+                    });
+                    resolve(compressedFile);
+                }, file.type, quality);
+            };
             
-            // Google Drive 썸네일 URL에서 파일 ID 추출
-            // 예: https://drive.google.com/thumbnail?id=FILE_ID&sz=w400
-            const thumbnailMatch = imageUrl.match(/thumbnail\?id=([^&]+)/);
-            if (thumbnailMatch) {
-                return thumbnailMatch[1];
-            }
-            
-            // Google Drive 파일 URL에서 파일 ID 추출
-            // 예: https://drive.google.com/file/d/FILE_ID/view
-            const fileMatch = imageUrl.match(/\/file\/d\/([^\/]+)/);
-            if (fileMatch) {
-                return fileMatch[1];
-            }
-            
-            // Google Drive 공유 링크에서 파일 ID 추출
-            // 예: https://drive.google.com/open?id=FILE_ID
-            const openMatch = imageUrl.match(/open\?id=([^&]+)/);
-            if (openMatch) {
-                return openMatch[1];
-            }
-            
-            // 일반적인 파일 ID 패턴 (25자 이상의 영숫자와 하이픈)
-            const generalMatch = imageUrl.match(/[-\w]{25,}/);
-            if (generalMatch) {
-                return generalMatch[0];
-            }
-            
-            return null;
-        } catch (error) {
-            console.error('파일 ID 추출 오류:', error);
+            img.src = URL.createObjectURL(file);
+        });
+    }
+
+    // 폴더 구조 캐시 (전역 캐시)
+    let folderCache = null;
+    let cacheTimestamp = 0;
+    const CACHE_DURATION = 30 * 60 * 1000; // 30분으로 연장
+    let isPreloading = false; // 프리로딩 중인지 확인
+
+    // 폴더 구조를 미리 프리로딩하는 함수
+    async function preloadFolderStructure(driveService) {
+        // driveService가 유효한지 확인
+        if (!driveService || !driveService.current) {
+            console.warn('driveService가 초기화되지 않았습니다. 프리로딩을 건너뜁니다.');
             return null;
         }
+
+        if (isPreloading || folderCache) {
+            return folderCache;
+        }
+
+        isPreloading = true;
+        const startTime = Date.now();
+
+        try {
+            // 기본 폴더 구조만 미리 생성
+            const portfolioFolder = await driveService.current.ensurePortfolioFolder();
+            const imageFolder = await driveService.current.ensureImageFolder(portfolioFolder.id);
+            
+            folderCache = { 
+                portfolioFolder, 
+                imageFolder, 
+                experienceFolder: null // 이력별 폴더는 필요할 때 생성
+            };
+            cacheTimestamp = Date.now();
+            
+            const endTime = Date.now();
+            const duration = ((endTime - startTime) / 1000).toFixed(2);
+        } catch (error) {
+            console.error('폴더 구조 프리로딩 실패:', error);
+        } finally {
+            isPreloading = false;
+        }
+
+        return folderCache;
+    }
+
+    // 폴더 구조를 미리 캐싱하는 함수
+    async function ensureFolderCache(experienceTitle, driveService) {
+        const now = Date.now();
+        
+        // 캐시가 유효한지 확인 (30분 이내)
+        if (folderCache && (now - cacheTimestamp) < CACHE_DURATION) {
+            
+            // 이력별 폴더가 없으면 생성
+            if (!folderCache.experienceFolder) {
+                folderCache.experienceFolder = await driveService.current.ensureExperienceImageFolder(
+                    experienceTitle, 
+                    folderCache.imageFolder.id
+                );
+            }
+            
+            return folderCache;
+        }
+
+        const startTime = Date.now();
+        
+        // 포트폴리오와 이미지 폴더는 병렬로 처리
+        const [portfolioFolder, imageFolder] = await Promise.all([
+            driveService.current.ensurePortfolioFolder(),
+            driveService.current.ensureImageFolder(null).then(async (folder) => {
+                if (!folder) {
+                    const portfolio = await driveService.current.ensurePortfolioFolder();
+                    return await driveService.current.ensureImageFolder(portfolio.id);
+                }
+                return folder;
+            })
+        ]);
+        
+        // 이력별 폴더는 별도로 생성
+        const experienceFolder = await driveService.current.ensureExperienceImageFolder(
+            experienceTitle, 
+            imageFolder.id
+        );
+        
+        folderCache = { portfolioFolder, imageFolder, experienceFolder };
+        cacheTimestamp = now;
+        
+        const endTime = Date.now();
+        const duration = ((endTime - startTime) / 1000).toFixed(2);
+        return folderCache;
+    }
+
+    // 단일 이미지 업로드 함수
+    async function uploadSingleImageFast(imageFile, experienceTitle, driveService, authService) {
+        if (!driveService.current) {
+            throw new Error('구글 드라이브 서비스가 초기화되지 않았습니다.');
+        }
+
+        try {
+            const startTime = Date.now();
+            
+            // 폴더 구조를 최적화된 방식으로 생성
+            let experienceFolder;
+            
+            // 캐시된 폴더가 있으면 즉시 사용
+            if (folderCache && folderCache.experienceFolder && (Date.now() - cacheTimestamp) < CACHE_DURATION) {
+                experienceFolder = folderCache.experienceFolder;
+            } else {
+                // 병렬로 폴더 구조 생성
+                const [portfolioFolder, imageFolder] = await Promise.all([
+                    driveService.current.ensurePortfolioFolder(),
+                    driveService.current.ensureImageFolder()
+                ]);
+                
+                let finalImageFolder = imageFolder;
+                
+                // 이미지 폴더가 없으면 포트폴리오 폴더 하위에 생성
+                if (!imageFolder) {
+                    finalImageFolder = await driveService.current.ensureImageFolder(portfolioFolder.id);
+                }
+                
+                experienceFolder = await driveService.current.ensureExperienceImageFolder(experienceTitle, finalImageFolder.id);
+                
+                // 캐시 업데이트
+                folderCache = { portfolioFolder, imageFolder: finalImageFolder, experienceFolder };
+                cacheTimestamp = Date.now();
+            }
+            
+            // 파일명을 타임스탬프 기반으로 단순화
+            const timestamp = Date.now();
+            const fileExtension = imageFile.name.split('.').pop() || 'jpg';
+            const finalFileName = `${experienceTitle}_${timestamp}.${fileExtension}`;
+
+            // 이미지 압축 (500KB 이상인 경우 압축)
+            let processedFile = imageFile;
+            if (imageFile.size > 500 * 1024) {
+                processedFile = await compressImage(imageFile, 1200, 0.6); // 더 작은 크기, 더 낮은 품질
+            }
+
+            // 파일 업로드
+            const uploadResult = await driveService.current.uploadFile(
+                finalFileName,
+                processedFile,
+                processedFile.type,
+                experienceFolder.id
+            );
+
+            if (!uploadResult.id) {
+                throw new Error('이미지 업로드에 실패했습니다.');
+            }
+
+            const directUrl = `https://drive.google.com/uc?export=view&id=${uploadResult.id}`;
+            return directUrl;
+        } catch (error) {
+            console.error('단일 이미지 업로드 오류:', error);
+            throw new Error('이미지를 구글 드라이브에 업로드하는데 실패했습니다.');
+        }
+    }
+
+    // 여러 이미지를 병렬로 업로드하는 함수
+    async function uploadMultipleImagesToDrive(imageFiles, experienceTitle, driveService, authService) {
+        if (!driveService.current) {
+            throw new Error('구글 드라이브 서비스가 초기화되지 않았습니다.');
+        }
+
+        if (!imageFiles || imageFiles.length === 0) {
+            return [];
+        }
+
+        // 단일 이미지인 경우 최적화된 단일 업로드 사용
+        if (imageFiles.length === 1) {
+            return [await uploadSingleImageFast(imageFiles[0], experienceTitle, driveService, authService)];
+        }
+
+        try {
+            const startTime = Date.now();
+            
+            // 폴더 구조 캐시 사용
+            const folderCache = await ensureFolderCache(experienceTitle, driveService);
+            const { experienceFolder } = folderCache;
+            
+            // 해당 이력 폴더의 기존 파일 목록을 한 번만 가져오기
+            const existingFiles = await driveService.current.getFilesInFolder(experienceFolder.id);
+            
+            // 이미지 압축을 병렬로 처리 (대용량 이미지의 경우)
+            const compressionPromises = imageFiles.map(async (imageFile) => {
+                // 2MB 이상의 이미지만 압축
+                if (imageFile.size > 2 * 1024 * 1024) {
+                    return await compressImage(imageFile);
+                }
+                return imageFile;
+            });
+            
+            const compressedFiles = await Promise.all(compressionPromises);
+            
+            // 파일명을 미리 생성하여 중복 확인 최적화
+            const filesWithNames = compressedFiles.map(imageFile => {
+                const finalFileName = driveService.current.generateSequentialFileName(imageFile.name, existingFiles);
+                return {
+                    name: finalFileName,
+                    file: imageFile,
+                    mimeType: imageFile.type
+                };
+            });
+            
+            // 구글 드라이브 서비스의 다중 파일 업로드 사용
+            const uploadResults = await driveService.current.uploadMultipleFiles(filesWithNames, experienceFolder.id);
+            
+            // 업로드된 파일들의 공개 URL 생성
+            const imageUrls = uploadResults
+                .filter(result => result.id)
+                .map(result => `https://drive.google.com/uc?export=view&id=${result.id}`);
+            
+            return imageUrls;
+        } catch (error) {
+            console.error('다중 이미지 업로드 오류:', error);
+            throw new Error('이미지들을 구글 드라이브에 업로드하는데 실패했습니다.');
+        }
+    }
+
+    // 이미지 URL에서 파일 ID 추출하는 헬퍼 함수
+    function extractFileIdFromImageUrl(imageUrl) {
+        // Base64 데이터 URL인 경우 null 반환 (로컬 파일)
+        if (imageUrl.startsWith('data:')) {
+            return null;
+        }
+        
+        // Google Drive 직접 링크 URL에서 파일 ID 추출
+        // 예: https://drive.google.com/uc?export=view&id=FILE_ID
+        const ucMatch = imageUrl.match(/[?&]id=([^&]+)/);
+        if (ucMatch) {
+            return ucMatch[1];
+        }
+        
+        // Google Drive 썸네일 URL에서 파일 ID 추출
+        // 예: https://drive.google.com/thumbnail?id=FILE_ID&sz=w400
+        const thumbnailMatch = imageUrl.match(/thumbnail\?id=([^&]+)/);
+        if (thumbnailMatch) {
+            return thumbnailMatch[1];
+        }
+        
+        // Google Drive 파일 URL에서 파일 ID 추출
+        // 예: https://drive.google.com/file/d/FILE_ID/view
+        const fileMatch = imageUrl.match(/\/file\/d\/([^\/]+)/);
+        if (fileMatch) {
+            return fileMatch[1];
+        }
+        
+        // Google Drive 공유 링크에서 파일 ID 추출
+        // 예: https://drive.google.com/open?id=FILE_ID
+        const openMatch = imageUrl.match(/open\?id=([^&]+)/);
+        if (openMatch) {
+            return openMatch[1];
+        }
+        
+        // 일반적인 파일 ID 패턴 (25자 이상의 영숫자와 하이픈)
+        const generalMatch = imageUrl.match(/[-\w]{25,}/);
+        if (generalMatch) {
+            return generalMatch[0];
+        }
+        
+        return null;
     }
 
     // 이미지 파일들을 삭제하는 헬퍼 함수
     async function deleteImageFiles(imageUrls, driveService) {
         if (!imageUrls || imageUrls.length === 0 || !driveService.current) {
-            console.log('삭제할 이미지가 없거나 드라이브 서비스가 없습니다.');
             return;
         }
         
-        console.log(`총 ${imageUrls.length}개의 이미지 파일 삭제 시작`);
         
         const deletePromises = imageUrls.map(async (imageUrl) => {
             try {
                 const fileId = extractFileIdFromImageUrl(imageUrl);
                 if (fileId) {
-                    console.log('이미지 파일 삭제 시도:', fileId, 'URL:', imageUrl);
                     await driveService.current.deleteFile(fileId);
-                    console.log('이미지 파일 삭제 완료:', fileId);
                     return { success: true, fileId, url: imageUrl };
                 } else {
                     console.warn('파일 ID를 추출할 수 없습니다:', imageUrl);
@@ -260,7 +502,6 @@ export function useExperienceLogic() {
         const successful = results.filter(r => r.status === 'fulfilled' && r.value.success).length;
         const failed = results.length - successful;
         
-        console.log(`이미지 파일 삭제 완료: 성공 ${successful}개, 실패 ${failed}개`);
         
         if (failed > 0) {
             console.warn('일부 이미지 파일 삭제에 실패했습니다. 실패한 파일들:', 
@@ -271,17 +512,13 @@ export function useExperienceLogic() {
     // 이력 폴더를 삭제하는 헬퍼 함수
     async function deleteExperienceFolder(experienceTitle, driveService, portfolioFolderId) {
         if (!experienceTitle || !driveService.current || !portfolioFolderId) {
-            console.log('폴더 삭제 조건 미충족:', { experienceTitle, hasDriveService: !!driveService.current, portfolioFolderId });
             return;
         }
         
         try {
-            console.log('포트폴리오 폴더 ID:', portfolioFolderId);
-            console.log('검색할 이력 제목:', experienceTitle);
             
             // 포트폴리오 이력 폴더 내에서 image 폴더 찾기
             const files = await driveService.current.getFilesInFolder(portfolioFolderId);
-            console.log('포트폴리오 폴더 내 파일들:', files.map(f => ({ name: f.name, mimeType: f.mimeType, id: f.id })));
             
             const imageFolder = files.find(file => 
                 file.name === 'image' && 
@@ -289,15 +526,12 @@ export function useExperienceLogic() {
             );
             
             if (!imageFolder) {
-                console.log('image 폴더를 찾을 수 없습니다');
                 return;
             }
             
-            console.log('image 폴더 발견:', imageFolder.name, imageFolder.id);
             
             // image 폴더 내에서 해당 이력 폴더 찾기
             const imageFiles = await driveService.current.getFilesInFolder(imageFolder.id);
-            console.log('image 폴더 내 파일들:', imageFiles.map(f => ({ name: f.name, mimeType: f.mimeType, id: f.id })));
             
             // 정확한 이름으로 먼저 찾기
             let experienceFolder = imageFiles.find(file => 
@@ -322,18 +556,8 @@ export function useExperienceLogic() {
             }
             
             if (experienceFolder) {
-                console.log('이력 폴더 발견:', experienceFolder.name, experienceFolder.id);
-                console.log('이력 폴더 삭제 시도:', experienceFolder.name, experienceFolder.id);
                 await driveService.current.deleteFile(experienceFolder.id);
-                console.log('이력 폴더 삭제 완료:', experienceFolder.name);
             } else {
-                console.log('삭제할 이력 폴더를 찾을 수 없습니다:', experienceTitle);
-                console.log('image 폴더 내 사용 가능한 폴더들:', imageFiles.filter(f => f.mimeType === 'application/vnd.google-apps.folder').map(f => f.name));
-                console.log('검색 조건:', { 
-                    exactMatch: experienceTitle,
-                    partialMatch: `contains ${experienceTitle}`,
-                    caseInsensitive: experienceTitle.toLowerCase()
-                });
             }
         } catch (error) {
             console.error('이력 폴더 삭제 실패:', experienceTitle, error);
@@ -377,13 +601,11 @@ export function useExperienceLogic() {
 
             // 이미지 파일들 삭제
             if (imagesToDelete.length > 0) {
-                console.log('삭제할 이미지 파일들:', imagesToDelete);
                 await deleteImageFiles(imagesToDelete, driveService);
             }
 
             // 이력 폴더들 삭제
             if (foldersToDelete.length > 0) {
-                console.log('삭제할 이력 폴더들:', foldersToDelete);
                 const folderDeletePromises = foldersToDelete.map(folderName => 
                     deleteExperienceFolder(folderName, driveService, portfolioFolderId)
                 );
@@ -428,17 +650,13 @@ export function useExperienceLogic() {
 
             // 이미지 파일들 삭제
             if (imagesToDelete.length > 0) {
-                console.log('삭제할 이미지 파일들:', imagesToDelete);
                 await deleteImageFiles(imagesToDelete, driveService);
             }
 
             // 이력 폴더 삭제
             if (expToDelete.title) {
-                console.log('개별 이력 삭제 - 삭제할 이력 폴더:', expToDelete.title);
-                console.log('개별 이력 삭제 - 이력 정보:', expToDelete);
                 await deleteExperienceFolder(expToDelete.title, driveService, portfolioFolderId);
             } else {
-                console.log('개별 이력 삭제 - 이력 제목이 없습니다:', expToDelete);
             }
 
             // 로컬 상태에서도 삭제
@@ -464,6 +682,11 @@ export function useExperienceLogic() {
         formatPeriod,
         validateDates,
         uploadImageToDrive,
+        uploadMultipleImagesToDrive,
+        uploadSingleImageFast,
+        compressImage,
+        ensureFolderCache,
+        preloadFolderStructure,
         extractFileIdFromImageUrl,
         deleteImageFiles,
         deleteExperienceFolder,

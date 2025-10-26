@@ -424,17 +424,9 @@ function App() {
                                                             return;
                                                           }
                                                         
-                                                          try {
-                                                            e.target.dataset.converting = 'true';
-                                                            await retryImageLoad(e.target, exp.imageUrls[0], 0, setImageLoadingState, setImageErrorState, driveService);
-                                                          } catch (error) {
-                                                            console.error('이미지 로딩 재시도 실패:', error);
-                                                            // 에러 상태 표시
-                                                            setImageErrorState(`${exp.imageUrls[0]}_${exp.title} 이미지 1`);
-                                                            e.target.style.display = 'none';
-                                                          } finally {
-                                                            e.target.dataset.converting = 'false';
-                                                          }
+                                                          e.target.dataset.converting = 'true';
+                                                          await retryImageLoad(e.target, exp.imageUrls[0], 0, setImageLoadingState, setImageErrorState, driveService);
+                                                          e.target.dataset.converting = 'false';
                                                         }}
                                                     />
                                                   </div>
@@ -581,12 +573,7 @@ function App() {
                                                     }));
                                                   }}
                                                   onBlur={async e => {
-                                                    try {
-                                                      await updateElementTextAndLocal(presentationId, elId, e.target.value, accessToken);
-                                                    } catch (err) {
-                                                      console.error('슬라이드 텍스트 업데이트 실패', err);
-                                                      alert('텍스트 업데이트 실패: ' + (err.message || err));
-                                                    }
+                                                    await updateElementTextAndLocal(presentationId, elId, e.target.value, accessToken);
                                                   }}
                                               />
 
@@ -595,12 +582,7 @@ function App() {
                                                     onChange={async (ev) => {
                                                       const fontFamily = ev.target.value;
                                                       if (!fontFamily) return;
-                                                      try {
-                                                        await updateElementStyle(presentationId, elId, { fontFamily }, accessToken);
-                                                      } catch (err) {
-                                                        console.error(err);
-                                                        alert('글꼴 변경 실패');
-                                                      }
+                                                      await updateElementStyle(presentationId, elId, { fontFamily }, accessToken);
                                                     }}
                                                 >
                                                   <option value="">글꼴</option>
@@ -617,12 +599,7 @@ function App() {
                                                     onBlur={async (ev) => {
                                                       const size = Number(ev.target.value);
                                                       if (!size || size <= 0) return;
-                                                      try {
-                                                        await updateElementStyle(presentationId, elId, { fontSize: { magnitude: size, unit: 'PT' } }, accessToken);
-                                                      } catch (err) {
-                                                        console.error(err);
-                                                        alert('글자 크기 변경 실패');
-                                                      }
+                                                      await updateElementStyle(presentationId, elId, { fontSize: { magnitude: size, unit: 'PT' } }, accessToken);
                                                     }}
                                                 />
                                                 <input
@@ -633,12 +610,7 @@ function App() {
                                                       const g = parseInt(hex.slice(3, 5), 16) / 255;
                                                       const b = parseInt(hex.slice(5, 7), 16) / 255;
                                                       const colorObj = { foregroundColor: { opaqueColor: { rgbColor: { red: r, green: g, blue: b } } } };
-                                                      try {
-                                                        await updateElementStyle(presentationId, elId, colorObj, accessToken);
-                                                      } catch (err) {
-                                                        console.error(err);
-                                                        alert('글자 색상 변경 실패');
-                                                      }
+                                                      await updateElementStyle(presentationId, elId, colorObj, accessToken);
                                                     }}
                                                 />
                                               </div>
@@ -796,10 +768,7 @@ function App() {
                                       )}
                                       <h4>
                                         {currentPath.length > 0 ? currentPath[currentPath.length - 1].name :
-                                            driveViewMode === 'all' ? '전체 파일' : '포트폴리오 폴더 내용'}
-                                        {driveViewMode === 'portfolio' && portfolioFolderId && currentPath.length === 0 && (
-                                            <small className="ms-2 white-text">(포트폴리오 이력 폴더)</small>
-                                        )}
+                                            driveViewMode === 'all' ? '전체 파일' : '포트폴리오 폴더'}
                                       </h4>
                                     </div>
                                     <div>
@@ -1157,17 +1126,9 @@ function App() {
                                                             return;
                                                           }
                                                         
-                                                          try {
-                                                            e.target.dataset.converting = 'true';
-                                                            await retryImageLoad(e.target, exp.imageUrls[0], 0, setImageLoadingState, setImageErrorState, driveService);
-                                                          } catch (error) {
-                                                            console.error('이미지 로딩 재시도 실패:', error);
-                                                            // 에러 상태 표시
-                                                            setImageErrorState(`${exp.imageUrls[0]}_${exp.title} 이미지 1`);
-                                                            e.target.style.display = 'none';
-                                                          } finally {
-                                                            e.target.dataset.converting = 'false';
-                                                          }
+                                                          e.target.dataset.converting = 'true';
+                                                          await retryImageLoad(e.target, exp.imageUrls[0], 0, setImageLoadingState, setImageErrorState, driveService);
+                                                          e.target.dataset.converting = 'false';
                                                         }}
                                                     />
                                                   </div>
@@ -1361,23 +1322,9 @@ function App() {
                                             style={{ width: '100%', height: '150px', objectFit: 'cover' }}
                                             onError={async (e) => {
                                               if (e.target.dataset.converting === 'true') { return; }
-                                              try {
-                                                e.target.dataset.converting = 'true';
-                                                await retryImageLoad(e.target, preview, 0, setImageLoadingState, setImageErrorState, driveService);
-                                              } catch (error) {
-                                                console.error('이력 수정 모달 이미지 로딩 재시도 실패:', error);
-                                                // 에러 상태 표시
-                                                setImageErrorState(`${preview}_이미지 ${index + 1}`);
-                                                e.target.style.display = 'none';
-                                                // 에러 메시지 표시
-                                                const errorDiv = document.createElement('div');
-                                                errorDiv.className = 'experience-image-error';
-                                                errorDiv.style.width = '100%';
-                                                errorDiv.style.height = '150px';
-                                                e.target.parentNode.appendChild(errorDiv);
-                                              } finally {
-                                                e.target.dataset.converting = 'false';
-                                              }
+                                              e.target.dataset.converting = 'true';
+                                              await retryImageLoad(e.target, preview, 0, setImageLoadingState, setImageErrorState, driveService);
+                                              e.target.dataset.converting = 'false';
                                             }}
                                         />
                                         <button
@@ -1478,16 +1425,9 @@ function App() {
                             return;
                           }
                           
-                          try {
-                            e.target.dataset.converting = 'true';
-                            await retryImageLoad(e.target, selectedImageForModal.url, 0, setImageLoadingState, setImageErrorState, driveService);
-                          } catch (error) {
-                            console.error('모달 이미지 로딩 재시도 실패:', error);
-                            e.target.style.display = 'none';
-                            alert('이미지를 불러올 수 없습니다.');
-                          } finally {
-                            e.target.dataset.converting = 'false';
-                          }
+                          e.target.dataset.converting = 'true';
+                          await retryImageLoad(e.target, selectedImageForModal.url, 0, setImageLoadingState, setImageErrorState, driveService);
+                          e.target.dataset.converting = 'false';
                         }}
                     />
                   </div>
@@ -1589,15 +1529,9 @@ function App() {
                                         return;
                                       }
                                       
-                                      try {
-                                        e.target.dataset.converting = 'true';
-                                        await retryImageLoad(e.target, imageUrl, 0, setImageLoadingState, setImageErrorState, driveService);
-                                      } catch (error) {
-                                        console.error('이력 모달 이미지 로딩 재시도 실패:', error);
-                                        e.target.style.display = 'none';
-                                      } finally {
-                                        e.target.dataset.converting = 'false';
-                                      }
+                                      e.target.dataset.converting = 'true';
+                                      await retryImageLoad(e.target, imageUrl, 0, setImageLoadingState, setImageErrorState, driveService);
+                                      e.target.dataset.converting = 'false';
                                     }}
                                   />
                                 </div>

@@ -123,12 +123,10 @@ function useAppLogic()
     // 서비스들 초기화
     async function initializeServices() {
       try {
-        console.log('서비스들 초기화 시작...');
         setIsInitializing(true);
 
         // 인증 상태 확인
         if (!authService.current.isAuthenticated()) {
-          console.log('인증이 완료되지 않았습니다. 서비스 초기화를 건너뜁니다.');
           // 토큰이 없으면 서비스 초기화를 건너뜀
           setAuthStatus('disconnected');
           setIsSheetsInitialized(false);
@@ -140,27 +138,22 @@ function useAppLogic()
         sheetsService.current = new GoogleSheetsService(authService.current);
         driveService.current = new GoogleDriveService(authService.current);
 
-        console.log('서비스 인스턴스 생성 완료');
 
         // 기존 스프레드시트가 있는지 확인하고 없으면 생성
         let currentSpreadsheetId = spreadsheetId;
 
         if (currentSpreadsheetId) {
-          console.log('기존 스프레드시트 ID 확인 중:', currentSpreadsheetId);
 
           try {
             // 기존 시트가 실제로 존재하는지 확인
             const exists = await sheetsService.current.checkSpreadsheetExists(currentSpreadsheetId);
             if (!exists) {
-              console.log('기존 스프레드시트가 존재하지 않습니다. 상태를 초기화합니다...');
               currentSpreadsheetId = null;
               setSpreadsheetId(null);
               localStorage.removeItem('spreadsheetId');
             } else {
-              console.log('기존 스프레드시트가 유효합니다.');
             }
           } catch (error) {
-            console.log('기존 스프레드시트 확인 중 오류, 상태를 초기화합니다:', error);
             currentSpreadsheetId = null;
             setSpreadsheetId(null);
             localStorage.removeItem('spreadsheetId');
@@ -168,14 +161,12 @@ function useAppLogic()
         }
 
         if (!currentSpreadsheetId) {
-          console.log('기존 포트폴리오 시트 파일 검색 중...');
 
           try {
             // 포트폴리오 이력 폴더가 있는지 확인 (생성하지 않고 찾기만)
             const portfolioFolder = await driveService.current.findFolder('포트폴리오 이력');
 
             if (portfolioFolder) {
-              console.log('기존 포트폴리오 이력 폴더 발견:', portfolioFolder.id);
 
               // 포트폴리오 이력 폴더 안에서 기존 시트 파일 검색
               const existingFiles = await driveService.current.listFiles(50, portfolioFolder.id);
@@ -185,7 +176,6 @@ function useAppLogic()
               );
 
               if (portfolioFile) {
-                console.log('기존 포트폴리오 시트 파일 발견:', portfolioFile.id);
                 // 기존 파일 ID 저장
                 currentSpreadsheetId = portfolioFile.id;
                 setSpreadsheetId(currentSpreadsheetId);
@@ -201,12 +191,10 @@ function useAppLogic()
                 localStorage.setItem('portfolioFolderId', portfolioFolder.id);
               }
             } else {
-              console.log('포트폴리오 이력 폴더가 없습니다. 시트 생성 시 함께 생성됩니다.');
             }
 
           } catch (error) {
             console.error('기존 파일 확인 중 오류:', error);
-            console.log('시트 생성 시 폴더도 함께 생성됩니다.');
           }
         }
 
@@ -226,14 +214,32 @@ function useAppLogic()
           await loadDriveFiles();
         }
 
+        // 폴더 구조 프리로딩 (이미지 업로드 속도 향상을 위해)
+        // driveService가 완전히 초기화된 후에 실행
+        const preloadFolders = () => {
+          if (driveService.current) {
+            experienceLogic.preloadFolderStructure(driveService)
+              .then(() => {
+              })
+              .catch(error => {
+                console.warn('폴더 구조 프리로딩 실패 (무시됨):', error);
+              });
+          } else {
+            // driveService가 아직 초기화되지 않았으면 500ms 후 다시 시도
+            setTimeout(preloadFolders, 500);
+          }
+        };
+        
+        // 1초 후에 프리로딩 시작
+        setTimeout(preloadFolders, 1000);
+
         // 기존 이미지 파일들에 공개 권한 설정 (백그라운드에서 실행, 중복 방지)
         if (driveService.current && !driveService.current._permissionSettingScheduled) {
           const currentDriveService = driveService.current; // 안전한 참조 저장
           currentDriveService._permissionSettingScheduled = true;
-          console.log('기존 이미지 파일들 공개 권한 설정 시작...');
           currentDriveService.setExistingImagesPublic()
             .then(count => {
-              console.log(`기존 이미지 ${count}개에 공개 권한 설정 완료`);
+              // 로그는 googleDriveService에서 출력하므로 중복 제거
               
               // 권한 설정 완료 - 이미지는 필요할 때 로딩됨
             })
@@ -248,7 +254,6 @@ function useAppLogic()
             });
         }
 
-        console.log('모든 서비스 초기화 완료');
 
       } catch (error) {
         console.error('서비스 초기화 오류:', error);
@@ -321,7 +326,6 @@ function useAppLogic()
     // 드라이브 파일 목록 로드 (통합된 driveService 사용)
     async function loadDriveFiles(parentId = null) {
       if (!driveService.current) {
-        console.log('driveService가 초기화되지 않았습니다.');
         return;
       }
       await driveService.current.loadDriveFiles(driveViewMode, portfolioFolderId, spreadsheetId, sheetsService, setDriveFiles, setIsDriveLoading, setSpreadsheetId, parentId);
@@ -401,7 +405,6 @@ function useAppLogic()
     // 시트에서 이력 데이터 로드 (통합된 sheetsService 사용)
     async function loadExperiencesFromSheets(spreadsheetIdToUse = null) {
       if (!sheetsService.current) {
-        console.log('sheetsService가 초기화되지 않았습니다.');
         return;
       }
       await sheetsService.current.loadExperiencesFromSheets(spreadsheetIdToUse || spreadsheetId, setExperiences, null, false);
@@ -410,7 +413,6 @@ function useAppLogic()
     // 구글 시트 데이터 새로고침 (통합된 sheetsService 사용)
     async function refreshSheetsData() {
       if (!sheetsService.current) {
-        console.log('sheetsService가 초기화되지 않았습니다.');
         return;
       }
       await sheetsService.current.refreshSheetsData(loadExperiencesFromSheets, setIsExperienceLoading);
@@ -419,7 +421,6 @@ function useAppLogic()
     // 시트 생성 (통합된 sheetsService 사용)
     async function createSheet() {
       if (!sheetsService.current) {
-        console.log('sheetsService가 초기화되지 않았습니다.');
         return;
       }
       await sheetsService.current.createSheet(driveService, setPortfolioFolderId, setSpreadsheetId, loadDriveFiles, setIsSheetLoading);
@@ -428,7 +429,6 @@ function useAppLogic()
     // 시트 삭제 (통합된 sheetsService 사용)
     async function deleteSheet() {
       if (!sheetsService.current) {
-        console.log('sheetsService가 초기화되지 않았습니다.');
         return;
       }
       await sheetsService.current.deleteSheet(spreadsheetId, driveService, portfolioFolderId, setSpreadsheetId, setPortfolioFolderId, setExperiences, loadDriveFiles, setIsSheetLoading);
@@ -506,9 +506,7 @@ function useAppLogic()
         if (portfolioFolder) {
           setPortfolioFolderId(portfolioFolder.id);
           localStorage.setItem('portfolioFolderId', portfolioFolder.id);
-          console.log('기존 포트폴리오 폴더 ID 설정됨:', portfolioFolder.id);
         } else {
-          console.log('포트폴리오 폴더가 없습니다. 시트 생성 시 함께 생성됩니다.');
         }
       } catch (error) {
         console.error('포트폴리오 폴더 확인 오류:', error);
@@ -545,20 +543,17 @@ function useAppLogic()
       const initializeApp = async () => {
         // 중복 실행 방지
         if (window._appInitializing) {
-          console.log('앱 초기화가 이미 진행 중입니다.');
           return;
         }
         
         try {
           window._appInitializing = true;
-          console.log('앱 초기화 시작...');
 
           // localStorage에서 로그인 상태 확인
           const savedLoginState = localStorage.getItem('isLoggedIn');
           const savedSpreadsheetId = localStorage.getItem('spreadsheetId');
 
           if (savedLoginState === 'true' && savedSpreadsheetId) {
-            console.log('저장된 로그인 상태 발견, 서비스 초기화 시작...');
 
             // 로그인 상태를 먼저 설정
             setIsLoggedIn(true);
@@ -567,7 +562,6 @@ function useAppLogic()
             // 통합 인증 시스템 초기화
             await initializeGoogleAuth();
           } else {
-            console.log('저장된 로그인 상태가 없습니다.');
             // 로그인 상태가 없으면 명시적으로 false로 설정
             setIsLoggedIn(false);
           }
