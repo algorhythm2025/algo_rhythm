@@ -2649,3 +2649,213 @@ a.btn:hover,
     font-size: 18px;
     font-weight: bold;
 }
+
+/* 페이지네이션 스타일 */
+.pagination-container {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+    padding: 20px 0;
+}
+
+.pagination {
+    display: flex;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    gap: 4px;
+    align-items: center;
+}
+
+.page-item {
+    display: flex;
+}
+
+.page-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 40px;
+    height: 40px;
+    padding: 8px 12px;
+    background-color: rgba(255, 255, 255, 0.15) !important;
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    border-radius: 8px;
+    color: #e0e0e0 !important;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.page-link:hover {
+    background-color: rgba(255, 255, 255, 0.25) !important;
+    border-color: rgba(255, 255, 255, 0.4) !important;
+    color: #ffffff !important;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(255, 255, 255, 0.1);
+}
+
+.page-item.active .page-link {
+    background-color: #007bff !important;
+    border-color: #007bff !important;
+    color: #ffffff !important;
+    box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
+}
+
+.page-item.disabled .page-link {
+    background-color: rgba(255, 255, 255, 0.05) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    color: rgba(200, 200, 200, 0.4) !important;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.page-item.disabled .page-link:hover {
+    background-color: rgba(255, 255, 255, 0.05) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    transform: none;
+}
+
+/* 이력 설명 텍스트 말줄임 스타일 */
+.experience-description {
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: normal;
+    max-width: 100%;
+    line-height: 1.4;
+    word-wrap: break-word;
+    word-break: break-word;
+}
+
+/* 이력 아이템 레이아웃 안정화 */
+.file-item {
+    display: flex;
+    align-items: flex-start;
+    min-height: 80px;
+}
+
+.file-item .flex-grow-1 {
+    flex: 1;
+    min-width: 0; /* flexbox에서 텍스트 오버플로우 방지 */
+    margin-right: 10px;
+}
+
+.file-item .experience-description {
+    max-width: calc(100% - 20px); /* 여백 확보 */
+}
+
+/* 이력 상세 모달에서의 설명은 전체 표시 */
+.experience-modal .experience-description {
+    display: block;
+    -webkit-line-clamp: unset;
+    line-clamp: unset;
+    -webkit-box-orient: unset;
+    overflow: visible;
+    text-overflow: unset;
+    white-space: normal;
+}
+
+/* 페이지네이션 강제 스타일 적용 */
+.pagination .page-item .page-link {
+    color: #e0e0e0 !important;
+    background-color: rgba(255, 255, 255, 0.15) !important;
+    border-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+.pagination .page-item:not(.active):not(.disabled) .page-link {
+    color: #e0e0e0 !important;
+    background-color: rgba(255, 255, 255, 0.15) !important;
+    border-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+.pagination .page-item:not(.active):not(.disabled) .page-link:hover {
+    color: #ffffff !important;
+    background-color: rgba(255, 255, 255, 0.25) !important;
+    border-color: rgba(255, 255, 255, 0.4) !important;
+}
+
+.pagination .page-item.active .page-link {
+    color: #ffffff !important;
+    background-color: #007bff !important;
+    border-color: #007bff !important;
+}
+
+.pagination .page-item.disabled .page-link {
+    color: rgba(200, 200, 200, 0.4) !important;
+    background-color: rgba(255, 255, 255, 0.05) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* 페이지네이션 버튼 스타일 */
+.page-link[aria-label="이전 페이지"],
+.page-link[aria-label="다음 페이지"] {
+    font-size: 18px;
+    font-weight: bold;
+    min-width: 40px;
+    color: #e0e0e0 !important;
+    background-color: rgba(255, 255, 255, 0.15) !important;
+    border-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+.page-link[aria-label="이전 페이지"]:hover,
+.page-link[aria-label="다음 페이지"]:hover {
+    color: #ffffff !important;
+    background-color: rgba(255, 255, 255, 0.25) !important;
+    border-color: rgba(255, 255, 255, 0.4) !important;
+    box-shadow: 0 2px 8px rgba(255, 255, 255, 0.1) !important;
+}
+
+.page-item.disabled .page-link[aria-label="이전 페이지"],
+.page-item.disabled .page-link[aria-label="다음 페이지"] {
+    color: rgba(200, 200, 200, 0.4) !important;
+    background-color: rgba(255, 255, 255, 0.05) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    cursor: not-allowed;
+}
+
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+    .pagination {
+        gap: 2px;
+    }
+    
+    .page-link {
+        min-width: 36px;
+        height: 36px;
+        padding: 6px 10px;
+        font-size: 13px;
+    }
+    
+    .page-link[aria-label="이전 페이지"],
+    .page-link[aria-label="다음 페이지"] {
+        font-size: 16px;
+        min-width: 36px;
+        color: #e0e0e0 !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .pagination {
+        gap: 1px;
+    }
+    
+    .page-link {
+        min-width: 32px;
+        height: 32px;
+        padding: 4px 8px;
+        font-size: 12px;
+    }
+    
+    .page-link[aria-label="이전 페이지"],
+    .page-link[aria-label="다음 페이지"] {
+        font-size: 14px;
+        min-width: 32px;
+        color: #e0e0e0 !important;
+    }
+}

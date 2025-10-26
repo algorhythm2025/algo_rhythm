@@ -107,6 +107,16 @@ function useAppLogic()
       // localStorage에서 저장된 포트폴리오 폴더 ID 복원
       return localStorage.getItem('portfolioFolderId') || null;
     }); // 포트폴리오 폴더 ID
+
+    // 페이지네이션 상태들
+    const [driveCurrentPage, setDriveCurrentPage] = useState(1);
+    const [myPagePptHistoryCurrentPage, setMyPagePptHistoryCurrentPage] = useState(1); // 마이페이지 PPT 기록 전용
+    const [myPageExperienceCurrentPage, setMyPageExperienceCurrentPage] = useState(1); // 마이페이지 이력관리 전용
+    const [pptMakerCurrentPage, setPptMakerCurrentPage] = useState(1);
+    const [driveItemsPerPage] = useState(8); // 드라이브 페이지당 아이템 수
+    const [myPagePptHistoryItemsPerPage] = useState(8); // 마이페이지 PPT 기록 페이지당 아이템 수
+    const [myPageExperienceItemsPerPage] = useState(6); // 마이페이지 이력관리 페이지당 아이템 수
+    const [pptMakerItemsPerPage] = useState(6); // PPT 제작 페이지당 아이템 수
     const formRef = useRef();
   
     // 통합 인증 서비스 인스턴스
@@ -729,6 +739,15 @@ function useAppLogic()
       accessToken,
       selectedExperiences,
       templateDescriptions: uiLogic.templateDescriptions,
+      // 페이지네이션 상태들
+      driveCurrentPage,
+      myPagePptHistoryCurrentPage,
+      myPageExperienceCurrentPage,
+      pptMakerCurrentPage,
+      driveItemsPerPage,
+      myPagePptHistoryItemsPerPage,
+      myPageExperienceItemsPerPage,
+      pptMakerItemsPerPage,
       // 함수들
       showSection: (section) => uiLogic.showSection(section, setActiveSection),
       logout,
@@ -786,6 +805,14 @@ function useAppLogic()
       setForm,
       setSelectedImageForModal,
       setShowImageModal,
+      // 페이지네이션 함수들
+      getPaginatedItems: uiLogic.getPaginatedItems,
+      getTotalPages: uiLogic.getTotalPages,
+      getPaginationRange: uiLogic.getPaginationRange,
+      setDriveCurrentPage,
+      setMyPagePptHistoryCurrentPage,
+      setMyPageExperienceCurrentPage,
+      setPptMakerCurrentPage,
       // 서비스들
       driveService: driveService.current
     };

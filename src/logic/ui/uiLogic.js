@@ -373,6 +373,39 @@ export function useUILogic(driveService = null) {
         setSelectedTemplateForModal(null);
     }
 
+    // 페이지네이션 관련 함수들
+    function getPaginatedItems(items, currentPage, itemsPerPage) {
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const endIndex = startIndex + itemsPerPage;
+        return items.slice(startIndex, endIndex);
+    }
+
+    function getTotalPages(totalItems, itemsPerPage) {
+        return Math.ceil(totalItems / itemsPerPage);
+    }
+
+    function getPaginationRange(currentPage, totalPages, maxVisiblePages = 5) {
+        // totalPages가 0이거나 음수인 경우 처리
+        if (!totalPages || totalPages <= 0) {
+            return { start: 1, end: 1 };
+        }
+        
+        // currentPage가 유효하지 않은 경우 처리
+        if (currentPage < 1) currentPage = 1;
+        if (currentPage > totalPages) currentPage = totalPages;
+        
+        const half = Math.floor(maxVisiblePages / 2);
+        let start = Math.max(1, currentPage - half);
+        let end = Math.min(totalPages, start + maxVisiblePages - 1);
+        
+        // 끝에서 시작점 조정
+        if (end - start + 1 < maxVisiblePages) {
+            start = Math.max(1, end - maxVisiblePages + 1);
+        }
+        
+        return { start, end };
+    }
+
     // 템플릿 설명 객체
     const templateDescriptions = {
         basic: {
@@ -420,6 +453,9 @@ export function useUILogic(driveService = null) {
         convertImageUrl,
         openTemplateModal,
         handleTemplateCancel,
-        templateDescriptions
+        templateDescriptions,
+        getPaginatedItems,
+        getTotalPages,
+        getPaginationRange
     };
 }

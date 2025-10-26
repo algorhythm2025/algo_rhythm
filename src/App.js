@@ -12,6 +12,87 @@ export const NAV_ITEMS = [
     { id: "myPage", label: "마이페이지",    icon: "fas fa-user" },
 ];
 
+/** 페이지네이션 컴포넌트 */
+function Pagination({ currentPage, totalPages, onPageChange, maxVisiblePages = 5, getPaginationRange }) {
+  // totalPages가 0이거나 1 이하일 때는 페이지네이션을 표시하지 않음
+  if (!totalPages || totalPages <= 1) return null;
+
+  // currentPage가 유효하지 않은 경우 처리
+  const safeCurrentPage = Math.max(1, Math.min(currentPage, totalPages));
+  
+  const { start, end } = getPaginationRange(safeCurrentPage, totalPages, maxVisiblePages);
+  const pages = [];
+  
+  for (let i = start; i <= end; i++) {
+    pages.push(i);
+  }
+
+  return (
+    <div className="pagination-container">
+      <nav aria-label="페이지 네비게이션">
+        <ul className="pagination">
+          {/* 이전 페이지 버튼 */}
+          <li className={`page-item ${safeCurrentPage === 1 ? 'disabled' : ''}`}>
+            <button 
+              className="page-link" 
+              onClick={() => safeCurrentPage > 1 && onPageChange(safeCurrentPage - 1)}
+              disabled={safeCurrentPage === 1}
+              aria-label="이전 페이지"
+            >
+              ‹
+            </button>
+          </li>
+          
+          {/* 첫 페이지 */}
+          {start > 1 && (
+            <>
+              <li className="page-item">
+                <button className="page-link" onClick={() => onPageChange(1)}>1</button>
+              </li>
+              {start > 2 && <li className="page-item disabled"><span className="page-link">...</span></li>}
+            </>
+          )}
+          
+          {/* 페이지 번호들 */}
+          {pages.map(page => (
+            <li key={page} className={`page-item ${safeCurrentPage === page ? 'active' : ''}`}>
+              <button 
+                className="page-link" 
+                onClick={() => onPageChange(page)}
+                aria-current={safeCurrentPage === page ? 'page' : undefined}
+              >
+                {page}
+              </button>
+            </li>
+          ))}
+          
+          {/* 마지막 페이지 */}
+          {end < totalPages && (
+            <>
+              {end < totalPages - 1 && <li className="page-item disabled"><span className="page-link">...</span></li>}
+              <li className="page-item">
+                <button className="page-link" onClick={() => onPageChange(totalPages)}>{totalPages}</button>
+              </li>
+            </>
+          )}
+          
+          {/* 다음 페이지 버튼 */}
+          <li className={`page-item ${safeCurrentPage === totalPages ? 'disabled' : ''}`}>
+            <button 
+              className="page-link" 
+              onClick={() => safeCurrentPage < totalPages && onPageChange(safeCurrentPage + 1)}
+              disabled={safeCurrentPage === totalPages}
+              aria-label="다음 페이지"
+            >
+              ›
+            </button>
+          </li>
+        </ul>
+      </nav>
+    </div>
+  );
+}
+
 /** Apple TV+ 스타일 캐러셀 (순수 React) */
 function HeroCarousel({ onSelect }) {
     const slides = [
@@ -190,6 +271,15 @@ function App() {
     slides,
     accessToken,
     templateDescriptions,
+    // 페이지네이션 상태들
+    driveCurrentPage,
+    myPagePptHistoryCurrentPage,
+    myPageExperienceCurrentPage,
+    pptMakerCurrentPage,
+    driveItemsPerPage,
+    myPagePptHistoryItemsPerPage,
+    myPageExperienceItemsPerPage,
+    pptMakerItemsPerPage,
     // 함수들
     showSection,
     logout,
@@ -243,7 +333,15 @@ function App() {
     setSlides,
     setForm,
     setSelectedImageForModal,
-    setShowImageModal
+    setShowImageModal,
+    // 페이지네이션 함수들
+    getPaginatedItems,
+    getTotalPages,
+    getPaginationRange,
+    setDriveCurrentPage,
+    setMyPagePptHistoryCurrentPage,
+    setMyPageExperienceCurrentPage,
+    setPptMakerCurrentPage
   } = useAppLogic();
 
   /* 스크롤 시 상단바 스타일 토글 */
@@ -388,74 +486,103 @@ function App() {
                                     </button>
                                   </div>
                               ) : (
-                                  experiences.map((exp, idx) => (
-                                      <div className="list-group-item experience-list-item" key={idx} onClick={() => openExperienceModal(exp)}>
-                                        <div className="d-flex align-items-center">
-                                          <div className="me-3 experience-image-container">
-                                            {(exp.imageUrls && exp.imageUrls.length > 0) ? (
-                                                <>
-                                                  <div
-                                                      className="experience-image-wrapper ppt-size"
-                                                      onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        openImageModal(convertImageUrlToFullSize(exp.imageUrls[0]), `${exp.title} - 이미지 1`);
-                                                      }}
-                                                  >
-                                                    {imageLoadingStates.get(`${exp.imageUrls[0]}_${exp.title} 이미지 1`) === 'loading' && (
-                                                      <div className="experience-image-loading ppt-size">
-                                                        <i className="fas fa-spinner fa-spin"></i>
-                                                      </div>
+                                  <>
+                                    {/* 페이지네이션된 이력 선택 목록 */}
+                                    {(() => {
+                                      const paginatedExperiences = getPaginatedItems(experiences, pptMakerCurrentPage, pptMakerItemsPerPage);
+                                      const totalPages = getTotalPages(experiences.length, pptMakerItemsPerPage);
+                                      
+                                      return (
+                                        <>
+                                          {paginatedExperiences.map((exp, idx) => {
+                                            // 원본 인덱스 찾기
+                                            const originalIdx = experiences.findIndex(originalExp => originalExp === exp);
+                                            return (
+                                              <div className="list-group-item experience-list-item" key={originalIdx} onClick={() => openExperienceModal(exp)}>
+                                                <div className="d-flex align-items-center">
+                                                  <div className="me-3 experience-image-container">
+                                                    {(exp.imageUrls && exp.imageUrls.length > 0) ? (
+                                                        <>
+                                                          <div
+                                                              className="experience-image-wrapper ppt-size"
+                                                              onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                openImageModal(convertImageUrlToFullSize(exp.imageUrls[0]), `${exp.title} - 이미지 1`);
+                                                              }}
+                                                          >
+                                                            {imageLoadingStates.get(`${exp.imageUrls[0]}_${exp.title} 이미지 1`) === 'loading' && (
+                                                              <div className="experience-image-loading ppt-size">
+                                                                <i className="fas fa-spinner fa-spin"></i>
+                                                              </div>
+                                                            )}
+                                                            {imageLoadingStates.get(`${exp.imageUrls[0]}_${exp.title} 이미지 1`) === 'error' && (
+                                                              <div className="experience-image-error ppt-size">
+                                                                <i className="fas fa-exclamation-triangle"></i>
+                                                              </div>
+                                                            )}
+                                                            <img
+                                                                src={convertImageUrlToThumbnail(exp.imageUrls[0])}
+                                                                alt={`${exp.title} 이미지 1`}
+                                                                loading="lazy"
+                                                                decoding="async"
+                                                                className={`experience-image ${imageLoadingStates.get(`${exp.imageUrls[0]}_${exp.title} 이미지 1`) === 'loading' ? 'loading' : ''}`}
+                                                                onLoad={() => setImageLoadingState(`${exp.imageUrls[0]}_${exp.title} 이미지 1`, false)}
+                                                                onError={async (e) => {
+                                                                  // 이미 변환 시도 중인지 확인 (무한 재귀 방지)
+                                                                  if (e.target.dataset.converting === 'true') {
+                                                                    return;
+                                                                  }
+                                                                
+                                                                  e.target.dataset.converting = 'true';
+                                                                  await retryImageLoad(e.target, exp.imageUrls[0], 0, setImageLoadingState, setImageErrorState, driveService);
+                                                                  e.target.dataset.converting = 'false';
+                                                                }}
+                                                            />
+                                                          </div>
+                                                          {exp.imageUrls.length > 1 && (
+                                                              <div className="experience-image-count">
+                                                                +{exp.imageUrls.length - 1}
+                                                              </div>
+                                                          )}
+                                                        </>
+                                                    ) : (
+                                                        <div
+                                                            className="experience-no-image ppt-size"
+                                                            title="이미지 없음"
+                                                        >
+                                                          <i className="fas fa-image experience-no-image-icon"></i>
+                                                        </div>
                                                     )}
-                                                    {imageLoadingStates.get(`${exp.imageUrls[0]}_${exp.title} 이미지 1`) === 'error' && (
-                                                      <div className="experience-image-error ppt-size">
-                                                        <i className="fas fa-exclamation-triangle"></i>
-                                                      </div>
-                                                    )}
-                                                    <img
-                                                        src={convertImageUrlToThumbnail(exp.imageUrls[0])}
-                                                        alt={`${exp.title} 이미지 1`}
-                                                        loading="lazy"
-                                                        decoding="async"
-                                                        className={`experience-image ${imageLoadingStates.get(`${exp.imageUrls[0]}_${exp.title} 이미지 1`) === 'loading' ? 'loading' : ''}`}
-                                                        onLoad={() => setImageLoadingState(`${exp.imageUrls[0]}_${exp.title} 이미지 1`, false)}
-                                                        onError={async (e) => {
-                                                          // 이미 변환 시도 중인지 확인 (무한 재귀 방지)
-                                                          if (e.target.dataset.converting === 'true') {
-                                                            return;
-                                                          }
-                                                        
-                                                          e.target.dataset.converting = 'true';
-                                                          await retryImageLoad(e.target, exp.imageUrls[0], 0, setImageLoadingState, setImageErrorState, driveService);
-                                                          e.target.dataset.converting = 'false';
-                                                        }}
-                                                    />
                                                   </div>
-                                                  {exp.imageUrls.length > 1 && (
-                                                      <div className="experience-image-count">
-                                                        +{exp.imageUrls.length - 1}
-                                                      </div>
-                                                  )}
-                                                </>
-                                            ) : (
-                                                <div
-                                                    className="experience-no-image ppt-size"
-                                                    title="이미지 없음"
-                                                >
-                                                  <i className="fas fa-image experience-no-image-icon"></i>
+                                                  <div className="flex-grow-1">
+                                                    <h6 className="mb-1">{exp.title}</h6>
+                                                    <p className="mb-1"><small>{exp.period}</small></p>
+                                                    <p className="mb-0 experience-description">{exp.description}</p>
+                                                  </div>
+                                                  <div className="form-check ms-3" onClick={(e) => e.stopPropagation()}>
+                                                    <input className="form-check-input" type="checkbox" checked={selected.includes(originalIdx)} onChange={() => toggleSelect(originalIdx)} />
+                                                  </div>
                                                 </div>
-                                            )}
-                                          </div>
-                                          <div className="flex-grow-1">
-                                            <h6 className="mb-1">{exp.title}</h6>
-                                            <p className="mb-1"><small>{exp.period}</small></p>
-                                            <p className="mb-0">{exp.description}</p>
-                                          </div>
-                                          <div className="form-check ms-3" onClick={(e) => e.stopPropagation()}>
-                                            <input className="form-check-input" type="checkbox" checked={selected.includes(idx)} onChange={() => toggleSelect(idx)} />
-                                          </div>
-                                        </div>
-                                      </div>
-                                  ))
+                                              </div>
+                                            );
+                                          })}
+                                          
+                                          {/* 페이지네이션 */}
+                                          {(() => {
+                                            const totalPages = getTotalPages(experiences.length, pptMakerItemsPerPage);
+                                            return (
+                                              <Pagination
+                                                currentPage={pptMakerCurrentPage}
+                                                totalPages={totalPages}
+                                                onPageChange={setPptMakerCurrentPage}
+                                                getPaginationRange={getPaginationRange}
+                                              />
+                                            );
+                                          })()}
+                                        </>
+                                      );
+                                    })()}
+                                  </>
                               )}
                             </div>
                           </div>
@@ -821,10 +948,17 @@ function App() {
                                         </div>
                                     ) : (
                                         <>
-                                          {/* 폴더들 먼저 표시 */}
-                                          {driveFiles
-                                              .filter(file => file.mimeType === 'application/vnd.google-apps.folder')
-                                              .map((file, index, array) => (
+                                          {/* 페이지네이션된 파일 목록 */}
+                                          {(() => {
+                                            const paginatedFiles = getPaginatedItems(driveFiles, driveCurrentPage, driveItemsPerPage);
+                                            const totalPages = getTotalPages(driveFiles.length, driveItemsPerPage);
+                                            
+                                            return (
+                                              <>
+                                                {/* 폴더들 먼저 표시 */}
+                                                {paginatedFiles
+                                                    .filter(file => file.mimeType === 'application/vnd.google-apps.folder')
+                                                    .map((file, index, array) => (
                                                   <div key={file.id}>
                                                     <div className="file-item list-group-item folder-item" onClick={() => enterFolder(file.id, file.name)}>
                                                       <div className="d-flex align-items-center">
@@ -888,10 +1022,10 @@ function App() {
                                                   <hr className="simple-divider" />
                                               )}
 
-                                          {/* 파일들 표시 */}
-                                          {driveFiles
-                                              .filter(file => file.mimeType !== 'application/vnd.google-apps.folder')
-                                              .map((file, index, array) => (
+                                                {/* 파일들 표시 */}
+                                                {paginatedFiles
+                                                    .filter(file => file.mimeType !== 'application/vnd.google-apps.folder')
+                                                    .map((file, index, array) => (
                                                   <div key={file.id}>
                                                     <div className="file-item list-group-item">
                                                       <div className="d-flex align-items-center">
@@ -964,7 +1098,23 @@ function App() {
                                                     )}
                                                   </div>
                                               ))}
-                                        </>
+                                              
+                                              {/* 페이지네이션 */}
+                                              {(() => {
+                                                const totalPages = getTotalPages(driveFiles.length, driveItemsPerPage);
+                                                return (
+                                                  <Pagination
+                                                    currentPage={driveCurrentPage}
+                                                    totalPages={totalPages}
+                                                    onPageChange={setDriveCurrentPage}
+                                                    getPaginationRange={getPaginationRange}
+                                                  />
+                                                );
+                                              })()}
+                                            </>
+                                          );
+                                        })()}
+                                      </>
                                     )}
                                   </div>
                                 </div>
@@ -1012,48 +1162,73 @@ function App() {
                                   <p>아직 제작한 PPT가 없습니다.</p>
                                 </div>
                               ) : (
-                                pptHistory.map((ppt, index) => (
-                                    <div
-                                        key={ppt.id}
-                                        className="list-group-item mac-list-item d-flex align-items-center file-item"
-                                        onClick={() => window.open(`https://docs.google.com/presentation/d/${ppt.id}/edit`, '_blank')}
-                                    >
-                                      <div className="me-3">
-                                        <i className="fas fa-file-powerpoint text-primary fa-2x"></i>
-                                      </div>
-                                      <div className="flex-grow-1">
-                                        <h6 className="mb-1 text-white">{ppt.name}</h6>
-                                        <small className="text-white-50">
-                                          생성일: {new Date(ppt.createdTime).toLocaleDateString()}
-                                        </small>
-                                      </div>
-                                      <div className="d-flex align-items-center gap-2">
-                                        {/* 수정 버튼 */}
-                                        <button
-                                            className="btn btn-outline-secondary btn-sm"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              loadPptForEdit(ppt.id);
-                                            }}
-                                        >
-                                          <i className="fas fa-edit"></i> 수정
-                                        </button>
+                                <>
+                                  {/* 페이지네이션된 PPT 기록 목록 */}
+                                  {(() => {
+                                    const paginatedPptHistory = getPaginatedItems(pptHistory, myPagePptHistoryCurrentPage, myPagePptHistoryItemsPerPage);
+                                    const totalPages = getTotalPages(pptHistory.length, myPagePptHistoryItemsPerPage);
+                                    
+                                    return (
+                                      <>
+                                        {paginatedPptHistory.map((ppt, index) => (
+                                            <div
+                                                key={ppt.id}
+                                                className="list-group-item mac-list-item d-flex align-items-center file-item"
+                                                onClick={() => window.open(`https://docs.google.com/presentation/d/${ppt.id}/edit`, '_blank')}
+                                            >
+                                              <div className="me-3">
+                                                <i className="fas fa-file-powerpoint text-primary fa-2x"></i>
+                                              </div>
+                                              <div className="flex-grow-1">
+                                                <h6 className="mb-1 text-white">{ppt.name}</h6>
+                                                <small className="text-white-50">
+                                                  생성일: {new Date(ppt.createdTime).toLocaleDateString()}
+                                                </small>
+                                              </div>
+                                              <div className="d-flex align-items-center gap-2">
+                                                {/* 수정 버튼 */}
+                                                <button
+                                                    className="btn btn-outline-secondary btn-sm"
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      loadPptForEdit(ppt.id);
+                                                    }}
+                                                >
+                                                  <i className="fas fa-edit"></i> 수정
+                                                </button>
 
-                                        {/* 삭제 버튼 */}
-                                        <button
-                                            className="btn btn-outline-danger btn-sm"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              if (window.confirm(`"${ppt.name}" 파일을 삭제하시겠습니까?`)) {
-                                                handleDriveFileDelete(ppt.id, true); // PPT 기록에서 삭제하므로 true 전달
-                                              }
-                                            }}
-                                        >
-                                          <i className="fas fa-trash-alt"></i> 삭제
-                                        </button>
-                                      </div>
-                                    </div>
-                                ))
+                                                {/* 삭제 버튼 */}
+                                                <button
+                                                    className="btn btn-outline-danger btn-sm"
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      if (window.confirm(`"${ppt.name}" 파일을 삭제하시겠습니까?`)) {
+                                                        handleDriveFileDelete(ppt.id, true); // PPT 기록에서 삭제하므로 true 전달
+                                                      }
+                                                    }}
+                                                >
+                                                  <i className="fas fa-trash-alt"></i> 삭제
+                                                </button>
+                                              </div>
+                                            </div>
+                                        ))}
+                                        
+                                        {/* 페이지네이션 */}
+                                        {(() => {
+                                          const totalPages = getTotalPages(pptHistory.length, myPagePptHistoryItemsPerPage);
+                                          return (
+                                            <Pagination
+                                              currentPage={myPagePptHistoryCurrentPage}
+                                              totalPages={totalPages}
+                                              onPageChange={setMyPagePptHistoryCurrentPage}
+                                              getPaginationRange={getPaginationRange}
+                                            />
+                                          );
+                                        })()}
+                                      </>
+                                    );
+                                  })()}
+                                </>
                               )}
                             </div>
                           </div>
@@ -1090,93 +1265,124 @@ function App() {
                                     </button>
                                   </div>
                               ) : (
-                                  experiences.map((exp, idx) => (
-                                      <div className="list-group-item file-item" key={idx} onClick={() => openExperienceModal(exp)}>
-                                        <div className="d-flex align-items-center">
-                                          <div className="me-3 experience-image-container">
-                                            {(exp.imageUrls && exp.imageUrls.length > 0) ? (
-                                                <>
-                                                  <div
-                                                      className="experience-image-wrapper"
-                                                      onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        openImageModal(convertImageUrlToFullSize(exp.imageUrls[0]), `${exp.title} - 이미지 1`);
-                                                      }}
-                                                  >
-                                                    {imageLoadingStates.get(`${exp.imageUrls[0]}_${exp.title} 이미지 1`) === 'loading' && (
-                                                      <div className="experience-image-loading">
-                                                        <i className="fas fa-spinner fa-spin"></i>
-                                                      </div>
+                                  <>
+                                    {/* 페이지네이션된 이력 목록 */}
+                                    {(() => {
+                                      const paginatedExperiences = getPaginatedItems(experiences, myPageExperienceCurrentPage, myPageExperienceItemsPerPage);
+                                      const totalPages = getTotalPages(experiences.length, myPageExperienceItemsPerPage);
+                                      
+                                      return (
+                                        <>
+                                          {paginatedExperiences.map((exp, idx) => (
+                                              <div className="list-group-item file-item" key={idx} onClick={() => openExperienceModal(exp)}>
+                                                <div className="d-flex align-items-center">
+                                                  <div className="me-3 experience-image-container">
+                                                    {(exp.imageUrls && exp.imageUrls.length > 0) ? (
+                                                        <>
+                                                          <div
+                                                              className="experience-image-wrapper"
+                                                              onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                openImageModal(convertImageUrlToFullSize(exp.imageUrls[0]), `${exp.title} - 이미지 1`);
+                                                              }}
+                                                          >
+                                                            {imageLoadingStates.get(`${exp.imageUrls[0]}_${exp.title} 이미지 1`) === 'loading' && (
+                                                              <div className="experience-image-loading">
+                                                                <i className="fas fa-spinner fa-spin"></i>
+                                                              </div>
+                                                            )}
+                                                            {imageLoadingStates.get(`${exp.imageUrls[0]}_${exp.title} 이미지 1`) === 'error' && (
+                                                              <div className="experience-image-error">
+                                                                <i className="fas fa-exclamation-triangle"></i>
+                                                              </div>
+                                                            )}
+                                                            <img
+                                                                src={convertImageUrlToThumbnail(exp.imageUrls[0])}
+                                                                alt={`${exp.title} 이미지 1`}
+                                                                loading="lazy"
+                                                                decoding="async"
+                                                                className={`experience-image ${imageLoadingStates.get(`${exp.imageUrls[0]}_${exp.title} 이미지 1`) === 'loading' ? 'loading' : ''}`}
+                                                                onLoad={() => setImageLoadingState(`${exp.imageUrls[0]}_${exp.title} 이미지 1`, false)}
+                                                                onError={async (e) => {
+                                                                  // 이미 변환 시도 중인지 확인 (무한 재귀 방지)
+                                                                  if (e.target.dataset.converting === 'true') {
+                                                                    return;
+                                                                  }
+                                                                
+                                                                  e.target.dataset.converting = 'true';
+                                                                  await retryImageLoad(e.target, exp.imageUrls[0], 0, setImageLoadingState, setImageErrorState, driveService);
+                                                                  e.target.dataset.converting = 'false';
+                                                                }}
+                                                            />
+                                                          </div>
+                                                          {exp.imageUrls.length > 1 && (
+                                                              <div className="experience-image-count">
+                                                                +{exp.imageUrls.length - 1}
+                                                              </div>
+                                                          )}
+                                                        </>
+                                                    ) : (
+                                                        <div
+                                                            className="experience-no-image"
+                                                            title="이미지 없음"
+                                                        >
+                                                          <i className="fas fa-image experience-no-image-icon"></i>
+                                                        </div>
                                                     )}
-                                                    {imageLoadingStates.get(`${exp.imageUrls[0]}_${exp.title} 이미지 1`) === 'error' && (
-                                                      <div className="experience-image-error">
-                                                        <i className="fas fa-exclamation-triangle"></i>
-                                                      </div>
-                                                    )}
-                                                    <img
-                                                        src={convertImageUrlToThumbnail(exp.imageUrls[0])}
-                                                        alt={`${exp.title} 이미지 1`}
-                                                        loading="lazy"
-                                                        decoding="async"
-                                                        className={`experience-image ${imageLoadingStates.get(`${exp.imageUrls[0]}_${exp.title} 이미지 1`) === 'loading' ? 'loading' : ''}`}
-                                                        onLoad={() => setImageLoadingState(`${exp.imageUrls[0]}_${exp.title} 이미지 1`, false)}
-                                                        onError={async (e) => {
-                                                          // 이미 변환 시도 중인지 확인 (무한 재귀 방지)
-                                                          if (e.target.dataset.converting === 'true') {
-                                                            return;
-                                                          }
-                                                        
-                                                          e.target.dataset.converting = 'true';
-                                                          await retryImageLoad(e.target, exp.imageUrls[0], 0, setImageLoadingState, setImageErrorState, driveService);
-                                                          e.target.dataset.converting = 'false';
-                                                        }}
-                                                    />
                                                   </div>
-                                                  {exp.imageUrls.length > 1 && (
-                                                      <div className="experience-image-count">
-                                                        +{exp.imageUrls.length - 1}
-                                                      </div>
-                                                  )}
-                                                </>
-                                            ) : (
-                                                <div
-                                                    className="experience-no-image"
-                                                    title="이미지 없음"
-                                                >
-                                                  <i className="fas fa-image experience-no-image-icon"></i>
+                                                  <div className="flex-grow-1">
+                                                    <h6 className="mb-1">{exp.title}</h6>
+                                                    <p className="mb-1"><small>{exp.period}</small></p>
+                                                    <p className="mb-0 experience-description">{exp.description}</p>
+                                                  </div>
+                                                  <div className="d-flex align-items-center gap-2">
+                                                    <button
+                                                        className="btn btn-outline-secondary btn-sm"
+                                                        onClick={(e) => {
+                                                          e.stopPropagation();
+                                                          showEditExperienceModal(idx);
+                                                        }}
+                                                        disabled={isExperienceLoading}
+                                                    >
+                                                      <i className="fas fa-edit"></i> 수정
+                                                    </button>
+                                                    <button
+                                                        className="btn btn-outline-danger btn-sm"
+                                                        onClick={(e) => {
+                                                          e.stopPropagation();
+                                                          deleteIndividualExperience(idx);
+                                                        }}
+                                                        disabled={isExperienceLoading}
+                                                    >
+                                                      <i className="fas fa-trash-alt"></i> 삭제
+                                                    </button>
+                                                  </div>
                                                 </div>
-                                            )}
-                                          </div>
-                                          <div className="flex-grow-1">
-                                            <h6 className="mb-1">{exp.title}</h6>
-                                            <p className="mb-1"><small>{exp.period}</small></p>
-                                            <p className="mb-0">{exp.description}</p>
-                                          </div>
-                                          <div className="d-flex align-items-center gap-2">
-                                            <button
-                                                className="btn btn-outline-secondary btn-sm"
-                                                onClick={(e) => {
-                                                  e.stopPropagation();
-                                                  showEditExperienceModal(idx);
-                                                }}
-                                                disabled={isExperienceLoading}
-                                            >
-                                              <i className="fas fa-edit"></i> 수정
-                                            </button>
-                                            <button
-                                                className="btn btn-outline-danger btn-sm"
-                                                onClick={(e) => {
-                                                  e.stopPropagation();
-                                                  deleteIndividualExperience(idx);
-                                                }}
-                                                disabled={isExperienceLoading}
-                                            >
-                                              <i className="fas fa-trash-alt"></i> 삭제
-                                            </button>
-                                          </div>
-                                        </div>
-                                      </div>
-                                  ))
+                                              </div>
+                                            ))}
+                                          
+                                          {/* 페이지네이션 */}
+                                          {(() => {
+                                            const totalPages = getTotalPages(experiences.length, myPageExperienceItemsPerPage);
+                                            console.log('이력관리 페이지네이션 디버그:', {
+                                              experiencesLength: experiences.length,
+                                              myPageExperienceItemsPerPage,
+                                              totalPages,
+                                              myPageExperienceCurrentPage
+                                            });
+                                            return (
+                                              <Pagination
+                                                currentPage={myPageExperienceCurrentPage}
+                                                totalPages={totalPages}
+                                                onPageChange={setMyPageExperienceCurrentPage}
+                                                getPaginationRange={getPaginationRange}
+                                              />
+                                            );
+                                          })()}
+                                        </>
+                                      );
+                                    })()}
+                                  </>
                               )}
                             </div>
                           </div>
@@ -1438,7 +1644,7 @@ function App() {
 
         {/* 이력 상세 모달 */}
         {showExperienceModal && selectedExperience && (
-          <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="modal fade show d-block experience-modal" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
             <div className="modal-dialog modal-lg modal-dialog-centered">
               <div className="modal-content mac-modal">
                 <div className="modal-header">
@@ -1462,7 +1668,7 @@ function App() {
                       </div>
                       <div className="mb-3">
                         <strong className="white-text">설명:</strong>
-                        <p className="mt-1" style={{ whiteSpace: 'pre-wrap', color: 'white' }}>{selectedExperience.description}</p>
+                        <p className="mt-1 experience-description" style={{ whiteSpace: 'pre-wrap', color: 'white' }}>{selectedExperience.description}</p>
                       </div>
                     </div>
                     <div className="col-md-6">
