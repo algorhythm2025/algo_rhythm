@@ -93,9 +93,11 @@ function useAppLogic()
     const [showExperienceModal, setShowExperienceModal] = useState(false); // 이력 상세 모달 표시 여부
     const [accessToken, setAccessToken] = useState('');
     const [slides, setSlides] = useState([]);
+    const [slideThumbnails, setSlideThumbnails] = useState([]); // 슬라이드 썸네일 상태
     const [presentationId, setPresentationId] = useState(null);
     const [selectedTemplate, setSelectedTemplate] = useState('');
     const [selectedExperiences, setSelectedExperiences] = useState([]);
+    const [currentSlideIndex, setCurrentSlideIndex] = useState(0); // 현재 선택된 슬라이드 인덱스
     const [driveViewMode, setDriveViewMode] = useState(() =>
     {
       // localStorage에서 저장된 뷰 모드 복원
@@ -441,7 +443,53 @@ function useAppLogic()
 
     // PPT 수정을 위한 슬라이드 데이터 로드
     async function loadPptForEdit(pptId) {
-      await presentationLogic.loadPptForEdit(pptId, authService, presentationLogic.getPresentationData, setSlides, setPresentationId, setActiveSection, setIsLoading);
+        try {
+            setIsLoading(true);
+            
+            // 인증 서비스를 통해 토큰 확인 및 갱신
+            if (!authService.current) {
+                alert('인증 서비스가 초기화되지 않았습니다. 다시 로그인해주세요.');
+                return;
+            }
+            
+            // 인증 상태 확인
+            const isAuthenticated = await authService.current.isAuthenticated();
+            if (!isAuthenticated) {
+                alert('인증이 필요합니다. 다시 로그인해주세요.');
+                return;
+            }
+            
+            // 액세스 토큰 가져오기
+            const token = await authService.current.getAccessToken();
+            if (!token) {
+                alert('액세스 토큰을 가져올 수 없습니다. 다시 로그인해주세요.');
+                return;
+            }
+            
+            // 프레젠테이션 데이터 가져오기
+            const data = await presentationLogic.getPresentationData(pptId, token);
+            
+            // 슬라이드 데이터 설정
+            setSlides(data.slides || []);
+            setPresentationId(pptId);
+            
+            // 슬라이드 썸네일 가져오기
+            const thumbnails = await presentationLogic.getAllSlideThumbnails(pptId, token);
+            setSlideThumbnails(thumbnails);
+            
+            // 에디터 섹션으로 이동
+            setActiveSection('editor');
+            
+        } catch (error) {
+            console.error('PPT 수정 데이터 로드 오류:', error);
+            if (error.message && error.message.includes('인증')) {
+                alert('인증이 만료되었습니다. 다시 로그인해주세요.');
+            } else {
+                alert('PPT 데이터를 불러오는데 실패했습니다: ' + (error.message || error));
+            }
+        } finally {
+            setIsLoading(false);
+        }
     }
 
     // 템플릿 선택 → 프레젠테이션 생성 + 이력 반영 (presentationLogic 사용)
@@ -726,8 +774,11 @@ function useAppLogic()
       portfolioFolderId,
       presentationId,
       slides,
+      slideThumbnails,
       accessToken,
       selectedExperiences,
+      currentSlideIndex,
+      setCurrentSlideIndex,
       templateDescriptions: uiLogic.templateDescriptions,
       // 함수들
       showSection: (section) => uiLogic.showSection(section, setActiveSection),

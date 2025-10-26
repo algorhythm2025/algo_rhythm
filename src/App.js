@@ -188,7 +188,10 @@ function App() {
     portfolioFolderId,
     presentationId,
     slides,
+    slideThumbnails,
     accessToken,
+    currentSlideIndex,
+    setCurrentSlideIndex,
     templateDescriptions,
     // 함수들
     showSection,
@@ -506,126 +509,229 @@ function App() {
                   )}
 
                   {/* PPT 편집기 섹션 */}
-                  <div className="App">
-                    {activeSection === 'editor' && (
-                        <div className="content-section">
-                          <div className="ppt-editor">
-                            <div className="editor-toolbar">
-                              <button onClick={() => setActiveSection('myPage')} className="btn btn-outline-secondary me-2">
-                                <i className="fas fa-arrow-left"></i> 뒤로가기
-                              </button>
-                              <button onClick={() => window.open(`https://docs.google.com/presentation/d/${presentationId}/edit`, '_blank')} className="btn btn-primary">
-                                <i className="fas fa-external-link-alt"></i> Google Slides에서 열기
-                              </button>
-                            </div>
-
-                            {isLoading ? (
-                              <div className="text-center p-5">
-                                <div className="spinner-border text-primary mb-3 loading-spinner" role="status">
-                                  <span className="visually-hidden">로딩중...</span>
-                                </div>
-                                <p className="white-text">PPT 데이터를 불러오는 중입니다...</p>
-                              </div>
-                            ) : slides.length === 0 ? (
-                              <div className="text-center p-5">
-                                <i className="fas fa-file-powerpoint fa-3x mb-3 text-muted"></i>
-                                <p className="text-muted">슬라이드 데이터를 불러올 수 없습니다.</p>
-                                <button onClick={() => setActiveSection('myPage')} className="btn btn-outline-primary">
-                                  <i className="fas fa-arrow-left"></i> 마이페이지로 돌아가기
-                                </button>
-                              </div>
-                            ) : (
-                              <div className="editor-canvas">
-                                {slides.map((slide, sIdx) => (
-                                  <div key={slide.objectId || sIdx} className="editor-slide">
-                                    <div className="slide-header">슬라이드 {sIdx + 1}</div>
-                                    <div className="slide-body">
-                                      {slide.pageElements?.filter(el => {
-                                        // 텍스트 요소만 필터링 (shape이 있고 text 속성이 있는 요소)
-                                        return el.shape && el.shape.text && el.shape.text.textElements;
-                                      }).map((el) => {
-                                        const elText = getTextFromElement(el);
-                                        const elId = el.objectId;
-
-                                        return (
-                                            <div key={elId} className="text-box">
-                                              <input
-                                                  type="text"
-                                                  className="text-input"
-                                                  value={elText}
-                                                  onChange={e => {
-                                                    setSlides(prev => prev.map(sl => {
-                                                      if (sl.objectId !== slide.objectId) return sl;
-                                                      return {
-                                                        ...sl,
-                                                        pageElements: sl.pageElements.map(pe => {
-                                                          if (pe.objectId !== elId) return pe;
-                                                          const newShape = {
-                                                            ...pe.shape,
-                                                            text: {
-                                                              ...pe.shape?.text,
-                                                              textElements: [{ textRun: { content: e.target.value } }]
-                                                            }
-                                                          };
-                                                          return { ...pe, shape: newShape };
-                                                        })
-                                                      };
-                                                    }));
-                                                  }}
-                                                  onBlur={async e => {
-                                                    await updateElementTextAndLocal(presentationId, elId, e.target.value, accessToken);
-                                                  }}
-                                              />
-
-                                              <div className="text-controls">
-                                                <select
-                                                    onChange={async (ev) => {
-                                                      const fontFamily = ev.target.value;
-                                                      if (!fontFamily) return;
-                                                      await updateElementStyle(presentationId, elId, { fontFamily }, accessToken);
-                                                    }}
-                                                >
-                                                  <option value="">글꼴</option>
-                                                  <option value="Arial">Arial</option>
-                                                  <option value="Noto Sans KR">Noto Sans KR</option>
-                                                  <option value="Roboto">Roboto</option>
-                                                  <option value="Times New Roman">Times New Roman</option>
-                                                </select>
-
-
-                                                <input
-                                                    type="number"
-                                                    placeholder="크기(pt)"
-                                                    onBlur={async (ev) => {
-                                                      const size = Number(ev.target.value);
-                                                      if (!size || size <= 0) return;
-                                                      await updateElementStyle(presentationId, elId, { fontSize: { magnitude: size, unit: 'PT' } }, accessToken);
-                                                    }}
-                                                />
-                                                <input
-                                                    type="color"
-                                                    onChange={async (ev) => {
-                                                      const hex = ev.target.value;
-                                                      const r = parseInt(hex.slice(1, 3), 16) / 255;
-                                                      const g = parseInt(hex.slice(3, 5), 16) / 255;
-                                                      const b = parseInt(hex.slice(5, 7), 16) / 255;
-                                                      const colorObj = { foregroundColor: { opaqueColor: { rgbColor: { red: r, green: g, blue: b } } } };
-                                                      await updateElementStyle(presentationId, elId, colorObj, accessToken);
-                                                    }}
-                                                />
-                                              </div>
-                                            </div>
-                                        );
-                                      })}
-                                    </div>
-                                  </div>
-                              ))}
-                            </div>
-                            )}
+                  {activeSection === 'editor' && (
+                      <div className="ppt-editor-container">
+                        {/* 상단 툴바 */}
+                        <div className="ppt-editor-toolbar">
+                          <div className="toolbar-left">
+                            <button onClick={() => setActiveSection('myPage')} className="btn btn-outline-secondary me-2">
+                              <i className="fas fa-arrow-left"></i> 뒤로가기
+                            </button>
+                            <h4 className="mb-0">PPT 편집기</h4>
+                          </div>
+                          <div className="toolbar-right">
+                            <button onClick={() => window.open(`https://docs.google.com/presentation/d/${presentationId}/edit`, '_blank')} className="btn btn-primary">
+                              <i className="fas fa-external-link-alt"></i> Google Slides에서 열기
+                            </button>
                           </div>
                         </div>
-                    )}
-                  </div>
+
+                        {isLoading ? (
+                          <div className="text-center p-5">
+                            <div className="spinner-border text-primary mb-3 loading-spinner" role="status">
+                              <span className="visually-hidden">로딩중...</span>
+                            </div>
+                            <p className="white-text">PPT 데이터를 불러오는 중입니다...</p>
+                          </div>
+                        ) : slides.length === 0 ? (
+                          <div className="text-center p-5">
+                            <i className="fas fa-file-powerpoint fa-3x mb-3 text-muted"></i>
+                            <p className="text-muted">슬라이드 데이터를 불러올 수 없습니다.</p>
+                            <button onClick={() => setActiveSection('myPage')} className="btn btn-outline-primary">
+                              <i className="fas fa-arrow-left"></i> 마이페이지로 돌아가기
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="ppt-editor-main">
+                            {/* 왼쪽 슬라이드 목록 */}
+                            <div className="slide-panel">
+                              <div className="slide-panel-header">
+                                <h6>슬라이드</h6>
+                                <span className="slide-count">{slides.length}개</span>
+                              </div>
+                   <div className="slide-thumbnails">
+                     {slideThumbnails.length > 0 ? (
+                       slideThumbnails.map((thumbnail, sIdx) => (
+                         <div 
+                           key={thumbnail.slideId || sIdx} 
+                           className={`slide-thumbnail ${sIdx === currentSlideIndex ? 'active' : ''}`}
+                           onClick={() => setCurrentSlideIndex(sIdx)}
+                         >
+                           <div className="thumbnail-number">{sIdx + 1}</div>
+                           <div className="thumbnail-preview">
+                             {/* 실제 PPT 썸네일 우선 사용 */}
+                             {thumbnail.thumbnailUrl ? (
+                               <img 
+                                 src={thumbnail.thumbnailUrl} 
+                                 alt={`슬라이드 ${sIdx + 1}`}
+                                 className="thumbnail-image"
+                                 onError={(e) => {
+                                   // 썸네일 로딩 실패 시 텍스트 미리보기로 대체
+                                   e.target.style.display = 'none';
+                                   e.target.nextSibling.style.display = 'flex';
+                                 }}
+                               />
+                             ) : null}
+                             {/* 썸네일 실패 시 텍스트 미리보기로 대체 */}
+                             <div className="preview-content" style={{ display: thumbnail.thumbnailUrl ? 'none' : 'flex' }}>
+                               {thumbnail.slide.pageElements?.filter(el => el.shape && el.shape.text && el.shape.text.textElements).slice(0, 2).map((el, elIdx) => (
+                                 <div key={elIdx} className="preview-text">
+                                   {getTextFromElement(el).substring(0, 20)}...
+                                 </div>
+                               ))}
+                             </div>
+                           </div>
+                         </div>
+                       ))
+                     ) : (
+                       slides.map((slide, sIdx) => (
+                         <div 
+                           key={slide.objectId || sIdx} 
+                           className={`slide-thumbnail ${sIdx === currentSlideIndex ? 'active' : ''}`}
+                           onClick={() => setCurrentSlideIndex(sIdx)}
+                         >
+                           <div className="thumbnail-number">{sIdx + 1}</div>
+                           <div className="thumbnail-preview">
+                             <div className="preview-content">
+                               {slide.pageElements?.filter(el => el.shape && el.shape.text && el.shape.text.textElements).slice(0, 2).map((el, elIdx) => (
+                                 <div key={elIdx} className="preview-text">
+                                   {getTextFromElement(el).substring(0, 20)}...
+                                 </div>
+                               ))}
+                             </div>
+                           </div>
+                         </div>
+                       ))
+                     )}
+                   </div>
+                            </div>
+
+                 {/* 중앙 미리보기 영역 */}
+                 <div className="preview-panel">
+                   <div className="preview-container">
+                     <div className="slide-preview">
+                       {slides.length > 0 && slides[currentSlideIndex] && (
+                         <div className="current-slide">
+                           <div className="slide-content">
+                             {slides[currentSlideIndex].pageElements?.filter(el => {
+                               return el.shape && el.shape.text && el.shape.text.textElements;
+                             }).map((el) => {
+                               const elText = getTextFromElement(el);
+                               const elId = el.objectId;
+
+                               return (
+                                   <div key={elId} className="preview-text-element">
+                                     <div className="text-content">{elText}</div>
+                                   </div>
+                               );
+                             })}
+                           </div>
+                         </div>
+                       )}
+                     </div>
+                   </div>
+                 </div>
+
+                            {/* 오른쪽 편집 패널 */}
+                            <div className="edit-panel">
+                              <div className="edit-panel-header">
+                                <h6>편집</h6>
+                              </div>
+                   <div className="edit-controls">
+                     {slides.length > 0 && slides[currentSlideIndex] && slides[currentSlideIndex].pageElements?.filter(el => {
+                       return el.shape && el.shape.text && el.shape.text.textElements;
+                     }).map((el) => {
+                       const elText = getTextFromElement(el);
+                       const elId = el.objectId;
+
+                       return (
+                           <div key={elId} className="text-edit-control">
+                             <label className="control-label">텍스트</label>
+                             <textarea
+                                 className="text-edit-input"
+                                 value={elText}
+                                 onChange={e => {
+                                   setSlides(prev => prev.map(sl => {
+                                     if (sl.objectId !== slides[currentSlideIndex].objectId) return sl;
+                                     return {
+                                       ...sl,
+                                       pageElements: sl.pageElements.map(pe => {
+                                         if (pe.objectId !== elId) return pe;
+                                         const newShape = {
+                                           ...pe.shape,
+                                           text: {
+                                             ...pe.shape?.text,
+                                             textElements: [{ textRun: { content: e.target.value } }]
+                                           }
+                                         };
+                                         return { ...pe, shape: newShape };
+                                       })
+                                     };
+                                   }));
+                                 }}
+                                 onBlur={async e => {
+                                   await updateElementTextAndLocal(presentationId, elId, e.target.value, accessToken);
+                                 }}
+                             />
+
+                             <div className="style-controls">
+                               <div className="control-group">
+                                 <label className="control-label">글꼴</label>
+                                 <select
+                                     className="style-select"
+                                     onChange={async (ev) => {
+                                       const fontFamily = ev.target.value;
+                                       if (!fontFamily) return;
+                                       await updateElementStyle(presentationId, elId, { fontFamily }, accessToken);
+                                     }}
+                                 >
+                                   <option value="">글꼴 선택</option>
+                                   <option value="Arial">Arial</option>
+                                   <option value="Noto Sans KR">Noto Sans KR</option>
+                                   <option value="Roboto">Roboto</option>
+                                   <option value="Times New Roman">Times New Roman</option>
+                                 </select>
+                               </div>
+
+                               <div className="control-group">
+                                 <label className="control-label">크기</label>
+                                 <input
+                                     type="number"
+                                     className="style-input"
+                                     placeholder="크기(pt)"
+                                     onBlur={async (ev) => {
+                                       const size = Number(ev.target.value);
+                                       if (!size || size <= 0) return;
+                                       await updateElementStyle(presentationId, elId, { fontSize: { magnitude: size, unit: 'PT' } }, accessToken);
+                                     }}
+                                 />
+                               </div>
+
+                               <div className="control-group">
+                                 <label className="control-label">색상</label>
+                                 <input
+                                     type="color"
+                                     className="style-color"
+                                     onChange={async (ev) => {
+                                       const hex = ev.target.value;
+                                       const r = parseInt(hex.slice(1, 3), 16) / 255;
+                                       const g = parseInt(hex.slice(3, 5), 16) / 255;
+                                       const b = parseInt(hex.slice(5, 7), 16) / 255;
+                                       const colorObj = { foregroundColor: { opaqueColor: { rgbColor: { red: r, green: g, blue: b } } } };
+                                       await updateElementStyle(presentationId, elId, colorObj, accessToken);
+                                     }}
+                                 />
+                               </div>
+                             </div>
+                           </div>
+                       );
+                     })}
+                   </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                  )}
 
 
 

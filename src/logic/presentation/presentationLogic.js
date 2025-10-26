@@ -504,6 +504,55 @@ export function usePresentationLogic() {
         }
     }
 
+    // 슬라이드 썸네일 가져오기
+    async function getSlideThumbnail(presentationId, slideId, token) {
+        try {
+            const response = await fetch(`https://slides.googleapis.com/v1/presentations/${presentationId}/pages/${slideId}/thumbnail`, {
+                method: 'GET',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`썸네일 요청 실패: ${response.status}`);
+            }
+
+            const data = await response.json();
+            return data.contentUrl;
+        } catch (error) {
+            console.error('슬라이드 썸네일 가져오기 오류:', error);
+            return null;
+        }
+    }
+
+    // 모든 슬라이드 썸네일 가져오기
+    async function getAllSlideThumbnails(presentationId, token) {
+        try {
+            // 먼저 프레젠테이션 데이터를 가져와서 슬라이드 목록 확인
+            const presentationData = await getPresentationData(presentationId, token);
+            const slides = presentationData.slides || [];
+            
+            // 각 슬라이드의 썸네일을 병렬로 요청
+            const thumbnailPromises = slides.map(async (slide, index) => {
+                const thumbnailUrl = await getSlideThumbnail(presentationId, slide.objectId, token);
+                return {
+                    slideId: slide.objectId,
+                    slideIndex: index,
+                    thumbnailUrl: thumbnailUrl,
+                    slide: slide
+                };
+            });
+
+            const thumbnails = await Promise.all(thumbnailPromises);
+            return thumbnails;
+        } catch (error) {
+            console.error('모든 슬라이드 썸네일 가져오기 오류:', error);
+            return [];
+        }
+    }
+
     // PPT 수정을 위한 슬라이드 데이터 로드
     async function loadPptForEdit(pptId, authService, getPresentationData, setSlides, setPresentationId, setActiveSection, setIsLoading) {
         try {
@@ -1162,6 +1211,8 @@ export function usePresentationLogic() {
         getTextFromElement,
         loadPptHistory,
         loadPptForEdit,
+        getSlideThumbnail,
+        getAllSlideThumbnails,
         calculateSlideProgress,
         handleTemplateSelect,
         createBasicTemplateSlides,
@@ -1169,3 +1220,4 @@ export function usePresentationLogic() {
         createPhotoTemplateSlides
     };
 }
+
