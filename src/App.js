@@ -1699,22 +1699,47 @@ function App() {
                         </div>
                       </div>
                       
-                      {/* 테마 색상 선택 */}
-                      <div className="theme-color-selector">
-                        <h6>테마 색상</h6>
-                        <div className="theme-color-options">
-                          <div 
-                            className={`theme-color-option light ${selectedThemeColor === 'light' ? 'selected' : ''}`}
-                            onClick={() => handleThemeColorSelect('light')}
-                            title="밝은 테마 (흰색 배경, 검정 글씨)"
-                          ></div>
-                          <div 
-                            className={`theme-color-option dark ${selectedThemeColor === 'dark' ? 'selected' : ''}`}
-                            onClick={() => handleThemeColorSelect('dark')}
-                            title="어두운 테마 (검정 배경, 흰 글씨)"
-                          ></div>
-                        </div>
-                      </div>
+                     {/* 테마 색상 선택 */}
+                     <div className="theme-color-selector">
+                       <h6>테마 색상</h6>
+                       <div className="theme-color-options">
+                         <div
+                           className={`theme-color-option light ${selectedThemeColor === 'light' ? 'selected' : ''}`}
+                           onClick={() => handleThemeColorSelect('light')}
+                           title="밝은 테마 (흰색 배경, 검정 글씨)"
+                         ></div>
+                         <div
+                           className={`theme-color-option dark ${selectedThemeColor === 'dark' ? 'selected' : ''}`}
+                           onClick={() => handleThemeColorSelect('dark')}
+                           title="어두운 테마 (검정 배경, 흰 글씨)"
+                         ></div>
+                         <div
+                           className={`theme-color-option navy-white ${selectedThemeColor === 'navy-white' ? 'selected' : ''}`}
+                           onClick={() => handleThemeColorSelect('navy-white')}
+                           title="네이비-화이트 테마"
+                         ></div>
+                         <div
+                           className={`theme-color-option navy-yellow ${selectedThemeColor === 'navy-yellow' ? 'selected' : ''}`}
+                           onClick={() => handleThemeColorSelect('navy-yellow')}
+                           title="네이비-옐로우 테마"
+                         ></div>
+                         <div
+                           className={`theme-color-option darkgray-white ${selectedThemeColor === 'darkgray-white' ? 'selected' : ''}`}
+                           onClick={() => handleThemeColorSelect('darkgray-white')}
+                           title="다크그레이-화이트 테마"
+                         ></div>
+                         <div
+                           className={`theme-color-option darkgreen-white ${selectedThemeColor === 'darkgreen-white' ? 'selected' : ''}`}
+                           onClick={() => handleThemeColorSelect('darkgreen-white')}
+                           title="다크그린-화이트 테마"
+                         ></div>
+                         <div
+                           className={`theme-color-option lavenderpurple-black ${selectedThemeColor === 'lavenderpurple-black' ? 'selected' : ''}`}
+                           onClick={() => handleThemeColorSelect('lavenderpurple-black')}
+                           title="라벤더퍼플-블랙 테마"
+                         ></div>
+                       </div>
+                     </div>
                       
                       <h6 className="mb-3 white-text">주요 특징</h6>
                       <div className="template-features">

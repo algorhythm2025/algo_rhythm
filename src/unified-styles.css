@@ -2619,6 +2619,31 @@ a.btn:hover,
     color: #ffffff;
 }
 
+.theme-color-option.navy-white {
+    background-color: #1a2a42;
+    color: #ffffff;
+}
+
+.theme-color-option.navy-yellow {
+    background-color: #1a2a42;
+    color: #ffd700;
+}
+
+.theme-color-option.darkgray-white {
+    background-color: #333333;
+    color: #ffffff;
+}
+
+.theme-color-option.darkgreen-white {
+    background-color: #115511;
+    color: #ffffff;
+}
+
+.theme-color-option.lavenderpurple-black {
+    background-color: #ccb3e6;
+    color: #000000;
+}
+
 .theme-color-option::before {
     content: "A";
     font-size: 18px;

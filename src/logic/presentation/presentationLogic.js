@@ -588,7 +588,32 @@ export function usePresentationLogic() {
 
     // 테마 색상에 따른 스타일 반환 함수
     function getThemeStyles(selectedThemeColor) {
-        if (selectedThemeColor === 'dark') {
+        if (selectedThemeColor === 'navy-white') {
+            return {
+                backgroundColor: { rgbColor: { red: 0.098, green: 0.125, blue: 0.165 } }, // 네이비
+                textColor: { opaqueColor: { rgbColor: { red: 1, green: 1, blue: 1 } } } // 화이트
+            };
+        } else if (selectedThemeColor === 'navy-yellow') {
+            return {
+                backgroundColor: { rgbColor: { red: 0.098, green: 0.125, blue: 0.165 } }, // 네이비
+                textColor: { opaqueColor: { rgbColor: { red: 1, green: 0.843, blue: 0 } } } // 옐로우
+            };
+        } else if (selectedThemeColor === 'darkgray-white') {
+            return {
+                backgroundColor: { rgbColor: { red: 0.2, green: 0.2, blue: 0.2 } }, // 다크그레이
+                textColor: { opaqueColor: { rgbColor: { red: 1, green: 1, blue: 1 } } } // 화이트
+            };
+        } else if (selectedThemeColor === 'darkgreen-white') {
+            return {
+                backgroundColor: { rgbColor: { red: 0.067, green: 0.2, blue: 0.067 } }, // 다크그린
+                textColor: { opaqueColor: { rgbColor: { red: 1, green: 1, blue: 1 } } } // 화이트
+            };
+        } else if (selectedThemeColor === 'lavenderpurple-black') {
+            return {
+                backgroundColor: { rgbColor: { red: 0.8, green: 0.7, blue: 0.9 } }, // 연한 라벤더퍼플
+                textColor: { opaqueColor: { rgbColor: { red: 0, green: 0, blue: 0 } } } // 블랙
+            };
+        } else if (selectedThemeColor === 'dark') {
             return {
                 backgroundColor: { rgbColor: { red: 0, green: 0, blue: 0 } },
                 textColor: { opaqueColor: { rgbColor: { red: 1, green: 1, blue: 1 } } }
