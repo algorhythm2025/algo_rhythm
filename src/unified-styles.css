@@ -2649,3 +2649,16 @@ a.btn:hover,
     font-size: 18px;
     font-weight: bold;
 }
+.mac-titlebar .top-actions {
+    /* 버튼들을 가로로 나란히 배치 */
+    display: flex;
+
+    /* 요소들을 세로 중앙에 정렬 */
+    align-items: center;
+
+    /* 버튼 사이에 10px 간격 부여 (뭉개짐 해결 및 여백 추가) */
+    gap: 10px;
+
+    /* 상단 오른쪽 끝으로 정렬 */
+    margin-left: auto;
+}

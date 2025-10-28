@@ -7,7 +7,7 @@ import './unified-styles.css';
 export const NAV_ITEMS = [
     { id: "main", label: "메인",          icon: "fas fa-home" },
     { id: "drive", label: "구글 드라이브", icon: "fab fa-google-drive" },
-    { id: "portal", label: "학교 포털",     icon: "fas fa-university" },
+    { id: "History", label: "이력 등록",     icon: "fas fa-university" },
     { id: "pptMaker", label: "PPT 제작",    icon: "fas fa-file-powerpoint" },
     { id: "myPage", label: "마이페이지",    icon: "fas fa-user" },
 ];
@@ -262,7 +262,25 @@ function App() {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, [isLoggedIn]);
+    useEffect(() => {
+        if (activeSection === 'History') {
+            closeModal();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeSection]); //
 
+    // 'portal' 섹션(페이지)에서 사용될 폼 제출 및 취소 핸들러
+    const handleSubmitExperiencePage = async (e) => {
+        e.preventDefault();
+        await saveExperience(e); // appLogic의 저장 함수 호출
+        // 저장이 완료되면 '마이페이지'로 이동하여 결과 확인
+        setActiveSection('myPage');
+    };
+
+    const handleCancelExperiencePage = () => {
+        closeModal(); // 폼 상태 초기화
+        setActiveSection('myPage'); // '마이페이지'로 이동
+    };
   // 실제 화면 렌더링
   return (
       <div>
@@ -312,7 +330,8 @@ function App() {
         {isLoggedIn && (
             <div id="mainPage" className="theme-ink">
               {/* 상단 네비게이션 */}
-              <TopNav items={NAV_ITEMS} active={activeSection} onSelect={showSection} onLogout={logout} />
+              <TopNav items={NAV_ITEMS} active={activeSection} onSelect={showSection} onLogout={logout}
+                      onPortalClick={() => showSection('portal')}/>
 
               <div className="mac-container">
                 <div className="mac-content">
@@ -322,7 +341,7 @@ function App() {
                         <div className="container-xl">
                           <HeroCarousel onSelect={showSection} />
                           <div className="mac-grid mac-grid-2">
-                            <div className="mac-card" onClick={showAddExperienceModal}>
+                            <div className="mac-card" onClick={() => showSection('History')}>
                               <i className="fas fa-plus-circle"></i>
                               <h3>이력 등록</h3>
                               <p>새로운 경험을 추가하세요</p>
@@ -423,7 +442,7 @@ function App() {
                                                           if (e.target.dataset.converting === 'true') {
                                                             return;
                                                           }
-                                                        
+
                                                           e.target.dataset.converting = 'true';
                                                           await retryImageLoad(e.target, exp.imageUrls[0], 0, setImageLoadingState, setImageErrorState, driveService);
                                                           e.target.dataset.converting = 'false';
@@ -462,6 +481,181 @@ function App() {
                         </div>
                       </div>
                   )}
+                    {activeSection === 'History' && (
+                        <div id="historyPageSection" className="content-section">
+                            <div className="mac-window">
+
+                                <div className="modal-content mac-modal" style={{border: 'none', borderRadius: '0', background: 'transparent'}}>
+
+                                    <div className="modal-header">
+                                        <h5 className="modal-title">{editingIndex !== null ? '이력 수정' : '새 이력 추가'}</h5>
+                                    </div>
+
+
+
+                                    {/* 폼 자체는 동일하게 사용 (이것이 유일한 <form> 태그여야 합니다) */}
+                                    <form onSubmit={handleSubmitExperiencePage} ref={formRef}>
+                                        <div className="modal-body">
+
+                                            {/* --- (내부 폼 필드들은 변경 없음) --- */}
+                                            <div className="mb-3">
+                                                <label className="form-label">제목</label>
+                                                <input type="text" className="form-control" required value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} />
+                                            </div>
+                                            <div className="mb-3">
+                                                <label className="form-label">기간</label>
+                                                <div className="period-container">
+                                                    <div className="row">
+                                                        <div className="col-6">
+                                                            <label className="form-label small white-text">시작일</label>
+                                                            <input
+                                                                type="date"
+                                                                className="form-control"
+                                                                required
+                                                                value={form.startDate}
+                                                                onChange={e => {
+                                                                    const newStartDate = e.target.value;
+                                                                    if (!newStartDate || newStartDate.length < 10) {
+                                                                        setForm({ ...form, startDate: newStartDate });
+                                                                        return;
+                                                                    }
+                                                                    setForm({ ...form, startDate: newStartDate });
+                                                                    if (newStartDate && form.endDate && newStartDate > form.endDate) {
+                                                                        alert('시작일은 종료일보다 이전이어야 합니다.');
+                                                                        setForm(prev => ({ ...prev, endDate: '' }));
+                                                                    }
+                                                                }}
+                                                            />
+                                                        </div>
+                                                        <div className="col-6">
+                                                            <label className="form-label small white-text">종료일</label>
+                                                            <input
+                                                                type="date"
+                                                                className="form-control"
+                                                                required
+                                                                value={form.endDate}
+                                                                onChange={e => {
+                                                                    const newEndDate = e.target.value;
+                                                                    if (!newEndDate || newEndDate.length < 10) {
+                                                                        setForm({ ...form, endDate: newEndDate });
+                                                                        return;
+                                                                    }
+                                                                    setForm({ ...form, endDate: newEndDate });
+                                                                    if (newEndDate && form.startDate && newEndDate < form.startDate) {
+                                                                        alert('종료일은 시작일보다 이후여야 합니다.');
+                                                                        setForm(prev => ({ ...prev, endDate: '' }));
+                                                                    }
+                                                                }}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    {form.startDate && form.endDate && (
+                                                        <div className="period-preview">
+                                                            <small className="white-text">
+                                                                선택된 기간: {formatPeriod(form.startDate, form.endDate)}
+                                                            </small>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <div className="mb-3">
+                                                <label className="form-label">설명</label>
+                                                <textarea className="form-control" rows="3" required value={form.description} onChange={e => setForm({ ...form, description: e.target.value })}></textarea>
+                                            </div>
+                                            <div className="mb-3">
+                                                <label className="form-label">이미지 첨부</label>
+                                                <div
+                                                    className="image-upload-container"
+                                                    onClick={() => document.getElementById('imageInput').click()}
+                                                    onDragOver={(e) => { e.preventDefault(); e.currentTarget.style.borderColor = '#007bff'; }}
+                                                    onDragLeave={(e) => { e.preventDefault(); e.currentTarget.style.borderColor = '#dee2e6'; }}
+                                                    onDrop={(e) => {
+                                                        e.preventDefault();
+                                                        e.currentTarget.style.borderColor = '#dee2e6';
+                                                        const files = Array.from(e.dataTransfer.files);
+                                                        handleDroppedFiles(files);
+                                                    }}
+                                                >
+                                                    <input
+                                                        type="file"
+                                                        id="imageInput"
+                                                        className="file-input"
+                                                        accept="image/*"
+                                                        multiple
+                                                        onChange={handleImageSelect}
+                                                        style={{ display: 'none' }}
+                                                    />
+                                                    <i className="fas fa-cloud-upload-alt image-upload-icon"></i>
+                                                    <div className="image-upload-text">클릭하여 이미지 선택 (여러 개 가능)</div>
+                                                    <div className="image-upload-subtext">또는 이미지를 여기로 드래그하세요</div>
+                                                </div>
+                                                {imagePreviews.length > 0 && (
+                                                    <div className="image-previews-container mt-3">
+                                                        <h6 className="mb-2">선택된 이미지들:</h6>
+                                                        <div className="row">
+                                                            {imagePreviews.map((preview, index) => (
+                                                                <div key={index} className="col-md-4 col-sm-6 mb-2">
+                                                                    <div className="image-preview-item position-relative">
+                                                                        <img
+                                                                            src={preview}
+                                                                            alt={`이미지 ${index + 1}`}
+                                                                            className="img-fluid rounded"
+                                                                            style={{ width: '100%', height: '150px', objectFit: 'cover' }}
+                                                                            onError={async (e) => {
+                                                                                if (e.target.dataset.converting === 'true') { return; }
+                                                                                e.target.dataset.converting = 'true';
+                                                                                await retryImageLoad(e.target, preview, 0, setImageLoadingState, setImageErrorState, driveService);
+                                                                                e.target.dataset.converting = 'false';
+                                                                            }}
+                                                                        />
+                                                                        <button
+                                                                            type="button"
+                                                                            className="btn btn-sm btn-outline-danger position-absolute top-0 end-0 m-1 image-delete-btn"
+                                                                            onClick={() => removeImage(index)}
+                                                                            style={{ zIndex: 10 }}
+                                                                        >
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                <div className="image-size-info mt-2">
+                                                    <small className="white-text">최대 파일 크기: 5MB, 지원 형식: JPG, PNG, GIF</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="modal-footer">
+
+                                            <button
+                                                type="button"
+                                                className="btn btn-secondary"
+                                                onClick={() => {
+                                                    closeModal(); // 폼 초기화
+                                                    setActiveSection('main'); // 메인 페이지로 이동
+                                                }}
+                                                disabled={isExperienceLoading}
+                                            >
+                                                취소
+                                            </button>
+                                            <button type="submit" className="btn btn-primary" disabled={isExperienceLoading}>
+                                                {isExperienceLoading ? (
+                                                    <>
+                                                        <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                                        {editingIndex !== null ? '수정 중...' : '저장 중...'}
+                                                    </>
+                                                ) : (
+                                                    editingIndex !== null ? '수정' : '저장'
+                                                )}
+                                            </button>
+                                        </div>
+                                    </form>
+
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                   {/* 템플릿 선택 섹션 */}
                   {activeSection === 'templateSelection' && (
@@ -1125,7 +1319,7 @@ function App() {
                                                           if (e.target.dataset.converting === 'true') {
                                                             return;
                                                           }
-                                                        
+
                                                           e.target.dataset.converting = 'true';
                                                           await retryImageLoad(e.target, exp.imageUrls[0], 0, setImageLoadingState, setImageErrorState, driveService);
                                                           e.target.dataset.converting = 'false';
@@ -1188,181 +1382,7 @@ function App() {
             </div>
         )}
 
-        {/* 이력 추가 모달 */}
-        {showModal && (
-            <div className="modal fade show" style={{display: 'block', backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9999}} tabIndex="-1">
-              <div className="modal-dialog modal-dialog-centered">
-                <div className="modal-content mac-modal">
-                  <div className="modal-header">
-                    <h5 className="modal-title">{editingIndex !== null ? '이력 수정' : '새 이력 추가'}</h5>
-                    <button type="button" className="btn-close" onClick={closeModal}></button>
-                  </div>
-                  <form onSubmit={saveExperience} ref={formRef}>
-                    <div className="modal-body">
-                      <div className="mb-3">
-                        <label className="form-label">제목</label>
-                        <input type="text" className="form-control" required value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} />
-                      </div>
-                      <div className="mb-3">
-                        <label className="form-label">기간</label>
-                        <div className="period-container">
-                          <div className="row">
-                            <div className="col-6">
-                              <label className="form-label small white-text">시작일</label>
-                              <input
-                                  type="date"
-                                  className="form-control"
-                                  required
-                                  value={form.startDate}
-                                  onChange={e => {
-                                    const newStartDate = e.target.value;
-                                    
-                                    // 빈 값이거나 유효하지 않은 날짜 형식이면 검사하지 않음
-                                    if (!newStartDate || newStartDate.length < 10) {
-                                      setForm({ ...form, startDate: newStartDate });
-                                      return;
-                                    }
-                                    
-                                    setForm({ ...form, startDate: newStartDate });
-
-                                    // 시작일이 종료일보다 늦으면 경고 후 종료일 초기화
-                                    if (newStartDate && form.endDate && newStartDate > form.endDate) {
-                                      alert('시작일은 종료일보다 이전이어야 합니다.');
-                                      setForm(prev => ({ ...prev, endDate: '' }));
-                                    }
-                                  }}
-                              />
-                            </div>
-                            <div className="col-6">
-                              <label className="form-label small white-text">종료일</label>
-                              <input
-                                  type="date"
-                                  className="form-control"
-                                  required
-                                  value={form.endDate}
-                                  onChange={e => {
-                                    const newEndDate = e.target.value;
-                                    
-                                    // 빈 값이거나 유효하지 않은 날짜 형식이면 검사하지 않음
-                                    if (!newEndDate || newEndDate.length < 10) {
-                                      setForm({ ...form, endDate: newEndDate });
-                                      return;
-                                    }
-                                    
-                                    setForm({ ...form, endDate: newEndDate });
-
-                                    // 종료일이 시작일보다 이르면 경고
-                                    if (newEndDate && form.startDate && newEndDate < form.startDate) {
-                                      alert('종료일은 시작일보다 이후여야 합니다.');
-                                      setForm(prev => ({ ...prev, endDate: '' }));
-                                    }
-                                  }}
-                              />
-                            </div>
-                          </div>
-
-                          {form.startDate && form.endDate && (
-                              <div className="period-preview">
-                                <small className="white-text">
-                                  선택된 기간: {formatPeriod(form.startDate, form.endDate)}
-                                </small>
-                              </div>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="mb-3">
-                        <label className="form-label">설명</label>
-                        <textarea className="form-control" rows="3" required value={form.description} onChange={e => setForm({ ...form, description: e.target.value })}></textarea>
-                      </div>
-                      <div className="mb-3">
-                        <label className="form-label">이미지 첨부</label>
-                        <div
-                            className="image-upload-container"
-                            onClick={() => document.getElementById('imageInput').click()}
-                            onDragOver={(e) => {
-                              e.preventDefault();
-                              e.currentTarget.style.borderColor = '#007bff';
-                            }}
-                            onDragLeave={(e) => {
-                              e.preventDefault();
-                              e.currentTarget.style.borderColor = '#dee2e6';
-                            }}
-                            onDrop={(e) => {
-                              e.preventDefault();
-                              e.currentTarget.style.borderColor = '#dee2e6';
-                              const files = Array.from(e.dataTransfer.files);
-                              handleDroppedFiles(files);
-                            }}
-                        >
-                          <input
-                              type="file"
-                              id="imageInput"
-                              className="file-input"
-                              accept="image/*"
-                              multiple
-                              onChange={handleImageSelect}
-                              style={{ display: 'none' }}
-                          />
-                          <i className="fas fa-cloud-upload-alt image-upload-icon"></i>
-                          <div className="image-upload-text">클릭하여 이미지 선택 (여러 개 가능)</div>
-                          <div className="image-upload-subtext">또는 이미지를 여기로 드래그하세요</div>
-                        </div>
-                        {imagePreviews.length > 0 && (
-                            <div className="image-previews-container mt-3">
-                              <h6 className="mb-2">선택된 이미지들:</h6>
-                              <div className="row">
-                                {imagePreviews.map((preview, index) => (
-                                    <div key={index} className="col-md-4 col-sm-6 mb-2">
-                                      <div className="image-preview-item position-relative">
-                                        <img
-                                            src={preview}
-                                            alt={`이미지 ${index + 1}`}
-                                            className="img-fluid rounded"
-                                            style={{ width: '100%', height: '150px', objectFit: 'cover' }}
-                                            onError={async (e) => {
-                                              if (e.target.dataset.converting === 'true') { return; }
-                                              e.target.dataset.converting = 'true';
-                                              await retryImageLoad(e.target, preview, 0, setImageLoadingState, setImageErrorState, driveService);
-                                              e.target.dataset.converting = 'false';
-                                            }}
-                                        />
-                                        <button
-                                            type="button"
-                                            className="btn btn-sm btn-outline-danger position-absolute top-0 end-0 m-1 image-delete-btn"
-                                            onClick={() => removeImage(index)}
-                                            style={{ zIndex: 10 }}
-                                        >
-                                        </button>
-                                      </div>
-                                    </div>
-                                ))}
-                              </div>
-                            </div>
-                        )}
-                        <div className="image-size-info mt-2">
-                          <small className="white-text">최대 파일 크기: 5MB, 지원 형식: JPG, PNG, GIF</small>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="modal-footer">
-                      <button type="button" className="btn btn-secondary" onClick={closeModal} disabled={isExperienceLoading}>취소</button>
-                      <button type="submit" className="btn btn-primary" disabled={isExperienceLoading}>
-                        {isExperienceLoading ? (
-                            <>
-                              <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                              {editingIndex !== null ? '수정 중...' : '저장 중...'}
-                            </>
-                        ) : (
-                            editingIndex !== null ? '수정' : '저장'
-                        )}
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              </div>
-            </div>
-        )}
+          {/* 이력 추가 모달 */}
 
         {/* 이미지 확대 모달 */}
         {showImageModal && selectedImageForModal && (
@@ -1413,8 +1433,8 @@ function App() {
                         className="img-fluid"
                         loading="eager"
                         decoding="async"
-                        style={{ 
-                          maxHeight: '80vh', 
+                        style={{
+                          maxHeight: '80vh',
                           maxWidth: '100%',
                           opacity: imageLoadingStates.get(`${selectedImageForModal.url}_${selectedImageForModal.title}`) === 'loading' ? 0.5 : 1
                         }}
@@ -1424,7 +1444,7 @@ function App() {
                           if (e.target.dataset.converting === 'true') {
                             return;
                           }
-                          
+
                           e.target.dataset.converting = 'true';
                           await retryImageLoad(e.target, selectedImageForModal.url, 0, setImageLoadingState, setImageErrorState, driveService);
                           e.target.dataset.converting = 'false';
@@ -1517,9 +1537,9 @@ function App() {
                                     alt={`${selectedExperience.title} 이미지 ${imgIdx + 1}`}
                                     loading="lazy"
                                     decoding="async"
-                                    style={{ 
-                                      width: '100%', 
-                                      height: '100%', 
+                                    style={{
+                                      width: '100%',
+                                      height: '100%',
                                       objectFit: 'cover',
                                       opacity: imageLoadingStates.get(`${imageUrl}_${selectedExperience.title} 이미지 ${imgIdx + 1}`) === 'loading' ? 0.5 : 1
                                     }}
@@ -1528,7 +1548,7 @@ function App() {
                                       if (e.target.dataset.converting === 'true') {
                                         return;
                                       }
-                                      
+
                                       e.target.dataset.converting = 'true';
                                       await retryImageLoad(e.target, imageUrl, 0, setImageLoadingState, setImageErrorState, driveService);
                                       e.target.dataset.converting = 'false';
@@ -1582,19 +1602,19 @@ function App() {
                       <p className="mb-4" style={{ whiteSpace: 'pre-wrap', color: 'white' }}>
                         {templateDescriptions[selectedTemplateForModal]?.description}
                       </p>
-                      
+
                       {/* 템플릿 미리보기 이미지 */}
                       <div className="mb-4">
                         <h6 className="mb-3 white-text">템플릿 미리보기</h6>
                         <div className="template-preview-container">
-                          {templateDescriptions[selectedTemplateForModal]?.previewImages && 
+                          {templateDescriptions[selectedTemplateForModal]?.previewImages &&
                            templateDescriptions[selectedTemplateForModal].previewImages.length > 0 ? (
                             <div className="row g-3">
                               {templateDescriptions[selectedTemplateForModal].previewImages.map((imagePath, index) => (
                                 <div key={index} className="col-md-4">
                                   <div className="template-preview-item">
-                                    <img 
-                                      src={imagePath} 
+                                    <img
+                                      src={imagePath}
                                       alt={`템플릿 미리보기 ${index + 1}`}
                                       className="img-fluid rounded"
                                       style={{
@@ -1632,7 +1652,7 @@ function App() {
                           )}
                         </div>
                       </div>
-                      
+
                      {/* 테마 색상 선택 */}
                      <div className="theme-color-selector">
                        <h6>테마 색상</h6>
@@ -1674,7 +1694,7 @@ function App() {
                          ></div>
                        </div>
                      </div>
-                      
+
                       <h6 className="mb-3 white-text">주요 특징</h6>
                       <div className="template-features">
                         {templateDescriptions[selectedTemplateForModal]?.features.map((feature, index) => (
