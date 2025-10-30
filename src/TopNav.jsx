@@ -30,29 +30,39 @@ export default function TopNav({ items = [], active, onSelect, onLogout, onPorta
                 ))}
             </nav>
 
-            {/* 2. 학교 포털 버튼을 먼저 배치합니다 (기존 로그아웃 디자인 사용) */}
+            {/* <div className="top-actions">가 여기서 시작하여 두 버튼을 모두 감쌉니다. */}
             <div className="top-actions">
 
-                {/* 기존 로그아웃 디자인과 클래스를 그대로 사용하여 학교 포털 버튼 구현 */}
-                <button
-                    className="btn-portal btn-logout" // 기존 로그아웃 스타일을 그대로 사용
-                    onClick={onPortalClick}             // 클릭 시 portal로 이동
+                <a
+                    href="https://www.yuhan.ac.kr/index.do"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn-portal btn-logout"
                     aria-label="학교 포털 바로가기"
                     title="학교 포털 바로가기"
                 >
-                    {/* 기존 로그아웃 아이콘(fa-sign-out-alt) 대신 학교 아이콘 사용 */}
                     <i className="fas fa-university" aria-hidden="true"></i>
-
-                    {/* 로그아웃 텍스트 대신 '학교 포털' 텍스트 사용 */}
+                    <span className="portal-text">학교 홈페이지</span>
+                </a>
+                {/* 학교 포털 링크 (수정된 <a> 태그) */}
+                <a
+                    href="https://portal.yuhan.ac.kr/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn-portal btn-logout"
+                    aria-label="학교 포털 바로가기"
+                    title="학교 포털 바로가기"
+                >
+                    <i className="fas fa-university" aria-hidden="true"></i>
                     <span className="portal-text">학교 포털</span>
-                </button>
+                </a>
 
                 {/* 3. 원래의 로그아웃 버튼 */}
                 <button className="btn-logout" onClick={onLogout} aria-label="로그아웃">
                     <i className="fas fa-sign-out-alt" aria-hidden="true"></i>
                     <span className="logout-text">로그아웃</span>
                 </button>
-            </div>
+            </div> {/* 👈 top-actions <div>를 여기서 닫습니다. (불필요한 </div> 제거) */}
 
         </header>
     );
