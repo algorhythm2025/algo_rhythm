@@ -29,7 +29,11 @@ function useAppLogic()
       // localStorage에서 스프레드시트 ID 복원
       return localStorage.getItem('spreadsheetId') || null;
     });
-
+    const [expSortBy, setExpSortBy] = useState('startDate'); // 기본값: 기간순
+    // 정렬 차수 (오름차순: asc, 내림차순: desc)
+    const [expSortOrder, setExpSortOrder] = useState('desc');
+    const [pptSortBy, setPptSortBy] = useState('createdTime');
+    const [pptSortOrder, setPptSortOrder] = useState('desc');
     const [isSheetsInitialized, setIsSheetsInitialized] = useState(false);
     const [isDriveInitialized, setIsDriveInitialized] = useState(false);
     const [isInitializing, setIsInitializing] = useState(false); // 서비스 초기화 중 상태
@@ -119,7 +123,77 @@ function useAppLogic()
     const experienceLogic = useExperienceLogic();
     const presentationLogic = usePresentationLogic();
     const uiLogic = useUILogic(driveService.current);
+    const sortPptHistory = (history, sortBy, sortOrder) => { // 인자 변경
+        if (!history || history.length === 0) return [];
+        const sorted = [...history];
+        const isAsc = sortOrder === 'asc';
+        const field = sortBy; // 'createdTime' 또는 'name'
 
+        sorted.sort((a, b) => {
+
+            let valA;
+            let valB;
+
+            if (field === 'name') {
+                valA = a.name.toLowerCase();
+                valB = b.name.toLowerCase();
+
+                if (valA < valB) return isAsc ? -1 : 1;
+                if (valA > valB) return isAsc ? 1 : -1;
+                return 0;
+            } else if (field === 'createdTime' || field === 'modifiedTime') {
+                // 날짜 비교
+                valA = new Date(a[field] || 0).getTime();
+                valB = new Date(b[field] || 0).getTime();
+
+                // 오름차순(asc)이면 valA - valB, 내림차순(desc)이면 valB - valA
+                return isAsc ? valA - valB : valB - valA;
+            }
+            return 0;
+        });
+        return sorted;
+    };
+    const sortedPptHistory = sortPptHistory(pptHistory, pptSortBy, pptSortOrder);
+    const sortExperiences = (expList, sortBy, sortOrder) => {
+        if (!expList || expList.length === 0) return [];
+        const sorted = [...expList];
+        const isAsc = sortOrder === 'asc';
+        const field = sortBy; // 'title' 또는 'startDate'
+
+        sorted.sort((a, b) => {
+            let valA;
+            let valB;
+
+            if (field === 'title') {
+                // 제목 비교 (기존 로직 유지)
+                valA = a.title.toLowerCase();
+                valB = b.title.toLowerCase();
+
+                if (valA < valB) return isAsc ? -1 : 1;
+                if (valA > valB) return isAsc ? 1 : -1;
+                return 0;
+            } else if (field === 'startDate') {
+                // ⭐ 날짜 비교 로직 강화
+
+                // 1. Date 객체 생성
+                const dateA = new Date(a.startDate);
+                const dateB = new Date(b.startDate);
+
+                // 2. 유효성 검사 및 밀리초 변환
+                // 유효한 날짜(getTime()이 NaN이 아닌 경우)만 사용.
+                // 유효하지 않으면 (Invalid Date) 안전하게 0으로 처리 (1970/01/01)
+                valA = !isNaN(dateA.getTime()) ? dateA.getTime() : 0;
+                valB = !isNaN(dateB.getTime()) ? dateB.getTime() : 0;
+
+                // 3. 비교
+                // 오름차순(asc)이면 valA - valB, 내림차순(desc)이면 valB - valA
+                return isAsc ? valA - valB : valB - valA;
+            }
+            return 0;
+        });
+        return sorted;
+    };
+    const sortedExperiences = sortExperiences(experiences, expSortBy, expSortOrder);
     // 서비스들 초기화
     async function initializeServices() {
       try {
@@ -682,7 +756,7 @@ function useAppLogic()
       isLoggedIn,
       activeSection,
       authStatus,
-      experiences,
+        experiences: sortedExperiences,
       selected,
       spreadsheetId,
       isSheetsInitialized,
@@ -697,8 +771,17 @@ function useAppLogic()
       isRefreshLoading,
       isDeleteLoading,
       editingIndex,
+        pptSortBy,
+        setPptSortBy,
+        pptSortOrder,
+
+        setPptSortOrder,
       deletingFileIds,
       isViewModeLoading,
+        expSortBy,
+        setExpSortBy,
+        expSortOrder,
+        setExpSortOrder,
       isPptCreating,
       // PPT 진행 상황 상태들
       pptProgress,
@@ -711,7 +794,8 @@ function useAppLogic()
       selectedImages,
       imagePreviews,
       showImageModal,
-      pptHistory,
+        pptHistory: sortedPptHistory,
+
       selectedImageForModal,
       imageLoadingStates,
       selectedExperience,
@@ -770,6 +854,7 @@ function useAppLogic()
       enterFolder,
       downloadFile,
       openFileInNewTab,
+        handleDriveFileDownload,
       formatFileSize,
       getFileTypeDisplay,
       convertImageUrl,

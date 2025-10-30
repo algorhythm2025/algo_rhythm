@@ -201,6 +201,7 @@ function App() {
     setImageLoadingState,
     setImageErrorState,
     retryImageLoad,
+
     driveService,
     toggleSelect,
     setSelectedExperiences,
@@ -230,6 +231,19 @@ function App() {
     openFileInNewTab,
     formatFileSize,
     getFileTypeDisplay,
+        pptSortBy,
+        setPptSortBy,
+        pptSortOrder,
+        setPptSortOrder,
+        expSortBy,
+        setExpSortBy,
+        expSortOrder,
+        setExpSortOrder,
+        driveSortBy,
+        setDriveSortBy,
+        driveSortOrder,
+        setDriveSortOrder,
+        handleDriveFileDownload,
     convertImageUrl,
     convertImageUrlToThumbnail,
     convertImageUrlToFullSize,
@@ -947,51 +961,81 @@ function App() {
                             )}
 
                             {/* 파일 목록 */}
-                            {isDriveInitialized && (
-                                <div className="drive-files">
-                                  <div className="d-flex justify-content-between align-items-center mb-3">
-                                    <div className="d-flex align-items-center">
-                                      {currentPath.length > 0 && (
-                                          <button
-                                              className="btn btn-outline-secondary btn-sm me-3"
-                                              onClick={goBack}
-                                              disabled={isViewModeLoading}
-                                          >
-                                            <i className="fas fa-arrow-left"></i> 뒤로가기
-                                          </button>
-                                      )}
-                                      <h4>
-                                        {currentPath.length > 0 ? currentPath[currentPath.length - 1].name :
-                                            driveViewMode === 'all' ? '전체 파일' : '포트폴리오 폴더'}
-                                      </h4>
-                                    </div>
-                                    <div>
-                                      <label htmlFor="drive-upload-input" className={`btn btn-outline-success btn-sm me-2 ${isUploadLoading ? 'disabled file-upload-btn' : ''}`}>
-                                        {isUploadLoading ? (
-                                            <>
-                                              <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
-                                              업로드 중...
-                                            </>
-                                        ) : (
-                                            <>
-                                              <i className="fas fa-upload"></i> 업로드
-                                            </>
-                                        )}
-                                      </label>
-                                      <input
-                                          id="drive-upload-input"
-                                          type="file"
-                                          className="hidden-input"
-                                          onChange={handleDriveFileUpload}
-                                      />
-                                      <button className="btn btn-outline-primary btn-sm" onClick={handleDriveRefresh} disabled={isRefreshLoading}>
-                                        {isRefreshLoading ? (
-                                            <>
-                                              <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
-                                              새로고침 중...
-                                            </>
-                                        ) : (
-                                            <>
+                              {isDriveInitialized && (
+                                  <div className="drive-files">
+                                      <div className="d-flex justify-content-between align-items-center mb-3">
+                                          <div className="d-flex align-items-center">
+                                              {/* ... (뒤로가기 버튼 유지) */}
+                                              {currentPath.length > 0 && (
+                                                  <button
+                                                      className="btn btn-outline-secondary btn-sm me-3"
+                                                      onClick={goBack}
+                                                      disabled={isViewModeLoading}
+                                                  >
+                                                      <i className="fas fa-arrow-left"></i> 뒤로가기
+                                                  </button>
+                                              )}
+                                              <h4>
+                                                  {currentPath.length > 0 ? currentPath[currentPath.length - 1].name :
+                                                      driveViewMode === 'all' ? '전체 파일' : '포트폴리오 폴더'}
+                                              </h4>
+                                          </div>
+
+                                          {/* ⭐ 정렬 드롭다운 추가 영역 */}
+                                          <div className="d-flex align-items-center">
+                                              {/* 1. 정렬 기준 드롭다운: 이름순, 날짜순 */}
+                                              <select
+                                                  className="form-select form-select-sm me-2 custom-sort-select"
+                                                  style={{width: '90px'}}
+                                                  value={driveSortBy}
+                                                  onChange={(e) => setDriveSortBy(e.target.value)}
+                                              >
+                                                  <option value="name">이름순</option>
+                                                  <option value="modifiedTime">날짜순</option>
+                                              </select>
+
+                                              {/* 2. 정렬 차수 드롭다운: 오름차순, 내림차순 */}
+                                              <select
+                                                  className="form-select form-select-sm me-3 custom-sort-select" // me-3로 간격 조정
+                                                  style={{width: '100px'}}
+                                                  value={driveSortOrder}
+                                                  onChange={(e) => setDriveSortOrder(e.target.value)}
+                                              >
+                                                  <option value="asc">
+                                                      {driveSortBy === 'name' ? '오름차순 (A-Z)' : '오래된순'}
+                                                  </option>
+                                                  <option value="desc">
+                                                      {driveSortBy === 'name' ? '내림차순 (Z-A)' : '최신순'}
+                                                  </option>
+                                              </select>
+
+                                              {/* ... (업로드/새로고침 버튼 유지) */}
+                                              <label htmlFor="drive-upload-input" className={`btn btn-outline-success btn-sm me-2 ${isUploadLoading ? 'disabled file-upload-btn' : ''}`}>
+                                                  {isUploadLoading ? (
+                                                      <>
+                                                          <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                                          업로드 중...
+                                                      </>
+                                                  ) : (
+                                                      <>
+                                                          <i className="fas fa-upload"></i> 업로드
+                                                      </>
+                                                  )}
+                                              </label>
+                                              <input
+                                                  id="drive-upload-input"
+                                                  type="file"
+                                                  className="hidden-input"
+                                                  onChange={handleDriveFileUpload}
+                                              />
+                                              <button className="btn btn-outline-primary btn-sm" onClick={handleDriveRefresh} disabled={isRefreshLoading}>
+                                                  {isRefreshLoading ? (
+                                                      <>
+                                                          <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                                          새로고침 중...
+                                                      </>
+                                                  ) : (
+                                                      <>
                                               <i className="fas fa-sync-alt"></i> 새로고침
                                             </>
                                         )}
@@ -1016,10 +1060,10 @@ function App() {
                                     ) : (
                                         <>
                                           {/* 폴더들 먼저 표시 */}
-                                          {driveFiles
-                                              .filter(file => file.mimeType === 'application/vnd.google-apps.folder')
-                                              .map((file, index, array) => (
-                                                  <div key={file.id}>
+                                            {driveFiles // 이 배열은 이미 useAppLogic에서 정렬된 상태입니다.
+                                                .filter(file => file.mimeType === 'application/vnd.google-apps.folder')
+                                                .map((file, index, array) => (
+                                                    <div key={file.id}>
                                                     <div className="file-item list-group-item folder-item" onClick={() => enterFolder(file.id, file.name)}>
                                                       <div className="d-flex align-items-center">
                                                         <i className="fas fa-folder me-3 folder-icon"></i>
@@ -1181,92 +1225,218 @@ function App() {
                         </div>
                       </div>
                   )}
-                  {/* 마이페이지 섹션 */}
-                  {activeSection === 'myPage' && (
-                      <div id="myPageSection" className="content-section">
-                        <div className="mac-grid">
-                          <div className="mac-window">
-                            <div className="d-flex justify-content-between align-items-center mb-3">
-                              <h2>PPT 기록</h2>
-                              <button className="btn btn-outline-primary btn-sm" onClick={loadPptHistory}>
-                                <i className="fas fa-sync-alt"></i> 새로고침
-                              </button>
-                            </div>
-                            <div id="pptHistory" className="mac-list">
-                              {isLoading ? (
-                                <div className="text-center p-4">
-                                  <div className="spinner-border text-primary" role="status">
-                                    <span className="visually-hidden">로딩중...</span>
-                                  </div>
-                                  <p className="mt-2">PPT 기록을 불러오는 중...</p>
-                                </div>
-                              ) : pptHistory.length === 0 ? (
-                                <div className="empty-state">
-                                  <i className="fas fa-history fa-3x mb-3"></i>
-                                  <p>아직 제작한 PPT가 없습니다.</p>
-                                </div>
-                              ) : (
-                                pptHistory.map((ppt, index) => (
-                                    <div
-                                        key={ppt.id}
-                                        className="list-group-item mac-list-item d-flex align-items-center file-item"
-                                        onClick={() => window.open(`https://docs.google.com/presentation/d/${ppt.id}/edit`, '_blank')}
-                                    >
-                                      <div className="me-3">
-                                        <i className="fas fa-file-powerpoint text-primary fa-2x"></i>
-                                      </div>
-                                      <div className="flex-grow-1">
-                                        <h6 className="mb-1 text-white">{ppt.name}</h6>
-                                        <small className="text-white-50">
-                                          생성일: {new Date(ppt.createdTime).toLocaleDateString()}
-                                        </small>
-                                      </div>
-                                      <div className="d-flex align-items-center gap-2">
-                                        {/* 수정 버튼 */}
-                                        <button
-                                            className="btn btn-outline-secondary btn-sm"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              loadPptForEdit(ppt.id);
-                                            }}
-                                        >
-                                          <i className="fas fa-edit"></i> 수정
-                                        </button>
+                    {/* 마이페이지 섹션 */}
+                    {activeSection === 'myPage' && (
+                        <div id="myPageSection" className="content-section">
+                            <div className="mac-grid">
+                                <div className="mac-window">
 
-                                        {/* 삭제 버튼 */}
-                                        <button
-                                            className="btn btn-outline-danger btn-sm"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              if (window.confirm(`"${ppt.name}" 파일을 삭제하시겠습니까?`)) {
-                                                handleDriveFileDelete(ppt.id, true); // PPT 기록에서 삭제하므로 true 전달
-                                              }
-                                            }}
-                                        >
-                                          <i className="fas fa-trash-alt"></i> 삭제
-                                        </button>
-                                      </div>
+                                    {/* ⭐ 이 부분이 헤더(제목 + 버튼) 컨테이너입니다. */}
+                                    <div className="d-flex justify-content-between align-items-center mb-3">
+                                        <h2>PPT 기록</h2>
+
+                                        {/* 1. 정렬 드롭다운과 새로고침 버튼을 묶는 컨테이너 */}
+                                        <div className="d-flex align-items-center">
+                                            {/* 1. 정렬 드롭다운 메뉴 (useAppLogic에서 가져온 sortKey, setSortKey 사용) */}
+                                            <select
+                                                className="form-select form-select-sm me-2 custom-sort-select"
+                                                style={{width: '90px'}} // 너비 조정
+                                                value={pptSortBy}
+                                                onChange={(e) => setPptSortBy(e.target.value)} // 기준 변경 (날짜/이름)
+                                            >
+                                                <option value="createdTime">날짜순</option>
+                                                <option value="name">이름순</option>
+                                            </select>
+
+                                            {/* ⭐ 2. 정렬 차수 드롭다운: 오름차순, 내림차순 */}
+                                            <select
+                                                className="form-select form-select-sm me-2 custom-sort-select"
+                                                style={{width: '100px'}} // 너비 조정
+                                                value={pptSortOrder}
+                                                onChange={(e) => setPptSortOrder(e.target.value)} // 차수 변경 (오름차순/내림차순)
+                                            >
+                                                {/* pptSortBy에 따라 텍스트 변경 */}
+                                                <option value="asc">
+                                                    {pptSortBy === 'name' ? '오름차순 (A-Z)' : '오래된순'}
+                                                </option>
+                                                <option value="desc">
+                                                    {pptSortBy === 'name' ? '내림차순 (Z-A)' : '최신순'}
+                                                </option>
+                                            </select>
+
+                                            {/* 3. 새로고침 버튼 */}
+                                            <button className="btn btn-outline-primary btn-sm" onClick={loadPptHistory}>
+                                                <i className="fas fa-sync-alt"></i> 새로고침
+                                            </button>
+                                        </div>
                                     </div>
-                                ))
-                              )}
-                            </div>
-                          </div>
-                          <div className="mac-window">
-                            <div className="d-flex justify-content-between align-items-center mb-3">
-                              <h2>이력 관리</h2>
-                              <button className="btn btn-outline-primary btn-sm" onClick={refreshSheetsData} disabled={isExperienceLoading}>
-                                {isExperienceLoading ? (
-                                  <>
-                                    <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                                    새로고침 중...
-                                  </>
-                                ) : (
-                                  <>
-                                    <i className="fas fa-sync-alt"></i> 시트 새로고침
-                                  </>
-                                )}
-                              </button>
-                            </div>
+
+
+                                    <div id="pptHistory" className="mac-list">
+                                        {isLoading ? (
+                                            <div className="text-center p-4">
+                                                <div className="spinner-border text-primary" role="status">
+                                                    <span className="visually-hidden">로딩중...</span>
+                                                </div>
+                                                <p className="mt-2">PPT 기록을 불러오는 중...</p>
+                                            </div>
+                                        ) : pptHistory.length === 0 ? (
+                                            <div className="empty-state">
+                                                <i className="fas fa-history fa-3x mb-3"></i>
+                                                <p>아직 제작한 PPT가 없습니다.</p>
+                                            </div>
+                                        ) : (
+                                            pptHistory.map((ppt, index) => (
+                                                <div
+                                                    key={ppt.id}
+                                                    className="list-group-item mac-list-item d-flex align-items-center file-item"
+                                                    // ⭐ 항목 클릭 시 기본 동작(Google Slides) 제거
+                                                    // onClick={() => window.open(`https://docs.google.com/presentation/d/${ppt.id}/edit`, '_blank')}
+                                                >
+                                                    <div className="me-3">
+                                                        <i className="fas fa-file-powerpoint text-primary fa-2x"></i>
+                                                    </div>
+                                                    <div className="flex-grow-1">
+                                                        <h6 className="mb-1 text-white">{ppt.name}</h6>
+                                                        <small className="text-white-50">
+                                                            생성일: {new Date(ppt.createdTime).toLocaleDateString()}
+                                                        </small>
+                                                    </div>
+                                                    <div className="d-flex align-items-center gap-2">
+
+                                                        {/* ⭐⭐ 1. 다운로드/열기 선택 드롭다운 버튼 그룹 추가 ⭐⭐ */}
+                                                        <div className="btn-group" role="group">
+                                                            {/* 기본 버튼: Google Slides에서 열기 (현재 기본 동작) */}
+                                                            <button
+                                                                className="btn btn-outline-info btn-sm"
+                                                                title="Google Slides에서 이 프레젠테이션을 편집합니다."
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    window.open(`https://docs.google.com/presentation/d/${ppt.id}/edit`, '_blank');
+                                                                }}
+                                                            >
+                                                                <i className="fab fa-google"></i> Slides에서 열기
+                                                            </button>
+
+                                                            {/* 드롭다운 토글 버튼 */}
+                                                            <button
+                                                                type="button"
+                                                                className="btn btn-outline-info btn-sm dropdown-toggle dropdown-toggle-split"
+                                                                data-bs-toggle="dropdown"
+                                                                aria-expanded="false"
+                                                                onClick={e => e.stopPropagation()} // 이벤트 전파 방지
+                                                            >
+                                                                <span className="visually-hidden">옵션 토글</span>
+                                                            </button>
+
+                                                            {/* 드롭다운 메뉴 */}
+                                                            <ul className="dropdown-menu dropdown-menu-dark" style={{ minWidth: 'auto' }}>
+                                                                <li>
+                                                                    {/* Microsoft PPTX 다운로드 버튼 (새로운 기능) */}
+                                                                    <a
+                                                                        className="dropdown-item"
+                                                                        href="#"
+                                                                        onClick={(e) => {
+                                                                            e.preventDefault();
+                                                                            e.stopPropagation();
+                                                                            // ⭐ driveService.downloadGoogleDoc 함수를 사용하여 PPTX로 다운로드
+                                                                            // 이 로직은 driveService.downloadFile을 통해 통합되어야 합니다.
+                                                                            // 임시로 handleDriveFileDownload를 사용하도록 합니다.
+                                                                            // ppt 객체에 mimeType을 임시로 추가하여 downloadFile이 export를 유도하도록 합니다.
+                                                                            handleDriveFileDownload({
+                                                                                ...ppt,
+                                                                                mimeType: 'application/vnd.google-apps.presentation'
+                                                                            });
+                                                                        }}
+                                                                    >
+                                                                        <i className="fas fa-download"></i> Microsoft PPT 다운로드 (.pptx)
+                                                                    </a>
+                                                                </li>
+                                                                <li><hr className="dropdown-divider" /></li>
+                                                                <li>
+                                                                    <a
+                                                                        className="dropdown-item"
+                                                                        href="#"
+                                                                        onClick={(e) => {
+                                                                            e.preventDefault();
+                                                                            e.stopPropagation();
+                                                                            // loadPptForEdit 함수를 사용하여 편집 모드로 전환
+                                                                            loadPptForEdit(ppt.id);
+                                                                        }}
+                                                                    >
+                                                                        <i className="fas fa-edit"></i> 내부 편집기로 수정
+                                                                    </a>
+                                                                </li>
+                                                            </ul>
+                                                        </div>
+                                                        {/* ⭐⭐ 다운로드/열기 버튼 그룹 끝 ⭐⭐ */}
+
+                                                        {/* 기존 삭제 버튼은 유지 */}
+                                                        <button
+                                                            className="btn btn-outline-danger btn-sm"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                if (window.confirm(`"${ppt.name}" 파일을 삭제하시겠습니까?`)) {
+                                                                    handleDriveFileDelete(ppt.id, true); // PPT 기록에서 삭제하므로 true 전달
+                                                                }
+                                                            }}
+                                                        >
+                                                            <i className="fas fa-trash-alt"></i> 삭제
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                </div>
+
+
+                                <div className="mac-window">
+                                    <div className="d-flex justify-content-between align-items-center mb-3">
+                                        <h2>이력 관리</h2>
+                                        <div className="d-flex align-items-center">
+                                            {/* ⭐ 1. 정렬 기준 드롭다운: 기간순, 제목순 */}
+                                            <select
+                                                className="form-select form-select-sm me-2 custom-sort-select"
+                                                style={{width: '90px'}} // 너비 조정
+                                                value={expSortBy}
+                                                onChange={(e) => setExpSortBy(e.target.value)} // 기준 변경 (기간/제목)
+                                            >
+                                                <option value="startDate">날짜순</option>
+                                                <option value="title">제목순</option>
+                                            </select>
+
+                                            {/* ⭐ 2. 정렬 차수 드롭다운: 오름차순, 내림차순 */}
+                                            <select
+                                                className="form-select form-select-sm me-2 custom-sort-select"
+                                                style={{width: '100px'}} // 너비 조정
+                                                value={expSortOrder}
+                                                onChange={(e) => setExpSortOrder(e.target.value)} // 차수 변경 (오름차순/내림차순)
+                                            >
+                                                {/* expSortBy에 따라 텍스트 변경 */}
+                                                <option value="asc">
+                                                    {expSortBy === 'title' ? '오름차순 (A-Z)' : '오래된순'}
+                                                </option>
+                                                <option value="desc">
+                                                    {expSortBy === 'title' ? '내림차순 (Z-A)' : '최신순'}
+                                                </option>
+                                            </select>
+
+                                            {/* 3. 시트 새로고침 버튼 (기존 코드) */}
+                                            <button className="btn btn-outline-primary btn-sm" onClick={refreshSheetsData} disabled={isExperienceLoading}>
+                                                {isExperienceLoading ? (
+                                                    <>
+                                                        <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                                        새로고침 중...
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <i className="fas fa-sync-alt"></i> 시트 새로고침
+                                                    </>
+                                                )}
+                                            </button>
+                                        </div>
+                                    </div>
                             <div id="experienceManagement" className="mac-list">
                               {isExperienceLoading ? (
                                 <div className="text-center p-4">
