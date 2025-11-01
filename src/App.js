@@ -320,19 +320,29 @@ function App() {
                             나만의 포트폴리오를 만들어 보세요.
                         </p>
                         <div className="login-footer-links">
-                            <button 
+                            <a 
+                                href="#privacy-policy" 
                                 className="footer-link-btn" 
-                                onClick={() => setShowPrivacyPolicy(true)}
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    setShowPrivacyPolicy(true);
+                                }}
+                                style={{ textDecoration: 'none', color: 'inherit', cursor: 'pointer' }}
                             >
                                 개인정보처리방침
-                            </button>
+                            </a>
                             <span className="footer-link-separator">|</span>
-                            <button 
+                            <a 
+                                href="#terms-of-service" 
                                 className="footer-link-btn" 
-                                onClick={() => setShowTermsOfService(true)}
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    setShowTermsOfService(true);
+                                }}
+                                style={{ textDecoration: 'none', color: 'inherit', cursor: 'pointer' }}
                             >
                                 사용자 약관
-                            </button>
+                            </a>
                         </div>
                     </div>
                 </div>
@@ -1226,19 +1236,29 @@ function App() {
               <footer className="main-footer">
                 <div className="footer-content">
                   <div className="footer-links">
-                    <button 
+                    <a 
+                      href="#privacy-policy" 
                       className="footer-link-btn" 
-                      onClick={() => setShowPrivacyPolicy(true)}
+                      onClick={(e) => {
+                          e.preventDefault();
+                          setShowPrivacyPolicy(true);
+                      }}
+                      style={{ textDecoration: 'none', color: 'inherit', cursor: 'pointer' }}
                     >
                       개인정보처리방침
-                    </button>
+                    </a>
                     <span className="footer-link-separator">|</span>
-                    <button 
+                    <a 
+                      href="#terms-of-service" 
                       className="footer-link-btn" 
-                      onClick={() => setShowTermsOfService(true)}
+                      onClick={(e) => {
+                          e.preventDefault();
+                          setShowTermsOfService(true);
+                      }}
+                      style={{ textDecoration: 'none', color: 'inherit', cursor: 'pointer' }}
                     >
                       사용자 약관
-                    </button>
+                    </a>
                   </div>
                   <p className="footer-copyright">© 2025 Portra. All rights reserved.</p>
                 </div>
