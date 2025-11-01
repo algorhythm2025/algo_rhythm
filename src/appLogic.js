@@ -107,8 +107,16 @@ function useAppLogic()
       // localStorage에서 저장된 포트폴리오 폴더 ID 복원
       return localStorage.getItem('portfolioFolderId') || null;
     }); // 포트폴리오 폴더 ID
-    const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false); // 개인정보처리방침 표시 여부
-    const [showTermsOfService, setShowTermsOfService] = useState(false); // 사용자 약관 표시 여부
+    const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(() => {
+      // URL 파라미터에서 개인정보처리방침 페이지 확인
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get('page') === 'privacy-policy' || window.location.hash === '#privacy-policy';
+    }); // 개인정보처리방침 표시 여부
+    const [showTermsOfService, setShowTermsOfService] = useState(() => {
+      // URL 파라미터에서 사용자 약관 페이지 확인
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get('page') === 'terms-of-service' || window.location.hash === '#terms-of-service';
+    }); // 사용자 약관 표시 여부
     const formRef = useRef();
   
     // 통합 인증 서비스 인스턴스
@@ -682,6 +690,54 @@ function useAppLogic()
         setPortfolioFolder();
       }
     }, [activeSection, isDriveInitialized, portfolioFolderId]);
+
+    // 개인정보처리방침 페이지 상태 변경 시 URL 업데이트
+    useEffect(() => {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (showPrivacyPolicy) {
+        urlParams.set('page', 'privacy-policy');
+        const newUrl = window.location.origin + window.location.pathname + '?' + urlParams.toString();
+        window.history.pushState({ page: 'privacy-policy' }, '', newUrl);
+      } else if (urlParams.get('page') === 'privacy-policy') {
+        urlParams.delete('page');
+        const newUrl = window.location.origin + window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
+        window.history.pushState({}, '', newUrl);
+      }
+    }, [showPrivacyPolicy]);
+
+    // 사용자 약관 페이지 상태 변경 시 URL 업데이트
+    useEffect(() => {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (showTermsOfService) {
+        urlParams.set('page', 'terms-of-service');
+        const newUrl = window.location.origin + window.location.pathname + '?' + urlParams.toString();
+        window.history.pushState({ page: 'terms-of-service' }, '', newUrl);
+      } else if (urlParams.get('page') === 'terms-of-service') {
+        urlParams.delete('page');
+        const newUrl = window.location.origin + window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
+        window.history.pushState({}, '', newUrl);
+      }
+    }, [showTermsOfService]);
+
+    // 브라우저 뒤로가기/앞으로가기 버튼 처리
+    useEffect(() => {
+      const handlePopState = (event) => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const page = urlParams.get('page');
+        
+        if (page === 'privacy-policy') {
+          setShowPrivacyPolicy(true);
+        } else if (page === 'terms-of-service') {
+          setShowTermsOfService(true);
+        } else {
+          setShowPrivacyPolicy(false);
+          setShowTermsOfService(false);
+        }
+      };
+
+      window.addEventListener('popstate', handlePopState);
+      return () => window.removeEventListener('popstate', handlePopState);
+    }, [setShowPrivacyPolicy, setShowTermsOfService]);
 
     // 모든 상태와 함수들을 반환
     return {
