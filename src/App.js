@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAppLogic } from './appLogic';
 import TopNav from './TopNav';
+import PrivacyPolicy from './components/PrivacyPolicy';
+import TermsOfService from './components/TermsOfService';
 import './unified-styles.css';
 
 /* 상단 네비게이션 아이템 */
@@ -243,7 +245,11 @@ function App() {
     setSlides,
     setForm,
     setSelectedImageForModal,
-    setShowImageModal
+    setShowImageModal,
+    showPrivacyPolicy,
+    showTermsOfService,
+    setShowPrivacyPolicy,
+    setShowTermsOfService
   } = useAppLogic();
 
   /* 스크롤 시 상단바 스타일 토글 */
@@ -266,8 +272,18 @@ function App() {
   // 실제 화면 렌더링
   return (
       <div>
+        {/* 개인정보처리방침 페이지 */}
+        {showPrivacyPolicy && (
+          <PrivacyPolicy onBack={() => setShowPrivacyPolicy(false)} />
+        )}
+
+        {/* 사용자 약관 페이지 */}
+        {showTermsOfService && (
+          <TermsOfService onBack={() => setShowTermsOfService(false)} />
+        )}
+
         {/* 로그인 페이지 */}
-        {!isLoggedIn && (
+        {!isLoggedIn && !showPrivacyPolicy && !showTermsOfService && (
             <section id="loginPage" className="start-hero theme-apple">
                 <div className="hero-blob a" />
                 <div className="hero-blob b" />
@@ -303,16 +319,36 @@ function App() {
                             <br />
                             나만의 포트폴리오를 만들어 보세요.
                         </p>
+                        <div className="login-footer-links">
+                            <button 
+                                className="footer-link-btn" 
+                                onClick={() => setShowPrivacyPolicy(true)}
+                            >
+                                개인정보처리방침
+                            </button>
+                            <span className="footer-link-separator">|</span>
+                            <button 
+                                className="footer-link-btn" 
+                                onClick={() => setShowTermsOfService(true)}
+                            >
+                                사용자 약관
+                            </button>
+                        </div>
                     </div>
                 </div>
             </section>
         )}
 
         {/* 메인 페이지 */}
-        {isLoggedIn && (
+        {isLoggedIn && !showPrivacyPolicy && !showTermsOfService && (
             <div id="mainPage" className="theme-ink">
               {/* 상단 네비게이션 */}
-              <TopNav items={NAV_ITEMS} active={activeSection} onSelect={showSection} onLogout={logout} />
+              <TopNav 
+                items={NAV_ITEMS} 
+                active={activeSection} 
+                onSelect={showSection} 
+                onLogout={logout}
+              />
 
               <div className="mac-container">
                 <div className="mac-content">
@@ -1185,6 +1221,28 @@ function App() {
                   )}
                 </div>
               </div>
+              
+              {/* 푸터 */}
+              <footer className="main-footer">
+                <div className="footer-content">
+                  <div className="footer-links">
+                    <button 
+                      className="footer-link-btn" 
+                      onClick={() => setShowPrivacyPolicy(true)}
+                    >
+                      개인정보처리방침
+                    </button>
+                    <span className="footer-link-separator">|</span>
+                    <button 
+                      className="footer-link-btn" 
+                      onClick={() => setShowTermsOfService(true)}
+                    >
+                      사용자 약관
+                    </button>
+                  </div>
+                  <p className="footer-copyright">© 2025 Portra. All rights reserved.</p>
+                </div>
+              </footer>
             </div>
         )}
 
@@ -1694,10 +1752,10 @@ function App() {
                   <button type="button" className="btn btn-primary" onClick={handleTemplateUse}>
                     템플릿 사용
                   </button>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
         )}
       </div>
   );
