@@ -1,15 +1,15 @@
 {
   "files": {
     "main.css": "/algo_rhythm/static/css/main.6c74dd8c.css",
-    "main.js": "/algo_rhythm/static/js/main.37a23b8f.js",
+    "main.js": "/algo_rhythm/static/js/main.b4984600.js",
     "static/js/453.fc490bdb.chunk.js": "/algo_rhythm/static/js/453.fc490bdb.chunk.js",
     "index.html": "/algo_rhythm/index.html",
     "main.6c74dd8c.css.map": "/algo_rhythm/static/css/main.6c74dd8c.css.map",
-    "main.37a23b8f.js.map": "/algo_rhythm/static/js/main.37a23b8f.js.map",
+    "main.b4984600.js.map": "/algo_rhythm/static/js/main.b4984600.js.map",
     "453.fc490bdb.chunk.js.map": "/algo_rhythm/static/js/453.fc490bdb.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.6c74dd8c.css",
-    "static/js/main.37a23b8f.js"
+    "static/js/main.b4984600.js"
   ]
 }
