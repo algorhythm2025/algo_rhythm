@@ -321,25 +321,17 @@ function App() {
                         </p>
                         <div className="login-footer-links">
                             <a 
-                                href="#privacy-policy" 
+                                href="/algo_rhythm/privacy-policy.html" 
                                 className="footer-link-btn" 
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    setShowPrivacyPolicy(true);
-                                }}
-                                style={{ textDecoration: 'none', color: 'inherit', cursor: 'pointer' }}
+                                style={{ textDecoration: 'none', color: 'inherit' }}
                             >
                                 개인정보처리방침
                             </a>
                             <span className="footer-link-separator">|</span>
                             <a 
-                                href="#terms-of-service" 
+                                href="/algo_rhythm/terms-of-service.html" 
                                 className="footer-link-btn" 
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    setShowTermsOfService(true);
-                                }}
-                                style={{ textDecoration: 'none', color: 'inherit', cursor: 'pointer' }}
+                                style={{ textDecoration: 'none', color: 'inherit' }}
                             >
                                 사용자 약관
                             </a>
@@ -1237,25 +1229,17 @@ function App() {
                 <div className="footer-content">
                   <div className="footer-links">
                     <a 
-                      href="#privacy-policy" 
+                      href="/algo_rhythm/privacy-policy.html" 
                       className="footer-link-btn" 
-                      onClick={(e) => {
-                          e.preventDefault();
-                          setShowPrivacyPolicy(true);
-                      }}
-                      style={{ textDecoration: 'none', color: 'inherit', cursor: 'pointer' }}
+                      style={{ textDecoration: 'none', color: 'inherit' }}
                     >
                       개인정보처리방침
                     </a>
                     <span className="footer-link-separator">|</span>
                     <a 
-                      href="#terms-of-service" 
+                      href="/algo_rhythm/terms-of-service.html" 
                       className="footer-link-btn" 
-                      onClick={(e) => {
-                          e.preventDefault();
-                          setShowTermsOfService(true);
-                      }}
-                      style={{ textDecoration: 'none', color: 'inherit', cursor: 'pointer' }}
+                      style={{ textDecoration: 'none', color: 'inherit' }}
                     >
                       사용자 약관
                     </a>
