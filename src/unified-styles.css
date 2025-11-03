@@ -2744,3 +2744,535 @@ a.btn:hover,
     font-size: 18px;
     font-weight: bold;
 }
+/* 🌙 전체 배경 */
+body {
+    margin: 0;
+    font-family: 'SUIT Variable', 'Pretendard Variable', sans-serif;
+    background: radial-gradient(circle at top left, #0c0d12, #11131a);
+    color: #f5f5f5;
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+/* 🌌 카드형 글래스 박스 */
+.glass-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 18px;
+    padding: 1.8rem;
+    box-shadow: 0 6px 25px rgba(0, 0, 0, 0.35);
+    transition: all 0.3s ease;
+}
+
+.glass-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+}
+
+/* 💡 내부 Glass Row (파일행, 폴더행 등) */
+.glass-row {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    padding: 1rem 1.2rem;
+    margin-bottom: 0.6rem;
+    transition: all 0.2s ease;
+}
+
+.glass-row:hover {
+    background: rgba(255, 255, 255, 0.08);
+    transform: translateY(-2px);
+}
+
+/* ✨ 구분선 (gradient-line) */
+.gradient-divider {
+    border: 0;
+    height: 1px;
+    margin: 1.5rem 0;
+    background: linear-gradient(
+            90deg,
+            rgba(122, 92, 255, 0) 0%,
+            rgba(122, 92, 255, 0.6) 50%,
+            rgba(122, 92, 255, 0) 100%
+    );
+}
+
+/* ───────────────────────────── */
+/* 🧊 버튼 스타일 */
+.btn {
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+    color: #f5f5f5;
+    border-radius: 8px;
+    padding: 0.5rem 1rem;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn:hover {
+    border-color: #7a5cff;
+    box-shadow: 0 0 10px #7a5cff55;
+    transform: translateY(-1px);
+}
+
+/* 🌈 버튼 변형 */
+.btn-outline-primary {
+    border-color: #7a5cff;
+    color: #7a5cff;
+}
+.btn-outline-primary:hover {
+    background: #7a5cff;
+    color: #fff;
+}
+
+.btn-outline-success {
+    border-color: #42f57b;
+    color: #42f57b;
+}
+.btn-outline-success:hover {
+    background: #42f57b;
+    color: #111;
+}
+
+.btn-outline-danger {
+    border-color: #ff5c5c;
+    color: #ff5c5c;
+}
+.btn-outline-danger:hover {
+    background: #ff5c5c;
+    color: #fff;
+}
+
+/* 🪟 리스트 / 파일행 / 폴더행 */
+.file-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+.file-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.file-item i {
+    font-size: 1.2rem;
+}
+
+/* 아이콘 색상 */
+.file-type-spreadsheet { color: #47c972; }
+.file-type-document { color: #5c8cff; }
+.file-type-presentation { color: #e48c6f; }
+.file-type-image { color: #ffdf7e; }
+
+/* 📁 폴더 아이템 */
+.folder-item .folder-icon {
+    color: #ffc857;
+}
+.folder-item:hover .folder-icon {
+    color: #ffe58b;
+}
+
+/* ⚡ Empty state */
+.empty-state {
+    text-align: center;
+    opacity: 0.85;
+    font-size: 1.05rem;
+    color: #ccc;
+    padding: 2rem 1rem;
+}
+.empty-state i {
+    display: block;
+    margin-bottom: 0.8rem;
+    opacity: 0.8;
+}
+
+/* 💫 mac-window (기본 container) */
+.mac-window {
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(10px);
+    padding: 1.8rem;
+}
+
+/* ───────────────────────────── */
+/* ✍️ 폰트 & 타이틀 */
+h2, h3, h4, h5, h6 {
+    color: #fff;
+    font-weight: 600;
+    letter-spacing: -0.2px;
+    margin-bottom: 0.5rem;
+}
+
+p, small {
+    color: rgba(255, 255, 255, 0.85);
+}
+
+/* 🎯 파일 크기 / 날짜 표시 */
+.file-size small,
+.file-modification-date small {
+    font-size: 0.85rem;
+    opacity: 0.7;
+}
+
+/* 📂 파일 이름 hover 시 강조 */
+.file-name:hover {
+    text-decoration: underline;
+    color: #b09cff;
+    cursor: pointer;
+}
+
+/* ⚙️ 작은 텍스트 */
+.white-text {
+    color: #eaeaea !important;
+}
+.white-text-50 {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+/* 🧭 브레드크럼 */
+.badge {
+    font-weight: 500;
+    padding: 0.4rem 0.7rem;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 9999px;
+}
+
+/* 🌀 스크롤바 (다크 스타일) */
+::-webkit-scrollbar {
+    width: 10px;
+}
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+/* ───────────────────────────── */
+/* 🪩 푸터 */
+.main-footer {
+    margin-top: 4rem;
+    text-align: center;
+    padding: 2rem 1rem;
+    font-size: 0.9rem;
+    color: rgba(255,255,255,0.6);
+    border-top: 1px solid rgba(255,255,255,0.1);
+    backdrop-filter: blur(10px);
+}
+.footer-content a {
+    color: #aaa;
+    margin: 0 6px;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+.footer-content a:hover {
+    color: #fff;
+}
+
+/* ───────────────────────────── */
+/* 🧠 Transition */
+* {
+    transition: background 0.3s ease, color 0.3s ease, border 0.3s ease;
+}
+/* =============================== */
+/* 🪩 Glassmorphism 버튼 리디자인 */
+/* =============================== */
+.btn {
+    position: relative;
+    border: none;
+    outline: none;
+    cursor: pointer;
+    padding: 0.55rem 1.1rem;
+    border-radius: 12px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: #ffffffcc;
+    background: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.15) inset;
+    transition: all 0.25s ease;
+}
+
+.btn:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.12);
+    box-shadow:
+            0 0 8px rgba(255, 255, 255, 0.15),
+            0 0 10px rgba(122, 92, 255, 0.25);
+    transform: translateY(-1px);
+}
+
+/* 클릭 시 깊이감 */
+.btn:active {
+    transform: translateY(1px) scale(0.98);
+    box-shadow: 0 0 4px rgba(122, 92, 255, 0.2);
+}
+
+/* ✅ 버튼 타입별 포인트 색상 */
+.btn-primary {
+    background: linear-gradient(90deg, #7a5cff33, #b77dff33);
+    color: #e0d4ff;
+}
+.btn-primary:hover {
+    background: linear-gradient(90deg, #7a5cff55, #b77dff55);
+    box-shadow: 0 0 10px #9f84ff55;
+}
+
+.btn-success {
+    background: linear-gradient(90deg, #33cc7a33, #56ffa833);
+    color: #d4ffe5;
+}
+.btn-success:hover {
+    background: linear-gradient(90deg, #33cc7a55, #56ffa855);
+    box-shadow: 0 0 10px #42f57b66;
+}
+
+.btn-danger {
+    background: linear-gradient(90deg, #ff5c5c33, #ff8a8a33);
+    color: #ffdede;
+}
+.btn-danger:hover {
+    background: linear-gradient(90deg, #ff5c5c55, #ff8a8a55);
+    box-shadow: 0 0 10px #ff707066;
+}
+
+/* 🔹 미세한 Glow border 효과 */
+.btn::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    border: 1px solid rgba(255,255,255,0.08);
+    transition: all 0.25s ease;
+}
+.btn:hover::before {
+    border: 1px solid rgba(255,255,255,0.25);
+}
+
+/* 버튼 그룹 간격 조정 */
+.section-actions .btn {
+    margin-left: 0.4rem;
+}
+/* ================================
+   Monotone Minimal Buttons (Override)
+   붙여넣기용 — 기존 버튼 전부 무채색/모던화
+=================================== */
+:root {
+    --btn-bg: rgba(255,255,255,0.06);
+    --btn-bg-hover: rgba(255,255,255,0.10);
+    --btn-bg-active: rgba(255,255,255,0.14);
+    --btn-border: rgba(255,255,255,0.14);
+    --btn-border-hover: rgba(255,255,255,0.22);
+    --btn-text: #eef1f5;
+    --btn-text-dim: #cfd6e1;
+    --btn-ring: 0 0 0 3px rgba(180,188,204,0.25);
+}
+
+/* 베이스 버튼 */
+.btn {
+    position: relative !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: .45rem !important;
+    padding: .54rem 1rem !important;
+    border-radius: 12px !important;
+    border: 1px solid var(--btn-border) !important;
+    background: var(--btn-bg) !important;
+    color: var(--btn-text) !important;
+    font-weight: 500 !important;
+    letter-spacing: .2px !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.06) !important;
+    transition: background .18s ease, border-color .18s ease, transform .12s ease, box-shadow .18s ease !important;
+}
+
+.btn:hover {
+    background: var(--btn-bg-hover) !important;
+    border-color: var(--btn-border-hover) !important;
+    transform: translateY(-1px) !important;
+}
+
+.btn:active {
+    background: var(--btn-bg-active) !important;
+    transform: translateY(0) scale(.99) !important;
+}
+
+.btn:focus-visible {
+    outline: none !important;
+    box-shadow: var(--btn-ring) !important;
+}
+
+/* 아이콘 간격 */
+.btn i { opacity: .9; }
+
+/* 크기 보정 */
+.btn-sm { padding: .42rem .72rem !important; border-radius: 10px !important; font-size: .9rem !important; }
+.btn-lg { padding: .68rem 1.15rem !important; border-radius: 14px !important; }
+
+/* 비활성화 */
+.btn.disabled, .btn:disabled {
+    opacity: .6 !important;
+    pointer-events: none !important;
+}
+
+/* = Variants =  */
+/* 컬러 명칭이 붙었어도 모두 모노톤으로 통일 */
+.btn-primary,
+.btn-success,
+.btn-danger {
+    background: var(--btn-bg) !important;
+    border-color: var(--btn-border) !important;
+    color: var(--btn-text) !important;
+}
+.btn-primary:hover,
+.btn-success:hover,
+.btn-danger:hover {
+    background: var(--btn-bg-hover) !important;
+    border-color: var(--btn-border-hover) !important;
+}
+
+/* 얇은 테두리(“outline”)도 모노톤 고스트 스타일 */
+.btn-outline-primary,
+.btn-outline-success,
+.btn-outline-danger,
+.btn-outline-dark,
+.btn-outline-secondary {
+    background: transparent !important;
+    border-color: var(--btn-border) !important;
+    color: var(--btn-text-dim) !important;
+}
+.btn-outline-primary:hover,
+.btn-outline-success:hover,
+.btn-outline-danger:hover,
+.btn-outline-dark:hover,
+.btn-outline-secondary:hover {
+    background: var(--btn-bg-hover) !important;
+    color: var(--btn-text) !important;
+    border-color: var(--btn-border-hover) !important;
+}
+
+/* 배지/토글 느낌(전체/포트폴리오 스위치 같은 곳) */
+.btn.badge,
+.badge.btn,
+.view-mode-selector .btn {
+    padding: .28rem .6rem !important;
+    border-radius: 999px !important;
+    font-weight: 600 !important;
+    background: rgba(255,255,255,.04) !important;
+    border-color: rgba(255,255,255,.12) !important;
+    color: var(--btn-text-dim) !important;
+}
+.view-mode-selector .btn.btn-primary,
+.view-mode-selector .btn.btn-outline-primary:focus,
+.view-mode-selector .btn.active {
+    background: rgba(255,255,255,.14) !important;
+    color: var(--btn-text) !important;
+    border-color: var(--btn-border-hover) !important;
+}
+
+/* 버튼 그룹 경계 자연스럽게 */
+.btn-group .btn {
+    border-radius: 10px !important;
+}
+.btn-group .btn + .btn {
+    margin-left: .35rem !important;
+}
+
+/* 카드 헤더/섹션 액션 영역 버튼 간격 */
+.section-actions .btn,
+.mac-window .btn,
+.d-flex .btn { margin-left: .35rem !important; }
+
+/* 아이콘만 있는 경우 정사각형 */
+.btn.icon-only { padding: .5rem .58rem !important; width: 2.25rem; justify-content: center; }
+
+/* 드라이브/마이페이지 섹션에 우선 적용되도록 선택자 가중치 추가 */
+#driveSection .btn, #myPageSection .btn { all: revert-layer; }
+#driveSection .btn, #myPageSection .btn { /* 위 revert-layer 후 재적용 */
+    position: relative !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: .45rem !important;
+    padding: .54rem 1rem !important;
+    border-radius: 12px !important;
+    border: 1px solid var(--btn-border) !important;
+    background: var(--btn-bg) !important;
+    color: var(--btn-text) !important;
+    font-weight: 500 !important;
+    letter-spacing: .2px !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.06) !important;
+    transition: background .18s ease, border-color .18s ease, transform .12s ease, box-shadow .18s ease !important;
+}
+#driveSection .btn:hover, #myPageSection .btn:hover {
+    background: var(--btn-bg-hover) !important;
+    border-color: var(--btn-border-hover) !important;
+    transform: translateY(-1px) !important;
+}
+#driveSection .btn:focus-visible, #myPageSection .btn:focus-visible { box-shadow: var(--btn-ring) !important; }
+
+/* 업로드/시트 생성 같은 CTA를 살짝 강조하고 싶다면 */
+#driveSection .btn.btn-outline-success,
+#driveSection .btn.btn-outline-primary {
+    color: var(--btn-text) !important;
+    border-color: var(--btn-border) !important;
+}
+#driveSection .btn.btn-outline-success:hover,
+#driveSection .btn.btn-outline-primary:hover {
+    background: var(--btn-bg-hover) !important;
+    border-color: var(--btn-border-hover) !important;
+}
+
+/* 상단 네비의 활성 탭도 무채색으로 */
+.mac-titlebar .active,
+.topnav .active {
+    background: rgba(255,255,255,.10) !important;
+    border-color: rgba(255,255,255,.16) !important;
+    color: #fff !important;
+    border-radius: 10px !important;
+}
+.hero-visual {
+    position: absolute;
+    right: 24px;
+    top: 24px;
+    bottom: 24px;
+    width: min(42%, 560px);
+    border-radius: 18px;
+    background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+    border: 1px solid rgba(255,255,255,.08);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.hero-visual img {
+    width: 88%;
+    height: 88%;
+    object-fit: contain;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.45),
+    inset 0 1px 0 rgba(255,255,255,.06);
+    filter: drop-shadow(0 8px 18px rgba(0,0,0,.35));
+    transition: transform 0.4s ease;
+}
+
+.hero-visual img:hover {
+    transform: scale(1.03);
+}
+
+@media (max-width: 1024px) {
+    .hero-visual { position: static; width: 100%; height: 260px; margin-top: 14px; }
+    .hero-visual img { width: 92%; height: 100%; }
+}
