@@ -361,6 +361,65 @@ class GoogleDriveService {
     }
   }
 
+  // 슬라이드 배경 이미지
+  async uploadImageToDrive(file, subFolderName) {
+    try {
+      await this.ensureAuthenticated();
+
+      // 1. '포트폴리오 이력' 메인 폴더 확인/생성
+      const portfolioFolder = await this.ensurePortfolioFolder();
+      if (!portfolioFolder || !portfolioFolder.id) {
+        throw new Error("'포트폴리오 이력' 폴더를 찾을 수 없습니다.");
+      }
+
+      // 2. 메인 폴더 안에 지정된 하위 폴더 확인/생성
+      let targetFolder = await this.findFolder(subFolderName, portfolioFolder.id);
+      if (!targetFolder) {
+        targetFolder = await this.createFolder(subFolderName, portfolioFolder.id);
+      }
+
+      // 3. 파일 업로드 로직
+      const uniqueName = `${Date.now()}_${file.name}`;
+      const metadata = {
+        name: uniqueName,
+        mimeType: file.type,
+        parents: [targetFolder.id]
+      };
+
+      const accessToken = this.authService.getAccessToken();
+      const form = new FormData();
+      form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+      form.append('file', file);
+
+      const response = await fetch(
+          'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,mimeType',
+          {
+            method: 'POST',
+            headers: new Headers({ Authorization: 'Bearer ' + accessToken }),
+            body: form,
+          }
+      );
+
+      const uploadedFile = await response.json();
+
+      if (!uploadedFile || !uploadedFile.id) {
+        throw new Error('파일 업로드는 성공했으나 ID를 받지 못했습니다.');
+      }
+
+      // 4. 파일 공개 권한 설정
+      await this.setFilePublic(uploadedFile.id);
+
+      // 5. Google Slides API가 인식하는 'uc?export=view' URL을 반환합니다.
+      const publicUrl = `https://drive.google.com/uc?export=view&id=${uploadedFile.id}`;
+
+      return publicUrl;
+
+    } catch (error) {
+      console.error(`${subFolderName} 폴더에 이미지 업로드 오류:`, error);
+      throw new Error(`배경 이미지 업로드에 실패했습니다: ${error.message}`);
+    }
+  }
+
   // 파일 공개 권한 설정
   async setFilePublic(fileId) {
     try {
