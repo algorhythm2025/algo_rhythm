@@ -96,6 +96,8 @@ function useAppLogic()
     const [presentationId, setPresentationId] = useState(null);
     const [selectedTemplate, setSelectedTemplate] = useState('');
     const [selectedExperiences, setSelectedExperiences] = useState([]);
+    const [selectedBgImage, setSelectedBgImage] = useState(null);
+    const [bgImagePreview, setBgImagePreview] = useState(null);
     const [driveViewMode, setDriveViewMode] = useState(() =>
     {
       // localStorage에서 저장된 뷰 모드 복원
@@ -129,6 +131,55 @@ function useAppLogic()
     const experienceLogic = useExperienceLogic();
     const presentationLogic = usePresentationLogic();
     const uiLogic = useUILogic(driveService.current);
+
+    // 배경 이미지 핸들러
+    const handleBgImageSelect = (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        if (file.size > 5 * 1024 * 1024) {
+            alert('배경 이미지 파일 크기는 5MB 이하여야 합니다.');
+            return;
+        }
+        if (!file.type.startsWith('image/')) {
+            alert('이미지 파일만 업로드할 수 있습니다.');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            setBgImagePreview(e.target.result);
+            setSelectedBgImage(file);
+        };
+        reader.readAsDataURL(file);
+        event.target.value = '';
+    };
+
+    const handleBgImageDrop = (files) => {
+        const file = files[0];
+        if (!file) return;
+
+        if (file.size > 5 * 1024 * 1024) {
+            alert('배경 이미지 파일 크기는 5MB 이하여야 합니다.');
+            return;
+        }
+        if (!file.type.startsWith('image/')) {
+            alert('이미지 파일만 업로드할 수 있습니다.');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            setBgImagePreview(e.target.result);
+            setSelectedBgImage(file);
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const removeBgImage = () => {
+        setBgImagePreview(null);
+        setSelectedBgImage(null);
+    };
 
     // 서비스들 초기화
     async function initializeServices() {
@@ -470,7 +521,8 @@ function useAppLogic()
         setActiveSection,
         setAccessToken,
         accessToken,
-        selectedThemeColor
+        selectedThemeColor,
+        selectedBgImage
       });
     }
 
@@ -505,6 +557,12 @@ function useAppLogic()
     function handleThemeColorSelect(themeColor) {
       setSelectedThemeColor(themeColor);
     }
+
+    // 템플릿 배경 설정 취소 함수
+    const handleTemplateCancel = () => {
+        uiLogic.handleTemplateCancel(setShowTemplateModal, setSelectedTemplateForModal);
+        removeBgImage();
+    };
 
     // 포트폴리오 폴더 ID 설정
     async function setPortfolioFolder() {
@@ -792,6 +850,8 @@ function useAppLogic()
       accessToken,
       selectedExperiences,
       templateDescriptions: uiLogic.templateDescriptions,
+      selectedBgImage,
+      bgImagePreview,
       // 함수들
       showSection: (section) => uiLogic.showSection(section, setActiveSection),
       logout,
@@ -807,9 +867,12 @@ function useAppLogic()
       toggleSelect: (idx) => uiLogic.toggleSelect(idx, selected, setSelected),
       setSelectedExperiences,
       openTemplateModal: (templateName) => uiLogic.openTemplateModal(templateName, setSelectedTemplateForModal, setShowTemplateModal),
-      handleTemplateCancel: () => uiLogic.handleTemplateCancel(setShowTemplateModal, setSelectedTemplateForModal),
+      handleTemplateCancel,
       handleTemplateUse,
       handleThemeColorSelect,
+      handleBgImageSelect,
+      handleBgImageDrop,
+      removeBgImage,
       closeModal: () => {
         uiLogic.closeModal(setShowModal, setForm, setSelectedImages, setImagePreviews, setEditingIndex, setOriginalPeriod);
         setExistingImageUrls([]);
