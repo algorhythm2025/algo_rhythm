@@ -320,21 +320,19 @@ function App() {
                             나만의 포트폴리오를 만들어 보세요.
                         </p>
                         <div className="login-footer-links">
-                            <a 
-                                href="/algo_rhythm/privacy-policy.html" 
-                                className="footer-link-btn" 
-                                style={{ textDecoration: 'none', color: 'inherit' }}
+                            <button 
+                                onClick={() => setShowPrivacyPolicy(true)}
+                                className="footer-link-btn"
                             >
                                 개인정보처리방침
-                            </a>
+                            </button>
                             <span className="footer-link-separator">|</span>
-                            <a 
-                                href="/algo_rhythm/terms-of-service.html" 
-                                className="footer-link-btn" 
-                                style={{ textDecoration: 'none', color: 'inherit' }}
+                            <button 
+                                onClick={() => setShowTermsOfService(true)}
+                                className="footer-link-btn"
                             >
                                 사용자 약관
-                            </a>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -1228,21 +1226,19 @@ function App() {
               <footer className="main-footer">
                 <div className="footer-content">
                   <div className="footer-links">
-                    <a 
-                      href="/algo_rhythm/privacy-policy.html" 
-                      className="footer-link-btn" 
-                      style={{ textDecoration: 'none', color: 'inherit' }}
+                    <button 
+                      onClick={() => setShowPrivacyPolicy(true)}
+                      className="footer-link-btn"
                     >
                       개인정보처리방침
-                    </a>
+                    </button>
                     <span className="footer-link-separator">|</span>
-                    <a 
-                      href="/algo_rhythm/terms-of-service.html" 
-                      className="footer-link-btn" 
-                      style={{ textDecoration: 'none', color: 'inherit' }}
+                    <button 
+                      onClick={() => setShowTermsOfService(true)}
+                      className="footer-link-btn"
                     >
                       사용자 약관
-                    </a>
+                    </button>
                   </div>
                   <p className="footer-copyright">© 2025 Portra. All rights reserved.</p>
                 </div>
