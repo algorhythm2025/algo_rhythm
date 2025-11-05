@@ -108,14 +108,10 @@ function useAppLogic()
       return localStorage.getItem('portfolioFolderId') || null;
     }); // 포트폴리오 폴더 ID
     const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(() => {
-      // URL 파라미터에서 개인정보처리방침 페이지 확인
-      const urlParams = new URLSearchParams(window.location.search);
-      return urlParams.get('page') === 'privacy-policy' || window.location.hash === '#privacy-policy';
+      return window.location.pathname === '/privacy-policy.html';
     }); // 개인정보처리방침 표시 여부
     const [showTermsOfService, setShowTermsOfService] = useState(() => {
-      // URL 파라미터에서 사용자 약관 페이지 확인
-      const urlParams = new URLSearchParams(window.location.search);
-      return urlParams.get('page') === 'terms-of-service' || window.location.hash === '#terms-of-service';
+      return window.location.pathname === '/terms-of-service.html';
     }); // 사용자 약관 표시 여부
     const formRef = useRef();
   
@@ -693,42 +689,33 @@ function useAppLogic()
 
     // 개인정보처리방침 페이지 상태 변경 시 URL 업데이트
     useEffect(() => {
-      const urlParams = new URLSearchParams(window.location.search);
       if (showPrivacyPolicy) {
-        urlParams.set('page', 'privacy-policy');
-        const newUrl = window.location.origin + window.location.pathname + '?' + urlParams.toString();
-        window.history.pushState({ page: 'privacy-policy' }, '', newUrl);
-      } else if (urlParams.get('page') === 'privacy-policy') {
-        urlParams.delete('page');
-        const newUrl = window.location.origin + window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
-        window.history.pushState({}, '', newUrl);
+        window.history.pushState({ page: 'privacy-policy' }, '', '/privacy-policy.html');
+      } else if (window.location.pathname === '/privacy-policy.html') {
+        window.history.pushState({}, '', '/');
       }
     }, [showPrivacyPolicy]);
 
     // 사용자 약관 페이지 상태 변경 시 URL 업데이트
     useEffect(() => {
-      const urlParams = new URLSearchParams(window.location.search);
       if (showTermsOfService) {
-        urlParams.set('page', 'terms-of-service');
-        const newUrl = window.location.origin + window.location.pathname + '?' + urlParams.toString();
-        window.history.pushState({ page: 'terms-of-service' }, '', newUrl);
-      } else if (urlParams.get('page') === 'terms-of-service') {
-        urlParams.delete('page');
-        const newUrl = window.location.origin + window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
-        window.history.pushState({}, '', newUrl);
+        window.history.pushState({ page: 'terms-of-service' }, '', '/terms-of-service.html');
+      } else if (window.location.pathname === '/terms-of-service.html') {
+        window.history.pushState({}, '', '/');
       }
     }, [showTermsOfService]);
 
     // 브라우저 뒤로가기/앞으로가기 버튼 처리
     useEffect(() => {
       const handlePopState = (event) => {
-        const urlParams = new URLSearchParams(window.location.search);
-        const page = urlParams.get('page');
+        const pathname = window.location.pathname;
         
-        if (page === 'privacy-policy') {
+        if (pathname === '/privacy-policy.html') {
           setShowPrivacyPolicy(true);
-        } else if (page === 'terms-of-service') {
+          setShowTermsOfService(false);
+        } else if (pathname === '/terms-of-service.html') {
           setShowTermsOfService(true);
+          setShowPrivacyPolicy(false);
         } else {
           setShowPrivacyPolicy(false);
           setShowTermsOfService(false);
