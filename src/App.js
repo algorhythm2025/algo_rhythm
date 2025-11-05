@@ -60,7 +60,7 @@ function HeroCarousel({ onSelect }) {
             bg: "linear-gradient(135deg,#0F1115 0%, #171B22 50%, #0E0F13 100%)",
             accent: "linear-gradient(90deg,#e2e2e2,#f5f5f5)",
             // ✅ 아래 둘 중 하나로 지정 (예: public/assets/hero/ppt-preview.png 파일 존재)
-            img: "assets/hero/ppt-preview.png",
+            img: "assets/hero/ppt-preview.jpg",
             // or: img: "/assets/hero/ppt-preview.png",
             // or: img: "https://drive.google.com/file/d/FILE_ID/view?usp=sharing",
         },
@@ -71,7 +71,7 @@ function HeroCarousel({ onSelect }) {
             subtitle: "파일 업로드부터 공유까지 한 번에",
             bg: "linear-gradient(135deg,#0F1115 0%, #151922 55%, #0E0F13 100%)",
             accent: "linear-gradient(90deg,#d9e2ff,#eff3ff)",
-            img: "assets/hero/drive-preview.png",
+            img: "assets/hero/drive-preview.jpg",
         },
         {
             key: "portal",
@@ -89,7 +89,7 @@ function HeroCarousel({ onSelect }) {
             subtitle: "내 기록과 제작 이력 한눈에",
             bg: "linear-gradient(135deg,#0F1115 0%, #171B22 55%, #0E0F13 100%)",
             accent: "linear-gradient(90deg,#e2e2e2,#f5f5f5)",
-            img: "assets/hero/mypage-preview.png",
+            img: "assets/hero/mypage-preview.jpg",
         },
     ];
 
