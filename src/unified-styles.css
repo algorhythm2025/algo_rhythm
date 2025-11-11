@@ -2744,3 +2744,36 @@ a.btn:hover,
     font-size: 18px;
     font-weight: bold;
 }
+
+.pagination-container {
+    padding: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.pagination-info {
+    text-align: center;
+}
+
+.pagination-controls {
+    flex-wrap: wrap;
+}
+
+.pagination-pages {
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.pagination-pages .btn {
+    min-width: 36px;
+    padding: 6px 12px;
+}
+
+.pagination-controls .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.pagination-controls .btn:not(:disabled):hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}

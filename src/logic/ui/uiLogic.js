@@ -399,6 +399,34 @@ export function useUILogic(driveService = null) {
         }
     };
 
+    function getPaginatedItems(items, currentPage, itemsPerPage) {
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const endIndex = startIndex + itemsPerPage;
+        return items.slice(startIndex, endIndex);
+    }
+
+    function getTotalPages(items, itemsPerPage) {
+        return Math.max(1, Math.ceil(items.length / itemsPerPage));
+    }
+
+    function goToPage(page, setCurrentPage, totalPages) {
+        if (page >= 1 && page <= totalPages) {
+            setCurrentPage(page);
+        }
+    }
+
+    function goToNextPage(currentPage, totalPages, setCurrentPage) {
+        if (currentPage < totalPages) {
+            setCurrentPage(currentPage + 1);
+        }
+    }
+
+    function goToPrevPage(currentPage, setCurrentPage) {
+        if (currentPage > 1) {
+            setCurrentPage(currentPage - 1);
+        }
+    }
+
     return {
         showSection,
         showEditExperienceModal,
@@ -420,6 +448,11 @@ export function useUILogic(driveService = null) {
         convertImageUrl,
         openTemplateModal,
         handleTemplateCancel,
-        templateDescriptions
+        templateDescriptions,
+        getPaginatedItems,
+        getTotalPages,
+        goToPage,
+        goToNextPage,
+        goToPrevPage
     };
 }

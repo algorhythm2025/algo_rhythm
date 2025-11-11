@@ -113,6 +113,12 @@ function useAppLogic()
     const [showTermsOfService, setShowTermsOfService] = useState(() => {
       return window.location.pathname === '/terms-of-service.html';
     }); // 사용자 약관 표시 여부
+    const [pptHistoryCurrentPage, setPptHistoryCurrentPage] = useState(1);
+    const [experienceCurrentPage, setExperienceCurrentPage] = useState(1);
+    const [pptMakerExperienceCurrentPage, setPptMakerExperienceCurrentPage] = useState(1);
+    const pptHistoryItemsPerPage = 8;
+    const experienceItemsPerPage = 6;
+    const pptMakerExperienceItemsPerPage = 6;
     const formRef = useRef();
   
     // 통합 인증 서비스 인스턴스
@@ -779,6 +785,12 @@ function useAppLogic()
       accessToken,
       selectedExperiences,
       templateDescriptions: uiLogic.templateDescriptions,
+      pptHistoryCurrentPage,
+      experienceCurrentPage,
+      pptMakerExperienceCurrentPage,
+      pptHistoryItemsPerPage,
+      experienceItemsPerPage,
+      pptMakerExperienceItemsPerPage,
       // 함수들
       showSection: (section) => uiLogic.showSection(section, setActiveSection),
       logout,
@@ -842,7 +854,22 @@ function useAppLogic()
       showPrivacyPolicy,
       showTermsOfService,
       setShowPrivacyPolicy,
-      setShowTermsOfService
+      setShowTermsOfService,
+      // 페이지네이션 함수들
+      getPaginatedItems: (items, currentPage, itemsPerPage) => uiLogic.getPaginatedItems(items, currentPage, itemsPerPage),
+      getTotalPages: (items, itemsPerPage) => uiLogic.getTotalPages(items, itemsPerPage),
+      goToPptHistoryPage: (page) => uiLogic.goToPage(page, setPptHistoryCurrentPage, uiLogic.getTotalPages(pptHistory, pptHistoryItemsPerPage)),
+      goToPptHistoryNextPage: () => uiLogic.goToNextPage(pptHistoryCurrentPage, uiLogic.getTotalPages(pptHistory, pptHistoryItemsPerPage), setPptHistoryCurrentPage),
+      goToPptHistoryPrevPage: () => uiLogic.goToPrevPage(pptHistoryCurrentPage, setPptHistoryCurrentPage),
+      goToExperiencePage: (page) => uiLogic.goToPage(page, setExperienceCurrentPage, uiLogic.getTotalPages(experiences, experienceItemsPerPage)),
+      goToExperienceNextPage: () => uiLogic.goToNextPage(experienceCurrentPage, uiLogic.getTotalPages(experiences, experienceItemsPerPage), setExperienceCurrentPage),
+      goToExperiencePrevPage: () => uiLogic.goToPrevPage(experienceCurrentPage, setExperienceCurrentPage),
+      goToPptMakerExperiencePage: (page) => uiLogic.goToPage(page, setPptMakerExperienceCurrentPage, uiLogic.getTotalPages(experiences, pptMakerExperienceItemsPerPage)),
+      goToPptMakerExperienceNextPage: () => uiLogic.goToNextPage(pptMakerExperienceCurrentPage, uiLogic.getTotalPages(experiences, pptMakerExperienceItemsPerPage), setPptMakerExperienceCurrentPage),
+      goToPptMakerExperiencePrevPage: () => uiLogic.goToPrevPage(pptMakerExperienceCurrentPage, setPptMakerExperienceCurrentPage),
+      setPptHistoryCurrentPage,
+      setExperienceCurrentPage,
+      setPptMakerExperienceCurrentPage
     };
 }
 

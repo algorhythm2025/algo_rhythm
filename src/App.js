@@ -249,7 +249,24 @@ function App() {
     showPrivacyPolicy,
     showTermsOfService,
     setShowPrivacyPolicy,
-    setShowTermsOfService
+    setShowTermsOfService,
+    pptHistoryCurrentPage,
+    experienceCurrentPage,
+    pptMakerExperienceCurrentPage,
+    pptHistoryItemsPerPage,
+    experienceItemsPerPage,
+    pptMakerExperienceItemsPerPage,
+    getPaginatedItems,
+    getTotalPages,
+    goToPptHistoryPage,
+    goToPptHistoryNextPage,
+    goToPptHistoryPrevPage,
+    goToExperiencePage,
+    goToExperienceNextPage,
+    goToExperiencePrevPage,
+    goToPptMakerExperiencePage,
+    goToPptMakerExperienceNextPage,
+    goToPptMakerExperiencePrevPage
   } = useAppLogic();
 
   /* 스크롤 시 상단바 스타일 토글 */
@@ -424,8 +441,11 @@ function App() {
                                     </button>
                                   </div>
                               ) : (
-                                  experiences.map((exp, idx) => (
-                                      <div className="list-group-item experience-list-item" key={idx} onClick={() => openExperienceModal(exp)}>
+                                <>
+                                  {getPaginatedItems(experiences, pptMakerExperienceCurrentPage, pptMakerExperienceItemsPerPage).map((exp, idx) => {
+                                    const originalIndex = (pptMakerExperienceCurrentPage - 1) * pptMakerExperienceItemsPerPage + idx;
+                                    return (
+                                      <div className="list-group-item experience-list-item" key={originalIndex} onClick={() => openExperienceModal(exp)}>
                                         <div className="d-flex align-items-center">
                                           <div className="me-3 experience-image-container">
                                             {(exp.imageUrls && exp.imageUrls.length > 0) ? (
@@ -455,7 +475,6 @@ function App() {
                                                         className={`experience-image ${imageLoadingStates.get(`${exp.imageUrls[0]}_${exp.title} 이미지 1`) === 'loading' ? 'loading' : ''}`}
                                                         onLoad={() => setImageLoadingState(`${exp.imageUrls[0]}_${exp.title} 이미지 1`, false)}
                                                         onError={async (e) => {
-                                                          // 이미 변환 시도 중인지 확인 (무한 재귀 방지)
                                                           if (e.target.dataset.converting === 'true') {
                                                             return;
                                                           }
@@ -487,11 +506,49 @@ function App() {
                                             <p className="mb-0">{exp.description}</p>
                                           </div>
                                           <div className="form-check ms-3" onClick={(e) => e.stopPropagation()}>
-                                            <input className="form-check-input" type="checkbox" checked={selected.includes(idx)} onChange={() => toggleSelect(idx)} />
+                                            <input className="form-check-input" type="checkbox" checked={selected.includes(originalIndex)} onChange={() => toggleSelect(originalIndex)} />
                                           </div>
                                         </div>
                                       </div>
-                                  ))
+                                    );
+                                  })}
+                                  {getTotalPages(experiences, pptMakerExperienceItemsPerPage) > 1 && (
+                                    <div className="pagination-container mt-3">
+                                      <div className="pagination-info mb-2">
+                                        <small className="text-white-50">
+                                          {((pptMakerExperienceCurrentPage - 1) * pptMakerExperienceItemsPerPage) + 1} - {Math.min(pptMakerExperienceCurrentPage * pptMakerExperienceItemsPerPage, experiences.length)} / {experiences.length}
+                                        </small>
+                                      </div>
+                                      <div className="pagination-controls d-flex justify-content-center align-items-center gap-2">
+                                        <button
+                                          className="btn btn-outline-secondary btn-sm"
+                                          onClick={goToPptMakerExperiencePrevPage}
+                                          disabled={pptMakerExperienceCurrentPage === 1}
+                                        >
+                                          <i className="fas fa-chevron-left"></i> 이전
+                                        </button>
+                                        <div className="pagination-pages d-flex gap-1">
+                                          {Array.from({ length: getTotalPages(experiences, pptMakerExperienceItemsPerPage) }, (_, i) => i + 1).map((page) => (
+                                            <button
+                                              key={page}
+                                              className={`btn btn-sm ${page === pptMakerExperienceCurrentPage ? 'btn-primary' : 'btn-outline-secondary'}`}
+                                              onClick={() => goToPptMakerExperiencePage(page)}
+                                            >
+                                              {page}
+                                            </button>
+                                          ))}
+                                        </div>
+                                        <button
+                                          className="btn btn-outline-secondary btn-sm"
+                                          onClick={goToPptMakerExperienceNextPage}
+                                          disabled={pptMakerExperienceCurrentPage === getTotalPages(experiences, pptMakerExperienceItemsPerPage)}
+                                        >
+                                          다음 <i className="fas fa-chevron-right"></i>
+                                        </button>
+                                      </div>
+                                    </div>
+                                  )}
+                                </>
                               )}
                             </div>
                           </div>
@@ -1048,48 +1105,83 @@ function App() {
                                   <p>아직 제작한 PPT가 없습니다.</p>
                                 </div>
                               ) : (
-                                pptHistory.map((ppt, index) => (
-                                    <div
-                                        key={ppt.id}
-                                        className="list-group-item mac-list-item d-flex align-items-center file-item"
-                                        onClick={() => window.open(`https://docs.google.com/presentation/d/${ppt.id}/edit`, '_blank')}
-                                    >
-                                      <div className="me-3">
-                                        <i className="fas fa-file-powerpoint text-primary fa-2x"></i>
+                                <>
+                                  {getPaginatedItems(pptHistory, pptHistoryCurrentPage, pptHistoryItemsPerPage).map((ppt, index) => (
+                                      <div
+                                          key={ppt.id}
+                                          className="list-group-item mac-list-item d-flex align-items-center file-item"
+                                          onClick={() => window.open(`https://docs.google.com/presentation/d/${ppt.id}/edit`, '_blank')}
+                                      >
+                                        <div className="me-3">
+                                          <i className="fas fa-file-powerpoint text-primary fa-2x"></i>
+                                        </div>
+                                        <div className="flex-grow-1">
+                                          <h6 className="mb-1 text-white">{ppt.name}</h6>
+                                          <small className="text-white-50">
+                                            생성일: {new Date(ppt.createdTime).toLocaleDateString()}
+                                          </small>
+                                        </div>
+                                        <div className="d-flex align-items-center gap-2">
+                                          <button
+                                              className="btn btn-outline-secondary btn-sm"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                loadPptForEdit(ppt.id);
+                                              }}
+                                          >
+                                            <i className="fas fa-edit"></i> 수정
+                                          </button>
+                                          <button
+                                              className="btn btn-outline-danger btn-sm"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                if (window.confirm(`"${ppt.name}" 파일을 삭제하시겠습니까?`)) {
+                                                  handleDriveFileDelete(ppt.id, true);
+                                                }
+                                              }}
+                                          >
+                                            <i className="fas fa-trash-alt"></i> 삭제
+                                          </button>
+                                        </div>
                                       </div>
-                                      <div className="flex-grow-1">
-                                        <h6 className="mb-1 text-white">{ppt.name}</h6>
+                                  ))}
+                                  {getTotalPages(pptHistory, pptHistoryItemsPerPage) > 1 && (
+                                    <div className="pagination-container mt-3">
+                                      <div className="pagination-info mb-2">
                                         <small className="text-white-50">
-                                          생성일: {new Date(ppt.createdTime).toLocaleDateString()}
+                                          {((pptHistoryCurrentPage - 1) * pptHistoryItemsPerPage) + 1} - {Math.min(pptHistoryCurrentPage * pptHistoryItemsPerPage, pptHistory.length)} / {pptHistory.length}
                                         </small>
                                       </div>
-                                      <div className="d-flex align-items-center gap-2">
-                                        {/* 수정 버튼 */}
+                                      <div className="pagination-controls d-flex justify-content-center align-items-center gap-2">
                                         <button
-                                            className="btn btn-outline-secondary btn-sm"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              loadPptForEdit(ppt.id);
-                                            }}
+                                          className="btn btn-outline-secondary btn-sm"
+                                          onClick={goToPptHistoryPrevPage}
+                                          disabled={pptHistoryCurrentPage === 1}
                                         >
-                                          <i className="fas fa-edit"></i> 수정
+                                          <i className="fas fa-chevron-left"></i> 이전
                                         </button>
-
-                                        {/* 삭제 버튼 */}
+                                        <div className="pagination-pages d-flex gap-1">
+                                          {Array.from({ length: getTotalPages(pptHistory, pptHistoryItemsPerPage) }, (_, i) => i + 1).map((page) => (
+                                            <button
+                                              key={page}
+                                              className={`btn btn-sm ${page === pptHistoryCurrentPage ? 'btn-primary' : 'btn-outline-secondary'}`}
+                                              onClick={() => goToPptHistoryPage(page)}
+                                            >
+                                              {page}
+                                            </button>
+                                          ))}
+                                        </div>
                                         <button
-                                            className="btn btn-outline-danger btn-sm"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              if (window.confirm(`"${ppt.name}" 파일을 삭제하시겠습니까?`)) {
-                                                handleDriveFileDelete(ppt.id, true); // PPT 기록에서 삭제하므로 true 전달
-                                              }
-                                            }}
+                                          className="btn btn-outline-secondary btn-sm"
+                                          onClick={goToPptHistoryNextPage}
+                                          disabled={pptHistoryCurrentPage === getTotalPages(pptHistory, pptHistoryItemsPerPage)}
                                         >
-                                          <i className="fas fa-trash-alt"></i> 삭제
+                                          다음 <i className="fas fa-chevron-right"></i>
                                         </button>
                                       </div>
                                     </div>
-                                ))
+                                  )}
+                                </>
                               )}
                             </div>
                           </div>
@@ -1126,8 +1218,11 @@ function App() {
                                     </button>
                                   </div>
                               ) : (
-                                  experiences.map((exp, idx) => (
-                                      <div className="list-group-item file-item" key={idx} onClick={() => openExperienceModal(exp)}>
+                                <>
+                                  {getPaginatedItems(experiences, experienceCurrentPage, experienceItemsPerPage).map((exp, idx) => {
+                                    const originalIndex = (experienceCurrentPage - 1) * experienceItemsPerPage + idx;
+                                    return (
+                                      <div className="list-group-item file-item" key={originalIndex} onClick={() => openExperienceModal(exp)}>
                                         <div className="d-flex align-items-center">
                                           <div className="me-3 experience-image-container">
                                             {(exp.imageUrls && exp.imageUrls.length > 0) ? (
@@ -1157,7 +1252,6 @@ function App() {
                                                         className={`experience-image ${imageLoadingStates.get(`${exp.imageUrls[0]}_${exp.title} 이미지 1`) === 'loading' ? 'loading' : ''}`}
                                                         onLoad={() => setImageLoadingState(`${exp.imageUrls[0]}_${exp.title} 이미지 1`, false)}
                                                         onError={async (e) => {
-                                                          // 이미 변환 시도 중인지 확인 (무한 재귀 방지)
                                                           if (e.target.dataset.converting === 'true') {
                                                             return;
                                                           }
@@ -1193,7 +1287,7 @@ function App() {
                                                 className="btn btn-outline-secondary btn-sm"
                                                 onClick={(e) => {
                                                   e.stopPropagation();
-                                                  showEditExperienceModal(idx);
+                                                  showEditExperienceModal(originalIndex);
                                                 }}
                                                 disabled={isExperienceLoading}
                                             >
@@ -1203,7 +1297,7 @@ function App() {
                                                 className="btn btn-outline-danger btn-sm"
                                                 onClick={(e) => {
                                                   e.stopPropagation();
-                                                  deleteIndividualExperience(idx);
+                                                  deleteIndividualExperience(originalIndex);
                                                 }}
                                                 disabled={isExperienceLoading}
                                             >
@@ -1212,7 +1306,45 @@ function App() {
                                           </div>
                                         </div>
                                       </div>
-                                  ))
+                                    );
+                                  })}
+                                  {getTotalPages(experiences, experienceItemsPerPage) > 1 && (
+                                    <div className="pagination-container mt-3">
+                                      <div className="pagination-info mb-2">
+                                        <small className="text-white-50">
+                                          {((experienceCurrentPage - 1) * experienceItemsPerPage) + 1} - {Math.min(experienceCurrentPage * experienceItemsPerPage, experiences.length)} / {experiences.length}
+                                        </small>
+                                      </div>
+                                      <div className="pagination-controls d-flex justify-content-center align-items-center gap-2">
+                                        <button
+                                          className="btn btn-outline-secondary btn-sm"
+                                          onClick={goToExperiencePrevPage}
+                                          disabled={experienceCurrentPage === 1}
+                                        >
+                                          <i className="fas fa-chevron-left"></i> 이전
+                                        </button>
+                                        <div className="pagination-pages d-flex gap-1">
+                                          {Array.from({ length: getTotalPages(experiences, experienceItemsPerPage) }, (_, i) => i + 1).map((page) => (
+                                            <button
+                                              key={page}
+                                              className={`btn btn-sm ${page === experienceCurrentPage ? 'btn-primary' : 'btn-outline-secondary'}`}
+                                              onClick={() => goToExperiencePage(page)}
+                                            >
+                                              {page}
+                                            </button>
+                                          ))}
+                                        </div>
+                                        <button
+                                          className="btn btn-outline-secondary btn-sm"
+                                          onClick={goToExperienceNextPage}
+                                          disabled={experienceCurrentPage === getTotalPages(experiences, experienceItemsPerPage)}
+                                        >
+                                          다음 <i className="fas fa-chevron-right"></i>
+                                        </button>
+                                      </div>
+                                    </div>
+                                  )}
+                                </>
                               )}
                             </div>
                           </div>
@@ -1221,29 +1353,31 @@ function App() {
                   )}
                 </div>
               </div>
-              
-              {/* 푸터 */}
-              <footer className="main-footer">
-                <div className="footer-content">
-                  <div className="footer-links">
-                    <button 
-                      onClick={() => setShowPrivacyPolicy(true)}
-                      className="footer-link-btn"
-                    >
-                      개인정보처리방침
-                    </button>
-                    <span className="footer-link-separator">|</span>
-                    <button 
-                      onClick={() => setShowTermsOfService(true)}
-                      className="footer-link-btn"
-                    >
-                      사용자 약관
-                    </button>
-                  </div>
-                  <p className="footer-copyright">© 2025 Portra. All rights reserved.</p>
-                </div>
-              </footer>
             </div>
+        )}
+
+        {/* 푸터 - 모든 섹션에 표시 */}
+        {isLoggedIn && !showPrivacyPolicy && !showTermsOfService && (
+          <footer className="main-footer">
+            <div className="footer-content">
+              <div className="footer-links">
+                <button 
+                  onClick={() => setShowPrivacyPolicy(true)}
+                  className="footer-link-btn"
+                >
+                  개인정보처리방침
+                </button>
+                <span className="footer-link-separator">|</span>
+                <button 
+                  onClick={() => setShowTermsOfService(true)}
+                  className="footer-link-btn"
+                >
+                  사용자 약관
+                </button>
+              </div>
+              <p className="footer-copyright">© 2025 Portra. All rights reserved.</p>
+            </div>
+          </footer>
         )}
 
         {/* 이력 추가 모달 */}
