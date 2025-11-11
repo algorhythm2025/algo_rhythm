@@ -29,10 +29,34 @@ export default function TopNav({ items = [], active, onSelect, onLogout }) {
                 ))}
             </nav>
 
-            <button className="btn-logout" onClick={onLogout} aria-label="로그아웃">
-                <i className="fas fa-sign-out-alt" aria-hidden="true"></i>
-                <span className="logout-text">로그아웃</span>
-            </button>
+            <div className="top-actions">
+                <a
+                    href="https://www.yuhan.ac.kr/index.do"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn-portal btn-logout"
+                    aria-label="학교 홈페이지 바로가기"
+                    title="학교 홈페이지 바로가기"
+                >
+                    <i className="fas fa-university" aria-hidden="true"></i>
+                    <span className="portal-text">학교 홈페이지</span>
+                </a>
+                <a
+                    href="https://portal.yuhan.ac.kr/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn-portal btn-logout"
+                    aria-label="학교 포털 바로가기"
+                    title="학교 포털 바로가기"
+                >
+                    <i className="fas fa-university" aria-hidden="true"></i>
+                    <span className="portal-text">학교 포털</span>
+                </a>
+                <button className="btn-logout" onClick={onLogout} aria-label="로그아웃">
+                    <i className="fas fa-sign-out-alt" aria-hidden="true"></i>
+                    <span className="logout-text">로그아웃</span>
+                </button>
+            </div>
         </header>
     );
 }

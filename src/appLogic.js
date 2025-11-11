@@ -6,7 +6,7 @@ import { useExperienceLogic } from './logic/experience/experienceLogic';
 import { usePresentationLogic } from './logic/presentation/presentationLogic';
 import { useUILogic } from './logic/ui/uiLogic';
 
-export const SECTION_LIST = ['main', 'drive', 'portal', 'pptMaker', 'myPage'];
+export const SECTION_LIST = ['main', 'drive', 'History', 'pptMaker', 'myPage'];
 
 function useAppLogic()
 {
@@ -29,6 +29,12 @@ function useAppLogic()
       // localStorage에서 스프레드시트 ID 복원
       return localStorage.getItem('spreadsheetId') || null;
     });
+    const [expSortBy, setExpSortBy] = useState('startDate');
+    const [expSortOrder, setExpSortOrder] = useState('desc');
+    const [pptSortBy, setPptSortBy] = useState('createdTime');
+    const [pptSortOrder, setPptSortOrder] = useState('desc');
+    const [driveSortBy, setDriveSortBy] = useState('name');
+    const [driveSortOrder, setDriveSortOrder] = useState('asc');
 
     const [isSheetsInitialized, setIsSheetsInitialized] = useState(false);
     const [isDriveInitialized, setIsDriveInitialized] = useState(false);
@@ -590,6 +596,67 @@ function useAppLogic()
       }
     }, [portfolioFolderId]);
 
+    const sortPptHistory = (history, sortBy, sortOrder) => {
+        if (!history || history.length === 0) return [];
+        const sorted = [...history];
+        const isAsc = sortOrder === 'asc';
+        const field = sortBy;
+
+        sorted.sort((a, b) => {
+            let valA;
+            let valB;
+
+            if (field === 'name') {
+                valA = a.name.toLowerCase();
+                valB = b.name.toLowerCase();
+
+                if (valA < valB) return isAsc ? -1 : 1;
+                if (valA > valB) return isAsc ? 1 : -1;
+                return 0;
+            } else if (field === 'createdTime' || field === 'modifiedTime') {
+                valA = new Date(a[field] || 0).getTime();
+                valB = new Date(b[field] || 0).getTime();
+                return isAsc ? valA - valB : valB - valA;
+            }
+            return 0;
+        });
+        return sorted;
+    };
+
+    const sortExperiences = (expList, sortBy, sortOrder) => {
+        if (!expList || expList.length === 0) return [];
+        const sorted = [...expList];
+        const isAsc = sortOrder === 'asc';
+        const field = sortBy;
+
+        sorted.sort((a, b) => {
+            let valA;
+            let valB;
+
+            if (field === 'title') {
+                valA = a.title.toLowerCase();
+                valB = b.title.toLowerCase();
+
+                if (valA < valB) return isAsc ? -1 : 1;
+                if (valA > valB) return isAsc ? 1 : -1;
+                return 0;
+            } else if (field === 'startDate') {
+                const dateA = new Date(a.startDate);
+                const dateB = new Date(b.startDate);
+
+                valA = !isNaN(dateA.getTime()) ? dateA.getTime() : 0;
+                valB = !isNaN(dateB.getTime()) ? dateB.getTime() : 0;
+
+                return isAsc ? valA - valB : valB - valA;
+            }
+            return 0;
+        });
+        return sorted;
+    };
+
+    const sortedPptHistory = sortPptHistory(pptHistory, pptSortBy, pptSortOrder);
+    const sortedExperiences = sortExperiences(experiences, expSortBy, expSortOrder);
+
     // 마이페이지 섹션이 활성화될 때 PPT 기록과 이력 목록 로드
     useEffect(() => {
       if (activeSection === 'myPage' && isDriveInitialized) {
@@ -789,7 +856,7 @@ function useAppLogic()
       isLoggedIn,
       activeSection,
       authStatus,
-      experiences,
+      experiences: sortedExperiences,
       selected,
       spreadsheetId,
       isSheetsInitialized,
@@ -818,7 +885,7 @@ function useAppLogic()
       selectedImages,
       imagePreviews,
       showImageModal,
-      pptHistory,
+      pptHistory: sortedPptHistory,
       selectedImageForModal,
       imageLoadingStates,
       selectedExperience,
@@ -925,7 +992,20 @@ function useAppLogic()
       bgImagePreview,
       handleBgImageSelect,
       handleBgImageDrop,
-      removeBgImage
+      removeBgImage,
+      pptSortBy,
+      setPptSortBy,
+      pptSortOrder,
+      setPptSortOrder,
+      expSortBy,
+      setExpSortBy,
+      expSortOrder,
+      setExpSortOrder,
+      driveSortBy,
+      setDriveSortBy,
+      driveSortOrder,
+      setDriveSortOrder,
+      handleDriveFileDownload
     };
 }
 

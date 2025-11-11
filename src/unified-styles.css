@@ -2030,8 +2030,15 @@ a.btn:hover,
     background: rgba(255,255,255,.12); 
 }
 
+.top-actions {
+    justify-self: end;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-portal,
 .btn-logout {
-    justify-self: end; 
     padding: 8px 12px;
     border-radius: 10px;
     border: 1px solid rgba(255,255,255,.12);
@@ -2041,16 +2048,35 @@ a.btn:hover,
     pointer-events: auto;
     display: flex; 
     align-items: center; 
-    gap: 2px;
+    gap: 6px;
     justify-content: center;
     transition: background .2s ease, border-color .2s ease;
     font-size: 13px;
     font-weight: 500;
+    text-decoration: none;
+    white-space: nowrap;
 }
 
+.btn-portal:hover,
 .btn-logout:hover { 
     background: rgba(255,255,255,.12); 
     border-color: rgba(255,255,255,.18); 
+}
+
+.btn-portal .portal-text {
+    display: inline;
+}
+
+@media (max-width: 900px) {
+    .btn-portal .portal-text {
+        display: none;
+    }
+    .btn-portal {
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        justify-content: center;
+    }
 }
 
 /* 로그인 페이지 하단 링크 */
@@ -2393,6 +2419,7 @@ a.btn:hover,
 
 /* 포커스 접근성 */
 .nav-link:focus-visible, 
+.btn-portal:focus-visible,
 .btn-logout:focus-visible, 
 .brand-logo:focus-visible {
     outline: 2px solid rgba(255,255,255,.35);
@@ -2413,6 +2440,9 @@ a.btn:hover,
         grid-template-columns: 1fr !important;
         row-gap: 16px;
         text-align: center;
+    }
+    .top-actions {
+        gap: 6px;
     }
     .btn-logout .logout-text {
         display: none;
@@ -2544,6 +2574,28 @@ a.btn:hover,
 /* 파일 아이템 컨테이너 */
 .file-item {
     position: relative;
+}
+
+.file-item .d-flex {
+    min-width: 0;
+}
+
+.experience-content {
+    min-width: 0;
+    flex: 1 1 auto;
+    overflow: hidden;
+}
+
+.experience-description {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+}
+
+.experience-actions {
+    flex-shrink: 0;
+    flex-wrap: nowrap;
 }
 
 /* 파일 액션 버튼 스타일 */
