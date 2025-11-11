@@ -9,7 +9,7 @@ import './unified-styles.css';
 export const NAV_ITEMS = [
     { id: "main", label: "메인",          icon: "fas fa-home" },
     { id: "drive", label: "구글 드라이브", icon: "fab fa-google-drive" },
-    { id: "portal", label: "학교 포털",     icon: "fas fa-university" },
+    { id: "History", label: "이력 등록",     icon: "fas fa-clipboard-list" },
     { id: "pptMaker", label: "PPT 제작",    icon: "fas fa-file-powerpoint" },
     { id: "myPage", label: "마이페이지",    icon: "fas fa-user" },
 ];
@@ -32,14 +32,6 @@ function HeroCarousel({ onSelect }) {
             subtitle: "파일 업로드부터 공유까지 한 번에",
             bg: "linear-gradient(135deg,#0F1115 0%, #151922 55%, #0E0F13 100%)",
             accent: "linear-gradient(90deg,#d9e2ff, #eff3ff)",
-        },
-        {
-            key: "portal",
-            eyebrow: "Campus",
-            title: "학교 포털 바로가기",
-            subtitle: "학사 일정과 공지 확인",
-            bg: "linear-gradient(135deg,#0F1115 0%, #161b21 50%, #0F1218 100%)",
-            accent: "linear-gradient(90deg,#e9e9e9,#f7f7f7)",
         },
         {
             key: "myPage",
@@ -141,6 +133,74 @@ function HeroCarousel({ onSelect }) {
     );
 }
 
+function TemplateCarousel({ images = [] }) {
+    const [currentIndex, setCurrentIndex] = useState(0);
+
+    useEffect(() => {
+        setCurrentIndex(0);
+    }, [images]);
+
+    const prevSlide = () => {
+        const isFirstSlide = currentIndex === 0;
+        const newIndex = isFirstSlide ? images.length - 1 : currentIndex - 1;
+        setCurrentIndex(newIndex);
+    };
+
+    const nextSlide = () => {
+        const isLastSlide = currentIndex === images.length - 1;
+        const newIndex = isLastSlide ? 0 : currentIndex + 1;
+        setCurrentIndex(newIndex);
+    };
+
+    if (!images || images.length === 0) {
+        return (
+            <div className="carousel-container-placeholder">
+                <i className="fas fa-image"></i>
+                <p>미리보기 이미지가 없습니다.</p>
+            </div>
+        );
+    }
+
+    return (
+        <div className="carousel-container">
+            {images.length > 1 && (
+                <>
+                    <button type="button" onClick={prevSlide} className="carousel-button prev">
+                        &#10094;
+                    </button>
+                    <button type="button" onClick={nextSlide} className="carousel-button next">
+                        &#10095;
+                    </button>
+                </>
+            )}
+            <div className="carousel-slide-wrapper">
+                <div
+                    className="carousel-slides"
+                    style={{ transform: `translateX(-${currentIndex * 100}%)` }}
+                >
+                    {images.map((image, index) => (
+                        <div className="carousel-slide" key={index}>
+                            <img src={image} alt={`템플릿 미리보기 ${index + 1}`} />
+                        </div>
+                    ))}
+                </div>
+            </div>
+            {images.length > 1 && (
+                <div className="carousel-indicators">
+                    {images.map((_, index) => (
+                        <button
+                            type="button"
+                            key={index}
+                            className={`indicator-dot ${currentIndex === index ? 'active' : ''}`}
+                            onClick={() => setCurrentIndex(index)}
+                            aria-label={`슬라이드 ${index + 1}로 이동`}
+                        ></button>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
 
 function App() {
     // appLogic에서 모든 상태와 함수들을 가져옴
@@ -210,6 +270,10 @@ function App() {
     handleTemplateCancel,
     handleTemplateUse,
     handleThemeColorSelect,
+    bgImagePreview,
+    handleBgImageSelect,
+    handleBgImageDrop,
+    removeBgImage,
     closeModal,
     saveExperience,
     closeImageModal,
@@ -249,7 +313,24 @@ function App() {
     showPrivacyPolicy,
     showTermsOfService,
     setShowPrivacyPolicy,
-    setShowTermsOfService
+    setShowTermsOfService,
+    pptHistoryCurrentPage,
+    experienceCurrentPage,
+    pptMakerExperienceCurrentPage,
+    pptHistoryItemsPerPage,
+    experienceItemsPerPage,
+    pptMakerExperienceItemsPerPage,
+    getPaginatedItems,
+    getTotalPages,
+    goToPptHistoryPage,
+    goToPptHistoryNextPage,
+    goToPptHistoryPrevPage,
+    goToExperiencePage,
+    goToExperienceNextPage,
+    goToExperiencePrevPage,
+    goToPptMakerExperiencePage,
+    goToPptMakerExperienceNextPage,
+    goToPptMakerExperiencePrevPage
   } = useAppLogic();
 
   /* 스크롤 시 상단바 스타일 토글 */
@@ -269,19 +350,28 @@ function App() {
     return () => window.removeEventListener("scroll", onScroll);
   }, [isLoggedIn]);
 
+  useEffect(() => {
+    if (activeSection === 'History') {
+      if (editingIndex === null) {
+        showAddExperienceModal();
+      }
+    }
+  }, [activeSection]);
+
+  const handleSubmitExperiencePage = async (e) => {
+    e.preventDefault();
+    await saveExperience(e);
+    setActiveSection('myPage');
+  };
+
+  const handleCancelExperiencePage = () => {
+    closeModal();
+    setActiveSection('main');
+  };
+
   // 실제 화면 렌더링
   return (
       <div>
-        {/* 개인정보처리방침 페이지 */}
-        {showPrivacyPolicy && (
-          <PrivacyPolicy onBack={() => setShowPrivacyPolicy(false)} />
-        )}
-
-        {/* 사용자 약관 페이지 */}
-        {showTermsOfService && (
-          <TermsOfService onBack={() => setShowTermsOfService(false)} />
-        )}
-
         {/* 로그인 페이지 */}
         {!isLoggedIn && !showPrivacyPolicy && !showTermsOfService && (
             <section id="loginPage" className="start-hero theme-apple">
@@ -339,8 +429,18 @@ function App() {
             </section>
         )}
 
+        {/* 개인정보처리방침 페이지 */}
+        {showPrivacyPolicy && (
+          <PrivacyPolicy onBack={() => setShowPrivacyPolicy(false)} />
+        )}
+
+        {/* 사용자 약관 페이지 */}
+        {showTermsOfService && (
+          <TermsOfService onBack={() => setShowTermsOfService(false)} />
+        )}
+
         {/* 메인 페이지 */}
-        {isLoggedIn && !showPrivacyPolicy && !showTermsOfService && (
+        {isLoggedIn && (
             <div id="mainPage" className="theme-ink">
               {/* 상단 네비게이션 */}
               <TopNav 
@@ -358,7 +458,7 @@ function App() {
                         <div className="container-xl">
                           <HeroCarousel onSelect={showSection} />
                           <div className="mac-grid mac-grid-2">
-                            <div className="mac-card" onClick={showAddExperienceModal}>
+                            <div className="mac-card" onClick={() => showSection('History')}>
                               <i className="fas fa-plus-circle"></i>
                               <h3>이력 등록</h3>
                               <p>새로운 경험을 추가하세요</p>
@@ -424,8 +524,11 @@ function App() {
                                     </button>
                                   </div>
                               ) : (
-                                  experiences.map((exp, idx) => (
-                                      <div className="list-group-item experience-list-item" key={idx} onClick={() => openExperienceModal(exp)}>
+                                <>
+                                  {getPaginatedItems(experiences, pptMakerExperienceCurrentPage, pptMakerExperienceItemsPerPage).map((exp, idx) => {
+                                    const originalIndex = (pptMakerExperienceCurrentPage - 1) * pptMakerExperienceItemsPerPage + idx;
+                                    return (
+                                      <div className="list-group-item experience-list-item" key={originalIndex} onClick={() => openExperienceModal(exp)}>
                                         <div className="d-flex align-items-center">
                                           <div className="me-3 experience-image-container">
                                             {(exp.imageUrls && exp.imageUrls.length > 0) ? (
@@ -455,7 +558,6 @@ function App() {
                                                         className={`experience-image ${imageLoadingStates.get(`${exp.imageUrls[0]}_${exp.title} 이미지 1`) === 'loading' ? 'loading' : ''}`}
                                                         onLoad={() => setImageLoadingState(`${exp.imageUrls[0]}_${exp.title} 이미지 1`, false)}
                                                         onError={async (e) => {
-                                                          // 이미 변환 시도 중인지 확인 (무한 재귀 방지)
                                                           if (e.target.dataset.converting === 'true') {
                                                             return;
                                                           }
@@ -487,11 +589,49 @@ function App() {
                                             <p className="mb-0">{exp.description}</p>
                                           </div>
                                           <div className="form-check ms-3" onClick={(e) => e.stopPropagation()}>
-                                            <input className="form-check-input" type="checkbox" checked={selected.includes(idx)} onChange={() => toggleSelect(idx)} />
+                                            <input className="form-check-input" type="checkbox" checked={selected.includes(originalIndex)} onChange={() => toggleSelect(originalIndex)} />
                                           </div>
                                         </div>
                                       </div>
-                                  ))
+                                    );
+                                  })}
+                                  {getTotalPages(experiences, pptMakerExperienceItemsPerPage) > 1 && (
+                                    <div className="pagination-container mt-3">
+                                      <div className="pagination-info mb-2">
+                                        <small className="text-white-50">
+                                          {((pptMakerExperienceCurrentPage - 1) * pptMakerExperienceItemsPerPage) + 1} - {Math.min(pptMakerExperienceCurrentPage * pptMakerExperienceItemsPerPage, experiences.length)} / {experiences.length}
+                                        </small>
+                                      </div>
+                                      <div className="pagination-controls d-flex justify-content-center align-items-center gap-2">
+                                        <button
+                                          className="btn btn-outline-secondary btn-sm"
+                                          onClick={goToPptMakerExperiencePrevPage}
+                                          disabled={pptMakerExperienceCurrentPage === 1}
+                                        >
+                                          <i className="fas fa-chevron-left"></i> 이전
+                                        </button>
+                                        <div className="pagination-pages d-flex gap-1">
+                                          {Array.from({ length: getTotalPages(experiences, pptMakerExperienceItemsPerPage) }, (_, i) => i + 1).map((page) => (
+                                            <button
+                                              key={page}
+                                              className={`btn btn-sm ${page === pptMakerExperienceCurrentPage ? 'btn-primary' : 'btn-outline-secondary'}`}
+                                              onClick={() => goToPptMakerExperiencePage(page)}
+                                            >
+                                              {page}
+                                            </button>
+                                          ))}
+                                        </div>
+                                        <button
+                                          className="btn btn-outline-secondary btn-sm"
+                                          onClick={goToPptMakerExperienceNextPage}
+                                          disabled={pptMakerExperienceCurrentPage === getTotalPages(experiences, pptMakerExperienceItemsPerPage)}
+                                        >
+                                          다음 <i className="fas fa-chevron-right"></i>
+                                        </button>
+                                      </div>
+                                    </div>
+                                  )}
+                                </>
                               )}
                             </div>
                           </div>
@@ -1009,18 +1149,166 @@ function App() {
                         </div>
                       </div>
                   )}
-                  {/* 학교 포털 섹션 */}
-                  {activeSection === 'portal' && (
-                      <div id="portalSection" className="content-section">
-                        <div className="mac-window">
-                          <h2>학교 포털</h2>
-                          <div className="mac-window-content text-center p-5">
-                            <i className="fas fa-university fa-3x mb-3 text-primary"></i>
-                            <h3 className="mb-3">학교 포털로 이동</h3>
-                            <p className="mb-4">학교 포털에서 학사 정보를 확인하세요.</p>
-                            <a href="https://portal.yuhan.ac.kr/" target="_blank" rel="noopener noreferrer" className="btn btn-primary">학교 포털 열기</a>
+                  {/* 이력 등록 섹션 */}
+                  {activeSection === 'History' && (
+                      <div id="historyPageSection" className="content-section">
+                          <div className="mac-window">
+                              <div className="d-flex justify-content-between align-items-center mb-3">
+                                  <h2>{editingIndex !== null ? '이력 수정' : '새 이력 추가'}</h2>
+                              </div>
+                              <div className="mac-window-content">
+                                  <form onSubmit={handleSubmitExperiencePage} ref={formRef}>
+                                          <div className="mb-3">
+                                              <label className="form-label">제목</label>
+                                              <input type="text" className="form-control" required value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} />
+                                          </div>
+                                          <div className="mb-3">
+                                              <label className="form-label">기간</label>
+                                              <div className="period-container">
+                                                  <div className="row">
+                                                      <div className="col-6">
+                                                          <label className="form-label small white-text">시작일</label>
+                                                          <input
+                                                              type="date"
+                                                              className="form-control"
+                                                              required
+                                                              value={form.startDate}
+                                                              onChange={e => {
+                                                                  const newStartDate = e.target.value;
+                                                                  if (!newStartDate || newStartDate.length < 10) {
+                                                                      setForm({ ...form, startDate: newStartDate });
+                                                                      return;
+                                                                  }
+                                                                  setForm({ ...form, startDate: newStartDate });
+                                                                  if (newStartDate && form.endDate && newStartDate > form.endDate) {
+                                                                      alert('시작일은 종료일보다 이전이어야 합니다.');
+                                                                      setForm(prev => ({ ...prev, endDate: '' }));
+                                                                  }
+                                                              }}
+                                                          />
+                                                      </div>
+                                                      <div className="col-6">
+                                                          <label className="form-label small white-text">종료일</label>
+                                                          <input
+                                                              type="date"
+                                                              className="form-control"
+                                                              required
+                                                              value={form.endDate}
+                                                              onChange={e => {
+                                                                  const newEndDate = e.target.value;
+                                                                  if (!newEndDate || newEndDate.length < 10) {
+                                                                      setForm({ ...form, endDate: newEndDate });
+                                                                      return;
+                                                                  }
+                                                                  setForm({ ...form, endDate: newEndDate });
+                                                                  if (newEndDate && form.startDate && newEndDate < form.startDate) {
+                                                                      alert('종료일은 시작일보다 이후여야 합니다.');
+                                                                      setForm(prev => ({ ...prev, endDate: '' }));
+                                                                  }
+                                                              }}
+                                                          />
+                                                      </div>
+                                                  </div>
+                                                  {form.startDate && form.endDate && (
+                                                      <div className="period-preview">
+                                                          <small className="white-text">
+                                                              선택된 기간: {formatPeriod(form.startDate, form.endDate)}
+                                                          </small>
+                                                      </div>
+                                                  )}
+                                              </div>
+                                          </div>
+                                          <div className="mb-3">
+                                              <label className="form-label">설명</label>
+                                              <textarea className="form-control" rows="3" required value={form.description} onChange={e => setForm({ ...form, description: e.target.value })}></textarea>
+                                          </div>
+                                          <div className="mb-3">
+                                              <label className="form-label">이미지 첨부</label>
+                                              <div
+                                                  className="image-upload-container"
+                                                  onClick={() => document.getElementById('imageInput').click()}
+                                                  onDragOver={(e) => { e.preventDefault(); e.currentTarget.style.borderColor = '#007bff'; }}
+                                                  onDragLeave={(e) => { e.preventDefault(); e.currentTarget.style.borderColor = '#dee2e6'; }}
+                                                  onDrop={(e) => {
+                                                      e.preventDefault();
+                                                      e.currentTarget.style.borderColor = '#dee2e6';
+                                                      const files = Array.from(e.dataTransfer.files);
+                                                      handleDroppedFiles(files);
+                                                  }}
+                                              >
+                                                  <input
+                                                      type="file"
+                                                      id="imageInput"
+                                                      className="file-input"
+                                                      accept="image/*"
+                                                      multiple
+                                                      onChange={handleImageSelect}
+                                                      style={{ display: 'none' }}
+                                                  />
+                                                  <i className="fas fa-cloud-upload-alt image-upload-icon"></i>
+                                                  <div className="image-upload-text">클릭하여 이미지 선택 (여러 개 가능)</div>
+                                                  <div className="image-upload-subtext">또는 이미지를 여기로 드래그하세요</div>
+                                              </div>
+                                              {imagePreviews.length > 0 && (
+                                                  <div className="image-previews-container mt-3">
+                                                      <h6 className="mb-2">선택된 이미지들:</h6>
+                                                      <div className="row">
+                                                          {imagePreviews.map((preview, index) => (
+                                                              <div key={index} className="col-md-4 col-sm-6 mb-2">
+                                                                  <div className="image-preview-item position-relative">
+                                                                      <img
+                                                                          src={preview}
+                                                                          alt={`이미지 ${index + 1}`}
+                                                                          className="img-fluid rounded experience-preview-image"
+                                                                          onError={async (e) => {
+                                                                              if (e.target.dataset.converting === 'true') { return; }
+                                                                              e.target.dataset.converting = 'true';
+                                                                              await retryImageLoad(e.target, preview, 0, setImageLoadingState, setImageErrorState, driveService);
+                                                                              e.target.dataset.converting = 'false';
+                                                                          }}
+                                                                      />
+                                                                      <button
+                                                                          type="button"
+                                                                          className="btn btn-sm btn-outline-danger position-absolute top-0 end-0 m-1 image-delete-btn experience-image-delete-btn"
+                                                                          onClick={() => removeImage(index)}
+                                                                      >
+                                                                      </button>
+                                                                  </div>
+                                                              </div>
+                                                          ))}
+                                                      </div>
+                                                  </div>
+                                              )}
+                                              <div className="image-size-info mt-2">
+                                                  <small className="white-text">최대 파일 크기: 5MB, 지원 형식: JPG, PNG, GIF</small>
+                                              </div>
+                                          </div>
+                                      <div className="d-flex justify-content-end gap-2 mt-4">
+                                          <button
+                                              type="button"
+                                              className="btn btn-outline-secondary"
+                                              onClick={() => {
+                                                  closeModal();
+                                                  setActiveSection('main');
+                                              }}
+                                              disabled={isExperienceLoading}
+                                          >
+                                              취소
+                                          </button>
+                                          <button type="submit" className="btn btn-outline-primary" disabled={isExperienceLoading}>
+                                              {isExperienceLoading ? (
+                                                  <>
+                                                      <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                                      {editingIndex !== null ? '수정 중...' : '저장 중...'}
+                                                  </>
+                                              ) : (
+                                                  editingIndex !== null ? '수정' : '저장'
+                                              )}
+                                          </button>
+                                      </div>
+                                  </form>
+                              </div>
                           </div>
-                        </div>
                       </div>
                   )}
                   {/* 마이페이지 섹션 */}
@@ -1048,48 +1336,83 @@ function App() {
                                   <p>아직 제작한 PPT가 없습니다.</p>
                                 </div>
                               ) : (
-                                pptHistory.map((ppt, index) => (
-                                    <div
-                                        key={ppt.id}
-                                        className="list-group-item mac-list-item d-flex align-items-center file-item"
-                                        onClick={() => window.open(`https://docs.google.com/presentation/d/${ppt.id}/edit`, '_blank')}
-                                    >
-                                      <div className="me-3">
-                                        <i className="fas fa-file-powerpoint text-primary fa-2x"></i>
+                                <>
+                                  {getPaginatedItems(pptHistory, pptHistoryCurrentPage, pptHistoryItemsPerPage).map((ppt, index) => (
+                                      <div
+                                          key={ppt.id}
+                                          className="list-group-item mac-list-item d-flex align-items-center file-item"
+                                          onClick={() => window.open(`https://docs.google.com/presentation/d/${ppt.id}/edit`, '_blank')}
+                                      >
+                                        <div className="me-3">
+                                          <i className="fas fa-file-powerpoint text-primary fa-2x"></i>
+                                        </div>
+                                        <div className="flex-grow-1">
+                                          <h6 className="mb-1 text-white">{ppt.name}</h6>
+                                          <small className="text-white-50">
+                                            생성일: {new Date(ppt.createdTime).toLocaleDateString()}
+                                          </small>
+                                        </div>
+                                        <div className="d-flex align-items-center gap-2">
+                                          <button
+                                              className="btn btn-outline-secondary btn-sm"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                loadPptForEdit(ppt.id);
+                                              }}
+                                          >
+                                            <i className="fas fa-edit"></i> 수정
+                                          </button>
+                                          <button
+                                              className="btn btn-outline-danger btn-sm"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                if (window.confirm(`"${ppt.name}" 파일을 삭제하시겠습니까?`)) {
+                                                  handleDriveFileDelete(ppt.id, true);
+                                                }
+                                              }}
+                                          >
+                                            <i className="fas fa-trash-alt"></i> 삭제
+                                          </button>
+                                        </div>
                                       </div>
-                                      <div className="flex-grow-1">
-                                        <h6 className="mb-1 text-white">{ppt.name}</h6>
+                                  ))}
+                                  {getTotalPages(pptHistory, pptHistoryItemsPerPage) > 1 && (
+                                    <div className="pagination-container mt-3">
+                                      <div className="pagination-info mb-2">
                                         <small className="text-white-50">
-                                          생성일: {new Date(ppt.createdTime).toLocaleDateString()}
+                                          {((pptHistoryCurrentPage - 1) * pptHistoryItemsPerPage) + 1} - {Math.min(pptHistoryCurrentPage * pptHistoryItemsPerPage, pptHistory.length)} / {pptHistory.length}
                                         </small>
                                       </div>
-                                      <div className="d-flex align-items-center gap-2">
-                                        {/* 수정 버튼 */}
+                                      <div className="pagination-controls d-flex justify-content-center align-items-center gap-2">
                                         <button
-                                            className="btn btn-outline-secondary btn-sm"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              loadPptForEdit(ppt.id);
-                                            }}
+                                          className="btn btn-outline-secondary btn-sm"
+                                          onClick={goToPptHistoryPrevPage}
+                                          disabled={pptHistoryCurrentPage === 1}
                                         >
-                                          <i className="fas fa-edit"></i> 수정
+                                          <i className="fas fa-chevron-left"></i> 이전
                                         </button>
-
-                                        {/* 삭제 버튼 */}
+                                        <div className="pagination-pages d-flex gap-1">
+                                          {Array.from({ length: getTotalPages(pptHistory, pptHistoryItemsPerPage) }, (_, i) => i + 1).map((page) => (
+                                            <button
+                                              key={page}
+                                              className={`btn btn-sm ${page === pptHistoryCurrentPage ? 'btn-primary' : 'btn-outline-secondary'}`}
+                                              onClick={() => goToPptHistoryPage(page)}
+                                            >
+                                              {page}
+                                            </button>
+                                          ))}
+                                        </div>
                                         <button
-                                            className="btn btn-outline-danger btn-sm"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              if (window.confirm(`"${ppt.name}" 파일을 삭제하시겠습니까?`)) {
-                                                handleDriveFileDelete(ppt.id, true); // PPT 기록에서 삭제하므로 true 전달
-                                              }
-                                            }}
+                                          className="btn btn-outline-secondary btn-sm"
+                                          onClick={goToPptHistoryNextPage}
+                                          disabled={pptHistoryCurrentPage === getTotalPages(pptHistory, pptHistoryItemsPerPage)}
                                         >
-                                          <i className="fas fa-trash-alt"></i> 삭제
+                                          다음 <i className="fas fa-chevron-right"></i>
                                         </button>
                                       </div>
                                     </div>
-                                ))
+                                  )}
+                                </>
                               )}
                             </div>
                           </div>
@@ -1126,8 +1449,11 @@ function App() {
                                     </button>
                                   </div>
                               ) : (
-                                  experiences.map((exp, idx) => (
-                                      <div className="list-group-item file-item" key={idx} onClick={() => openExperienceModal(exp)}>
+                                <>
+                                  {getPaginatedItems(experiences, experienceCurrentPage, experienceItemsPerPage).map((exp, idx) => {
+                                    const originalIndex = (experienceCurrentPage - 1) * experienceItemsPerPage + idx;
+                                    return (
+                                      <div className="list-group-item file-item" key={originalIndex} onClick={() => openExperienceModal(exp)}>
                                         <div className="d-flex align-items-center">
                                           <div className="me-3 experience-image-container">
                                             {(exp.imageUrls && exp.imageUrls.length > 0) ? (
@@ -1157,7 +1483,6 @@ function App() {
                                                         className={`experience-image ${imageLoadingStates.get(`${exp.imageUrls[0]}_${exp.title} 이미지 1`) === 'loading' ? 'loading' : ''}`}
                                                         onLoad={() => setImageLoadingState(`${exp.imageUrls[0]}_${exp.title} 이미지 1`, false)}
                                                         onError={async (e) => {
-                                                          // 이미 변환 시도 중인지 확인 (무한 재귀 방지)
                                                           if (e.target.dataset.converting === 'true') {
                                                             return;
                                                           }
@@ -1183,17 +1508,18 @@ function App() {
                                                 </div>
                                             )}
                                           </div>
-                                          <div className="flex-grow-1">
+                                          <div className="flex-grow-1 experience-content">
                                             <h6 className="mb-1">{exp.title}</h6>
                                             <p className="mb-1"><small>{exp.period}</small></p>
-                                            <p className="mb-0">{exp.description}</p>
+                                            <p className="mb-0 experience-description">{exp.description}</p>
                                           </div>
-                                          <div className="d-flex align-items-center gap-2">
+                                          <div className="d-flex align-items-center gap-2 experience-actions">
                                             <button
                                                 className="btn btn-outline-secondary btn-sm"
                                                 onClick={(e) => {
                                                   e.stopPropagation();
-                                                  showEditExperienceModal(idx);
+                                                  showEditExperienceModal(originalIndex);
+                                                  setActiveSection('History');
                                                 }}
                                                 disabled={isExperienceLoading}
                                             >
@@ -1203,7 +1529,7 @@ function App() {
                                                 className="btn btn-outline-danger btn-sm"
                                                 onClick={(e) => {
                                                   e.stopPropagation();
-                                                  deleteIndividualExperience(idx);
+                                                  deleteIndividualExperience(originalIndex);
                                                 }}
                                                 disabled={isExperienceLoading}
                                             >
@@ -1212,7 +1538,45 @@ function App() {
                                           </div>
                                         </div>
                                       </div>
-                                  ))
+                                    );
+                                  })}
+                                  {getTotalPages(experiences, experienceItemsPerPage) > 1 && (
+                                    <div className="pagination-container mt-3">
+                                      <div className="pagination-info mb-2">
+                                        <small className="text-white-50">
+                                          {((experienceCurrentPage - 1) * experienceItemsPerPage) + 1} - {Math.min(experienceCurrentPage * experienceItemsPerPage, experiences.length)} / {experiences.length}
+                                        </small>
+                                      </div>
+                                      <div className="pagination-controls d-flex justify-content-center align-items-center gap-2">
+                                        <button
+                                          className="btn btn-outline-secondary btn-sm"
+                                          onClick={goToExperiencePrevPage}
+                                          disabled={experienceCurrentPage === 1}
+                                        >
+                                          <i className="fas fa-chevron-left"></i> 이전
+                                        </button>
+                                        <div className="pagination-pages d-flex gap-1">
+                                          {Array.from({ length: getTotalPages(experiences, experienceItemsPerPage) }, (_, i) => i + 1).map((page) => (
+                                            <button
+                                              key={page}
+                                              className={`btn btn-sm ${page === experienceCurrentPage ? 'btn-primary' : 'btn-outline-secondary'}`}
+                                              onClick={() => goToExperiencePage(page)}
+                                            >
+                                              {page}
+                                            </button>
+                                          ))}
+                                        </div>
+                                        <button
+                                          className="btn btn-outline-secondary btn-sm"
+                                          onClick={goToExperienceNextPage}
+                                          disabled={experienceCurrentPage === getTotalPages(experiences, experienceItemsPerPage)}
+                                        >
+                                          다음 <i className="fas fa-chevron-right"></i>
+                                        </button>
+                                      </div>
+                                    </div>
+                                  )}
+                                </>
                               )}
                             </div>
                           </div>
@@ -1221,206 +1585,33 @@ function App() {
                   )}
                 </div>
               </div>
-              
-              {/* 푸터 */}
-              <footer className="main-footer">
-                <div className="footer-content">
-                  <div className="footer-links">
-                    <button 
-                      onClick={() => setShowPrivacyPolicy(true)}
-                      className="footer-link-btn"
-                    >
-                      개인정보처리방침
-                    </button>
-                    <span className="footer-link-separator">|</span>
-                    <button 
-                      onClick={() => setShowTermsOfService(true)}
-                      className="footer-link-btn"
-                    >
-                      사용자 약관
-                    </button>
-                  </div>
-                  <p className="footer-copyright">© 2025 Portra. All rights reserved.</p>
-                </div>
-              </footer>
             </div>
         )}
 
-        {/* 이력 추가 모달 */}
-        {showModal && (
-            <div className="modal fade show" style={{display: 'block', backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9999}} tabIndex="-1">
-              <div className="modal-dialog modal-dialog-centered">
-                <div className="modal-content mac-modal">
-                  <div className="modal-header">
-                    <h5 className="modal-title">{editingIndex !== null ? '이력 수정' : '새 이력 추가'}</h5>
-                    <button type="button" className="btn-close" onClick={closeModal}></button>
-                  </div>
-                  <form onSubmit={saveExperience} ref={formRef}>
-                    <div className="modal-body">
-                      <div className="mb-3">
-                        <label className="form-label">제목</label>
-                        <input type="text" className="form-control" required value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} />
-                      </div>
-                      <div className="mb-3">
-                        <label className="form-label">기간</label>
-                        <div className="period-container">
-                          <div className="row">
-                            <div className="col-6">
-                              <label className="form-label small white-text">시작일</label>
-                              <input
-                                  type="date"
-                                  className="form-control"
-                                  required
-                                  value={form.startDate}
-                                  onChange={e => {
-                                    const newStartDate = e.target.value;
-                                    
-                                    // 빈 값이거나 유효하지 않은 날짜 형식이면 검사하지 않음
-                                    if (!newStartDate || newStartDate.length < 10) {
-                                      setForm({ ...form, startDate: newStartDate });
-                                      return;
-                                    }
-                                    
-                                    setForm({ ...form, startDate: newStartDate });
-
-                                    // 시작일이 종료일보다 늦으면 경고 후 종료일 초기화
-                                    if (newStartDate && form.endDate && newStartDate > form.endDate) {
-                                      alert('시작일은 종료일보다 이전이어야 합니다.');
-                                      setForm(prev => ({ ...prev, endDate: '' }));
-                                    }
-                                  }}
-                              />
-                            </div>
-                            <div className="col-6">
-                              <label className="form-label small white-text">종료일</label>
-                              <input
-                                  type="date"
-                                  className="form-control"
-                                  required
-                                  value={form.endDate}
-                                  onChange={e => {
-                                    const newEndDate = e.target.value;
-                                    
-                                    // 빈 값이거나 유효하지 않은 날짜 형식이면 검사하지 않음
-                                    if (!newEndDate || newEndDate.length < 10) {
-                                      setForm({ ...form, endDate: newEndDate });
-                                      return;
-                                    }
-                                    
-                                    setForm({ ...form, endDate: newEndDate });
-
-                                    // 종료일이 시작일보다 이르면 경고
-                                    if (newEndDate && form.startDate && newEndDate < form.startDate) {
-                                      alert('종료일은 시작일보다 이후여야 합니다.');
-                                      setForm(prev => ({ ...prev, endDate: '' }));
-                                    }
-                                  }}
-                              />
-                            </div>
-                          </div>
-
-                          {form.startDate && form.endDate && (
-                              <div className="period-preview">
-                                <small className="white-text">
-                                  선택된 기간: {formatPeriod(form.startDate, form.endDate)}
-                                </small>
-                              </div>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="mb-3">
-                        <label className="form-label">설명</label>
-                        <textarea className="form-control" rows="3" required value={form.description} onChange={e => setForm({ ...form, description: e.target.value })}></textarea>
-                      </div>
-                      <div className="mb-3">
-                        <label className="form-label">이미지 첨부</label>
-                        <div
-                            className="image-upload-container"
-                            onClick={() => document.getElementById('imageInput').click()}
-                            onDragOver={(e) => {
-                              e.preventDefault();
-                              e.currentTarget.style.borderColor = '#007bff';
-                            }}
-                            onDragLeave={(e) => {
-                              e.preventDefault();
-                              e.currentTarget.style.borderColor = '#dee2e6';
-                            }}
-                            onDrop={(e) => {
-                              e.preventDefault();
-                              e.currentTarget.style.borderColor = '#dee2e6';
-                              const files = Array.from(e.dataTransfer.files);
-                              handleDroppedFiles(files);
-                            }}
-                        >
-                          <input
-                              type="file"
-                              id="imageInput"
-                              className="file-input"
-                              accept="image/*"
-                              multiple
-                              onChange={handleImageSelect}
-                              style={{ display: 'none' }}
-                          />
-                          <i className="fas fa-cloud-upload-alt image-upload-icon"></i>
-                          <div className="image-upload-text">클릭하여 이미지 선택 (여러 개 가능)</div>
-                          <div className="image-upload-subtext">또는 이미지를 여기로 드래그하세요</div>
-                        </div>
-                        {imagePreviews.length > 0 && (
-                            <div className="image-previews-container mt-3">
-                              <h6 className="mb-2">선택된 이미지들:</h6>
-                              <div className="row">
-                                {imagePreviews.map((preview, index) => (
-                                    <div key={index} className="col-md-4 col-sm-6 mb-2">
-                                      <div className="image-preview-item position-relative">
-                                        <img
-                                            src={preview}
-                                            alt={`이미지 ${index + 1}`}
-                                            className="img-fluid rounded"
-                                            style={{ width: '100%', height: '150px', objectFit: 'cover' }}
-                                            onError={async (e) => {
-                                              if (e.target.dataset.converting === 'true') { return; }
-                                              e.target.dataset.converting = 'true';
-                                              await retryImageLoad(e.target, preview, 0, setImageLoadingState, setImageErrorState, driveService);
-                                              e.target.dataset.converting = 'false';
-                                            }}
-                                        />
-                                        <button
-                                            type="button"
-                                            className="btn btn-sm btn-outline-danger position-absolute top-0 end-0 m-1 image-delete-btn"
-                                            onClick={() => removeImage(index)}
-                                            style={{ zIndex: 10 }}
-                                        >
-                                        </button>
-                                      </div>
-                                    </div>
-                                ))}
-                              </div>
-                            </div>
-                        )}
-                        <div className="image-size-info mt-2">
-                          <small className="white-text">최대 파일 크기: 5MB, 지원 형식: JPG, PNG, GIF</small>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="modal-footer">
-                      <button type="button" className="btn btn-secondary" onClick={closeModal} disabled={isExperienceLoading}>취소</button>
-                      <button type="submit" className="btn btn-primary" disabled={isExperienceLoading}>
-                        {isExperienceLoading ? (
-                            <>
-                              <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                              {editingIndex !== null ? '수정 중...' : '저장 중...'}
-                            </>
-                        ) : (
-                            editingIndex !== null ? '수정' : '저장'
-                        )}
-                      </button>
-                    </div>
-                  </form>
-                </div>
+        {/* 푸터 - 모든 섹션에 표시 */}
+        {isLoggedIn && !showPrivacyPolicy && !showTermsOfService && (
+          <footer className="main-footer">
+            <div className="footer-content">
+              <div className="footer-links">
+                <button 
+                  onClick={() => setShowPrivacyPolicy(true)}
+                  className="footer-link-btn"
+                >
+                  개인정보처리방침
+                </button>
+                <span className="footer-link-separator">|</span>
+                <button 
+                  onClick={() => setShowTermsOfService(true)}
+                  className="footer-link-btn"
+                >
+                  사용자 약관
+                </button>
               </div>
+              <p className="footer-copyright">© 2025 Portra. All rights reserved.</p>
             </div>
+          </footer>
         )}
+
 
         {/* 이미지 확대 모달 */}
         {showImageModal && selectedImageForModal && (
@@ -1622,7 +1813,16 @@ function App() {
         )}
 
         {/* 템플릿 선택 모달 */}
-        {showTemplateModal && selectedTemplateForModal && (
+        {showTemplateModal && selectedTemplateForModal && (() => {
+            const templateInfo = templateDescriptions[selectedTemplateForModal];
+            if (!templateInfo) return null;
+
+            const imagesForCurrentTheme =
+            (templateInfo.previewImages && templateInfo.previewImages[selectedThemeColor]) ||
+            (templateInfo.previewImages && templateInfo.previewImages['light']) ||
+            [];
+
+            return(
           <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
             <div className="modal-dialog modal-lg modal-dialog-centered">
               <div className="modal-content mac-modal">
@@ -1641,59 +1841,13 @@ function App() {
                         {templateDescriptions[selectedTemplateForModal]?.description}
                       </p>
                       
-                      {/* 템플릿 미리보기 이미지 */}
                       <div className="mb-4">
-                        <h6 className="mb-3 white-text">템플릿 미리보기</h6>
-                        <div className="template-preview-container">
-                          {templateDescriptions[selectedTemplateForModal]?.previewImages && 
-                           templateDescriptions[selectedTemplateForModal].previewImages.length > 0 ? (
-                            <div className="row g-3">
-                              {templateDescriptions[selectedTemplateForModal].previewImages.map((imagePath, index) => (
-                                <div key={index} className="col-md-4">
-                                  <div className="template-preview-item">
-                                    <img 
-                                      src={imagePath} 
-                                      alt={`템플릿 미리보기 ${index + 1}`}
-                                      className="img-fluid rounded"
-                                      style={{
-                                        width: '100%',
-                                        height: '200px',
-                                        objectFit: 'cover',
-                                        border: '2px solid #007bff',
-                                        cursor: 'pointer',
-                                        transition: 'transform 0.2s ease'
-                                      }}
-                                      onMouseOver={(e) => e.target.style.transform = 'scale(1.05)'}
-                                      onMouseOut={(e) => e.target.style.transform = 'scale(1)'}
-                                      onClick={() => {
-                                        setSelectedImageForModal({
-                                          url: imagePath,
-                                          title: `템플릿 미리보기 ${index + 1}`
-                                        });
-                                        setShowImageModal(true);
-                                      }}
-                                    />
-                                    <div className="text-center mt-2">
-                                      <small style={{ color: '#ccc' }}>미리보기 {index + 1}</small>
-                                    </div>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <div className="text-center py-4">
-                              <i className="fas fa-image fa-3x mb-3" style={{ color: 'rgba(255, 255, 255, 0.3)' }}></i>
-                              <p className="mb-0" style={{ color: 'rgba(255, 255, 255, 0.6)' }}>
-                                미리보기 이미지가 준비 중입니다
-                              </p>
-                            </div>
-                          )}
+                            <h6 className="mb-3 white-text">템플릿 미리보기</h6>
+                            <TemplateCarousel images={imagesForCurrentTheme} />
                         </div>
-                      </div>
                       
-                     {/* 테마 색상 선택 */}
                      <div className="theme-color-selector">
-                       <h6>테마 색상</h6>
+                       <h6 className="white-text">테마 색상</h6>
                        <div className="theme-color-options">
                          <div
                            className={`theme-color-option light ${selectedThemeColor === 'light' ? 'selected' : ''}`}
@@ -1742,6 +1896,55 @@ function App() {
                           </div>
                         ))}
                       </div>
+                        <hr style={{ borderTop: '1px solid var(--ink-line)', margin: '20px 0' }} />
+                        <h6 className="mb-3 white-text">배경 이미지 업로드 (선택)</h6>
+                        <p className="mb-3" style={{ color: 'var(--ink-muted)', fontSize: '14px' }}>
+                            이미지를 업로드하면 모든 슬라이드의 배경으로 적용됩니다. (테마 색상 무시)
+                        </p>
+
+                        {!bgImagePreview ? (
+                            <div
+                                className="image-upload-container"
+                                onClick={() => document.getElementById('bgImageInput').click()}
+                                onDragOver={(e) => {
+                                    e.preventDefault();
+                                    e.currentTarget.classList.add('dragover');
+                                }}
+                                onDragLeave={(e) => {
+                                    e.preventDefault();
+                                    e.currentTarget.classList.remove('dragover');
+                                }}
+                                onDrop={(e) => {
+                                    e.preventDefault();
+                                    e.currentTarget.classList.remove('dragover');
+                                    const files = Array.from(e.dataTransfer.files);
+                                    handleBgImageDrop(files);
+                                }}
+                            >
+                                <input
+                                    type="file"
+                                    id="bgImageInput"
+                                    className="file-input"
+                                    accept="image/*"
+                                    onChange={handleBgImageSelect}
+                                    style={{ display: 'none' }}
+                                />
+                                <i className="fas fa-image image-upload-icon"></i>
+                                <div className="image-upload-text">클릭하여 배경 이미지 선택</div>
+                                <div className="image-upload-subtext">또는 이미지를 여기로 드래그하세요 (5MB 이하)</div>
+                            </div>
+                        ) : (
+                            <div className="image-preview">
+                                <img src={bgImagePreview} alt="배경 이미지 미리보기" />
+                                <button
+                                    type="button"
+                                    className="remove-image"
+                                    onClick={removeBgImage}
+                                >
+                                    &times;
+                                </button>
+                            </div>
+                        )}
                     </div>
                   </div>
                 </div>
@@ -1756,7 +1959,8 @@ function App() {
                 </div>
               </div>
             </div>
-        )}
+            );
+        })()}
       </div>
   );
 }

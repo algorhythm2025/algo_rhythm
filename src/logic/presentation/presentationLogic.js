@@ -1,5 +1,31 @@
 // PPT 생성 관련 로직
 export function usePresentationLogic() {
+    async function getImageDimensions(url) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => {
+                resolve({
+                    width: img.naturalWidth,
+                    height: img.naturalHeight
+                });
+            };
+            img.onerror = (err) => {
+                console.error('이미지 크기 로드 실패:', url, err);
+                resolve({ width: 1920, height: 1080 });
+            };
+
+            try {
+                if (url.startsWith('http')) {
+                    img.crossOrigin = 'anonymous';
+                }
+            } catch(e) {
+                console.warn('crossOrigin 설정 실패', e);
+            }
+
+            img.src = url;
+        });
+    }
+
     // 프레젠테이션 생성
     async function createPresentation(title, token) {
         const res = await fetch('https://slides.googleapis.com/v1/presentations', {
@@ -15,7 +41,6 @@ export function usePresentationLogic() {
         return data.presentationId;
     }
 
-    // 슬라이드 추가 (TITLE_AND_BODY)
     async function addSlide(presentationId, token) {
         await fetch(`https://slides.googleapis.com/v1/presentations/${presentationId}:batchUpdate`, {
             method: 'POST',
@@ -28,13 +53,69 @@ export function usePresentationLogic() {
                     {
                         createSlide: {
                             slideLayoutReference: {
-                                predefinedLayout: 'BLANK'  // 빈 슬라이드로 변경
+                                predefinedLayout: 'BLANK'
                             }
                         }
                     }
                 ]
             })
         });
+    }
+
+    async function addMultipleSlides(presentationId, token, count) {
+        if (count <= 0) return [];
+        
+        const requests = [];
+        for (let i = 0; i < count; i++) {
+            requests.push({
+                createSlide: {
+                    slideLayoutReference: {
+                        predefinedLayout: 'BLANK'
+                    }
+                }
+            });
+        }
+
+        const response = await fetch(`https://slides.googleapis.com/v1/presentations/${presentationId}:batchUpdate`, {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ requests })
+        });
+
+        const result = await response.json();
+        return result.replies?.map(reply => reply.createSlide?.objectId).filter(Boolean) || [];
+    }
+
+    async function batchUpdate(presentationId, token, requests) {
+        if (requests.length === 0) return { replies: [] };
+        
+        const BATCH_SIZE = 50;
+        const results = [];
+        
+        for (let i = 0; i < requests.length; i += BATCH_SIZE) {
+            const batch = requests.slice(i, i + BATCH_SIZE);
+            const response = await fetch(`https://slides.googleapis.com/v1/presentations/${presentationId}:batchUpdate`, {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ requests: batch })
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(`batchUpdate 실패: ${errorData.error?.message || '알 수 없는 오류'}`);
+            }
+            
+            const result = await response.json();
+            results.push(...(result.replies || []));
+        }
+        
+        return { replies: results };
     }
 
     // 첫 슬라이드에 제목/부제목 설정 (레이아웃 변경 없이)
@@ -611,9 +692,32 @@ export function usePresentationLogic() {
         }
     }
 
-    // 슬라이드 배경색 설정 함수
     async function setSlideBackground(presId, slideId, backgroundColor, token) {
-        const requests = [{
+        try {
+            const requests = [{
+                updatePageProperties: {
+                    objectId: slideId,
+                    pageProperties: {
+                        pageBackgroundFill: {
+                            solidFill: {
+                                color: backgroundColor
+                            }
+                        }
+                    },
+                    fields: 'pageBackgroundFill'
+                }
+            }];
+
+            await batchUpdate(presId, token, requests);
+        } catch (error) {
+            console.error('슬라이드 배경색 설정 실패:', error);
+        }
+    }
+
+    async function setMultipleSlideBackgrounds(presId, slideIds, backgroundColor, token) {
+        if (slideIds.length === 0) return;
+        
+        const requests = slideIds.map(slideId => ({
             updatePageProperties: {
                 objectId: slideId,
                 pageProperties: {
@@ -625,161 +729,482 @@ export function usePresentationLogic() {
                 },
                 fields: 'pageBackgroundFill'
             }
-        }];
+        }));
 
-        await window.gapi.client.slides.presentations.batchUpdate({
-            presentationId: presId,
-            requests: requests
-        });
+        await batchUpdate(presId, token, requests);
     }
 
-    // 기본 템플릿 슬라이드 생성
+    async function addExperienceTextToSlideBatch(presId, slideId, exp, currentToken, themeStyles) {
+        try {
+            const objectId1 = `textbox_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            const objectId2 = `textbox_${Date.now() + 1}_${Math.random().toString(36).substr(2, 9)}`;
+            const objectId3 = `textbox_${Date.now() + 2}_${Math.random().toString(36).substr(2, 9)}`;
+
+            const requests = [
+                {
+                    createShape: {
+                        objectId: objectId1,
+                        shapeType: 'TEXT_BOX',
+                        elementProperties: {
+                            pageObjectId: slideId,
+                            size: {
+                                width: { magnitude: 400, unit: 'PT' },
+                                height: { magnitude: 60, unit: 'PT' }
+                            },
+                            transform: {
+                                scaleX: 1,
+                                scaleY: 1,
+                                translateX: 50,
+                                translateY: 50,
+                                unit: 'PT'
+                            }
+                        }
+                    }
+                },
+                {
+                    insertText: {
+                        objectId: objectId1,
+                        text: exp.title
+                    }
+                },
+                {
+                    updateTextStyle: {
+                        objectId: objectId1,
+                        style: {
+                            bold: true,
+                            fontSize: { magnitude: 24, unit: 'PT' },
+                            fontFamily: 'Arial',
+                            foregroundColor: themeStyles.textColor
+                        },
+                        fields: 'bold,fontSize,fontFamily,foregroundColor'
+                    }
+                },
+                {
+                    createShape: {
+                        objectId: objectId2,
+                        shapeType: 'TEXT_BOX',
+                        elementProperties: {
+                            pageObjectId: slideId,
+                            size: {
+                                width: { magnitude: 350, unit: 'PT' },
+                                height: { magnitude: 40, unit: 'PT' }
+                            },
+                            transform: {
+                                scaleX: 1,
+                                scaleY: 1,
+                                translateX: 50,
+                                translateY: 100,
+                                unit: 'PT'
+                            }
+                        }
+                    }
+                },
+                {
+                    insertText: {
+                        objectId: objectId2,
+                        text: exp.period
+                    }
+                },
+                {
+                    updateTextStyle: {
+                        objectId: objectId2,
+                        style: {
+                            fontSize: { magnitude: 14, unit: 'PT' },
+                            fontFamily: 'Arial',
+                            foregroundColor: themeStyles.textColor
+                        },
+                        fields: 'fontSize,fontFamily,foregroundColor'
+                    }
+                },
+                {
+                    createShape: {
+                        objectId: objectId3,
+                        shapeType: 'TEXT_BOX',
+                        elementProperties: {
+                            pageObjectId: slideId,
+                            size: {
+                                width: { magnitude: 300, unit: 'PT' },
+                                height: { magnitude: 80, unit: 'PT' }
+                            },
+                            transform: {
+                                scaleX: 1,
+                                scaleY: 1,
+                                translateX: 50,
+                                translateY: 150,
+                                unit: 'PT'
+                            }
+                        }
+                    }
+                },
+                {
+                    insertText: {
+                        objectId: objectId3,
+                        text: exp.description
+                    }
+                },
+                {
+                    updateTextStyle: {
+                        objectId: objectId3,
+                        style: {
+                            fontSize: { magnitude: 12, unit: 'PT' },
+                            fontFamily: 'Arial',
+                            foregroundColor: themeStyles.textColor
+                        },
+                        fields: 'fontSize,fontFamily,foregroundColor'
+                    }
+                }
+            ];
+
+            await batchUpdate(presId, currentToken, requests);
+        } catch (textBoxError) {
+            console.error(`슬라이드 ${slideId}에 텍스트박스 추가 실패:`, textBoxError);
+        }
+    }
+
+    async function addExperienceTextToSlide(presId, slideId, exp, currentToken, themeStyles) {
+        await addExperienceTextToSlideBatch(presId, slideId, exp, currentToken, themeStyles);
+    }
+
     async function createBasicTemplateSlides(presId, currentToken, slidesArr, selectedExperiences, updatePptProgress, calculateSlideProgress, selectedThemeColor = 'light') {
         const themeStyles = getThemeStyles(selectedThemeColor);
-        let idx = 1; // 표지 다음부터 시작
+        
+        let idx = 1;
+        const allRequests = [];
+        const slideIdsToSetBackground = [];
+        
         for (let i = 0; i < selectedExperiences.length; i++) {
             const exp = selectedExperiences[i];
             if (!slidesArr[idx]) break;
             const s = slidesArr[idx];
             
-            // 슬라이드 생성 완료
             updatePptProgress(calculateSlideProgress(i, selectedExperiences.length), `슬라이드 ${i + 1} 생성중`, i + 1, selectedExperiences.length);
             
-            // 슬라이드 내용 삽입 시작
-            updatePptProgress(calculateSlideProgress(i, selectedExperiences.length) + 5, `슬라이드 ${i + 1} 내용 삽입중`, i + 1, selectedExperiences.length);
-
-            // 슬라이드 배경색 설정
-            await setSlideBackground(presId, s.objectId, themeStyles.backgroundColor, currentToken);
-
-            // 제목, 기간, 설명을 위한 새로운 텍스트박스들을 생성
-            // 1. 제목 텍스트박스 (제목 스타일 적용)
-            await addStyledTextBoxToSlide(presId, s.objectId, exp.title, currentToken, {
-                x: 50,   // 왼쪽에서 50pt
-                y: 50,   // 상단에서 50pt
-                width: 400,
-                height: 60
-            }, {
-                bold: true,
-                fontSize: { magnitude: 24, unit: 'PT' },
-                fontFamily: 'Arial',
-                color: themeStyles.textColor
-            });
-
-            // 2. 기간 텍스트박스 (일반 스타일, 가로 길이 증가)
-            await addStyledTextBoxToSlide(presId, s.objectId, exp.period, currentToken, {
-                x: 50,   // 왼쪽에서 50pt
-                y: 100,  // 제목 아래 간격을 줄임 (120 → 100)
-                width: 350,  // 가로 길이를 늘림 (200 → 350)
-                height: 40
-            }, {
-                fontSize: { magnitude: 14, unit: 'PT' },
-                fontFamily: 'Arial',
-                color: themeStyles.textColor
-            });
-
-            // 3. 설명 텍스트박스 (일반 스타일, 위치 조정)
-            await addStyledTextBoxToSlide(presId, s.objectId, exp.description, currentToken, {
-                x: 50,   // 왼쪽에서 50pt
-                y: 150,  // 기간 아래 간격을 줄임 (170 → 150)
-                width: 300,
-                height: 80
-            }, {
-                fontSize: { magnitude: 12, unit: 'PT' },
-                fontFamily: 'Arial',
-                color: themeStyles.textColor
-            });
+            slideIdsToSetBackground.push(s.objectId);
             
-            // 이미지가 있는 경우 슬라이드에 추가
             if (exp.imageUrls && exp.imageUrls.length > 0) {
-                updatePptProgress(calculateSlideProgress(i, selectedExperiences.length) + 10, `슬라이드 ${i + 1} 이미지 삽입중`, i + 1, selectedExperiences.length, 0, exp.imageUrls.length);
-                // 모든 이미지를 추가 (세로로 일렬 배치)
-                const imageCount = exp.imageUrls.length;
-                const imageWidth = 250;
-                const imageHeight = 150;
-                const imageSpacing = 20;
-                const startX = 400; // 텍스트 영역 오른쪽
-                const startY = 100; // 상단에서 100pt
+                const imageChunks = [];
+                for (let j = 0; j < exp.imageUrls.length; j += 2) {
+                    imageChunks.push(exp.imageUrls.slice(j, j + 2));
+                }
                 
-                for (let j = 0; j < imageCount; j++) {
-                    const imageUrl = exp.imageUrls[j];
+                for (let chunkIndex = 0; chunkIndex < imageChunks.length; chunkIndex++) {
+                    const chunk = imageChunks[chunkIndex];
+                    const currentSlideForImages = slidesArr[idx + chunkIndex];
                     
-                    // 이미지 위치 계산 (세로로 일렬 배치)
-                    const imagePosition = {
-                        x: startX,
-                        y: startY + j * (imageHeight + imageSpacing),
-                        width: imageWidth,
-                        height: imageHeight
-                    };
+                    if (!currentSlideForImages) break;
                     
-                    await addImageToSlide(presId, s.objectId, imageUrl, currentToken, imagePosition);
-                    updatePptProgress(calculateSlideProgress(i, selectedExperiences.length) + 10 + (j + 1) * 2, `이미지 ${j + 1} 삽입중`, i + 1, selectedExperiences.length, j + 1, imageCount);
+                    if (chunkIndex > 0) {
+                        slideIdsToSetBackground.push(currentSlideForImages.objectId);
+                    }
+                    
+                    const textRequests = createExperienceTextRequests(currentSlideForImages.objectId, exp, themeStyles);
+                    allRequests.push(...textRequests);
+                    
+                    const imageWidth = 240;
+                    const imageHeight = 160;
+                    const imageX = 460;
+                    const imageY_start = 50;
+                    const imageMargin = 20;
+                    
+                    for (let imageInChunkIndex = 0; imageInChunkIndex < chunk.length; imageInChunkIndex++) {
+                        const imageUrl = chunk[imageInChunkIndex];
+                        const imagePosition = {
+                            x: imageX,
+                            y: imageY_start + (imageInChunkIndex * (imageHeight + imageMargin)),
+                            width: imageWidth,
+                            height: imageHeight
+                        };
+                        
+                        allRequests.push({
+                            createImage: {
+                                objectId: `image_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                                url: imageUrl,
+                                elementProperties: {
+                                    pageObjectId: currentSlideForImages.objectId,
+                                    size: {
+                                        width: { magnitude: imagePosition.width, unit: 'PT' },
+                                        height: { magnitude: imagePosition.height, unit: 'PT' }
+                                    },
+                                    transform: {
+                                        scaleX: 1,
+                                        scaleY: 1,
+                                        translateX: imagePosition.x,
+                                        translateY: imagePosition.y,
+                                        unit: 'PT'
+                                    }
+                                }
+                            }
+                        });
+                    }
+                }
+                idx += imageChunks.length;
+            } else {
+                const textRequests = createExperienceTextRequests(s.objectId, exp, themeStyles);
+                allRequests.push(...textRequests);
+                idx++;
+            }
+        }
+        
+        if (slideIdsToSetBackground.length > 0) {
+            await setMultipleSlideBackgrounds(presId, slideIdsToSetBackground, themeStyles.backgroundColor, currentToken);
+        }
+        
+        if (allRequests.length > 0) {
+            updatePptProgress(60, '슬라이드 내용 추가중');
+            await batchUpdate(presId, currentToken, allRequests);
+        }
+        
+        updatePptProgress(80, '기본 템플릿 슬라이드 생성 완료');
+    }
+    
+    function createExperienceTextRequests(slideId, exp, themeStyles) {
+        const objectId1 = `textbox_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const objectId2 = `textbox_${Date.now() + 1}_${Math.random().toString(36).substr(2, 9)}`;
+        const objectId3 = `textbox_${Date.now() + 2}_${Math.random().toString(36).substr(2, 9)}`;
+        
+        return [
+            {
+                createShape: {
+                    objectId: objectId1,
+                    shapeType: 'TEXT_BOX',
+                    elementProperties: {
+                        pageObjectId: slideId,
+                        size: {
+                            width: { magnitude: 400, unit: 'PT' },
+                            height: { magnitude: 60, unit: 'PT' }
+                        },
+                        transform: {
+                            scaleX: 1,
+                            scaleY: 1,
+                            translateX: 50,
+                            translateY: 50,
+                            unit: 'PT'
+                        }
+                    }
+                }
+            },
+            {
+                insertText: {
+                    objectId: objectId1,
+                    text: exp.title
+                }
+            },
+            {
+                updateTextStyle: {
+                    objectId: objectId1,
+                    style: {
+                        bold: true,
+                        fontSize: { magnitude: 24, unit: 'PT' },
+                        fontFamily: 'Arial',
+                        foregroundColor: themeStyles.textColor
+                    },
+                    fields: 'bold,fontSize,fontFamily,foregroundColor'
+                }
+            },
+            {
+                createShape: {
+                    objectId: objectId2,
+                    shapeType: 'TEXT_BOX',
+                    elementProperties: {
+                        pageObjectId: slideId,
+                        size: {
+                            width: { magnitude: 350, unit: 'PT' },
+                            height: { magnitude: 40, unit: 'PT' }
+                        },
+                        transform: {
+                            scaleX: 1,
+                            scaleY: 1,
+                            translateX: 50,
+                            translateY: 100,
+                            unit: 'PT'
+                        }
+                    }
+                }
+            },
+            {
+                insertText: {
+                    objectId: objectId2,
+                    text: exp.period
+                }
+            },
+            {
+                updateTextStyle: {
+                    objectId: objectId2,
+                    style: {
+                        fontSize: { magnitude: 14, unit: 'PT' },
+                        fontFamily: 'Arial',
+                        foregroundColor: themeStyles.textColor
+                    },
+                    fields: 'fontSize,fontFamily,foregroundColor'
+                }
+            },
+            {
+                createShape: {
+                    objectId: objectId3,
+                    shapeType: 'TEXT_BOX',
+                    elementProperties: {
+                        pageObjectId: slideId,
+                        size: {
+                            width: { magnitude: 300, unit: 'PT' },
+                            height: { magnitude: 80, unit: 'PT' }
+                        },
+                        transform: {
+                            scaleX: 1,
+                            scaleY: 1,
+                            translateX: 50,
+                            translateY: 150,
+                            unit: 'PT'
+                        }
+                    }
+                }
+            },
+            {
+                insertText: {
+                    objectId: objectId3,
+                    text: exp.description
+                }
+            },
+            {
+                updateTextStyle: {
+                    objectId: objectId3,
+                    style: {
+                        fontSize: { magnitude: 12, unit: 'PT' },
+                        fontFamily: 'Arial',
+                        foregroundColor: themeStyles.textColor
+                    },
+                    fields: 'fontSize,fontFamily,foregroundColor'
                 }
             }
-            
-            idx++;
-        }
+        ];
     }
 
-    // 타임라인 템플릿 슬라이드 생성
     async function createTimelineTemplateSlides(presId, currentToken, slidesArr, selectedExperiences, updatePptProgress, calculateSlideProgress, selectedThemeColor = 'light') {
         const themeStyles = getThemeStyles(selectedThemeColor);
-        // 이력을 시작일 기준으로 정렬 (오름차순 - 더 오래된 이력부터)
         const sortedExperiences = [...selectedExperiences].sort((a, b) => {
             const dateA = new Date(a.period.split(' - ')[0] || a.period.split('~')[0] || a.period);
             const dateB = new Date(b.period.split(' - ')[0] || b.period.split('~')[0] || b.period);
             return dateA - dateB;
         });
 
-        let idx = 1; // 표지 다음부터 시작
+        let idx = 1;
+        const allRequests = [];
+        const slideIdsToSetBackground = [];
 
-        // 1. 타임라인 개요 슬라이드 생성
         if (slidesArr[idx]) {
             const overviewSlide = slidesArr[idx];
             updatePptProgress(10, '타임라인 개요 슬라이드 생성중');
             
-            // 슬라이드 배경색 설정
-            await setSlideBackground(presId, overviewSlide.objectId, themeStyles.backgroundColor, currentToken);
+            slideIdsToSetBackground.push(overviewSlide.objectId);
             
-            try {
-                // 타임라인 제목
-                await addStyledTextBoxToSlide(presId, overviewSlide.objectId, '타임라인', currentToken, {
-                    x: 50,
-                    y: 50,
-                    width: 500,
-                    height: 60
-                }, {
-                    bold: true,
-                    fontSize: { magnitude: 28, unit: 'PT' },
-                    fontFamily: 'Arial',
-                    color: themeStyles.textColor
-                });
-
-                // 타임라인 목록 생성
-                let timelineY = 150;
-                for (let i = 0; i < sortedExperiences.length; i++) {
-                    const exp = sortedExperiences[i];
-                    const timelineText = `${i + 1}. ${exp.title} (${exp.period})`;
-                    
-                    await addStyledTextBoxToSlide(presId, overviewSlide.objectId, timelineText, currentToken, {
-                        x: 80,
-                        y: timelineY,
-                        width: 450,
-                        height: 30
-                    }, {
-                        fontSize: { magnitude: 14, unit: 'PT' },
-                        fontFamily: 'Arial',
-                        color: themeStyles.textColor
-                    });
-                    
-                    timelineY += 40;
+            const titleObjectId = `textbox_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            allRequests.push({
+                createShape: {
+                    objectId: titleObjectId,
+                    shapeType: 'TEXT_BOX',
+                    elementProperties: {
+                        pageObjectId: overviewSlide.objectId,
+                        size: {
+                            width: { magnitude: 500, unit: 'PT' },
+                            height: { magnitude: 60, unit: 'PT' }
+                        },
+                        transform: {
+                            scaleX: 1,
+                            scaleY: 1,
+                            translateX: 50,
+                            translateY: 50,
+                            unit: 'PT'
+                        }
+                    }
                 }
-            } catch (error) {
-                console.error('타임라인 개요 슬라이드 생성 실패:', error);
+            });
+            allRequests.push({
+                insertText: {
+                    objectId: titleObjectId,
+                    text: '타임라인'
+                }
+            });
+            allRequests.push({
+                updateTextStyle: {
+                    objectId: titleObjectId,
+                    style: {
+                        bold: true,
+                        fontSize: { magnitude: 28, unit: 'PT' },
+                        fontFamily: 'Arial',
+                        foregroundColor: themeStyles.textColor
+                    },
+                    fields: 'bold,fontSize,fontFamily,foregroundColor'
+                }
+            });
+
+            const totalExperiences = sortedExperiences.length;
+            const isSplit = totalExperiences >= 5;
+            const splitPoint = Math.ceil(totalExperiences / 2);
+            const colWidth = isSplit ? 320 : 600;
+            const startX_left = 60;
+            const startX_right = 390;
+            const startY = 150;
+            const lineHeight = 40;
+
+            for (let i = 0; i < totalExperiences; i++) {
+                const exp = sortedExperiences[i];
+                const timelineText = `${i + 1}. ${exp.title} (${exp.period})`;
+                let currentX, currentY;
+
+                if (isSplit) {
+                    if (i < splitPoint) {
+                        currentX = startX_left;
+                        currentY = startY + (i * lineHeight);
+                    } else {
+                        currentX = startX_right;
+                        currentY = startY + ((i - splitPoint) * lineHeight);
+                    }
+                } else {
+                    currentX = startX_left;
+                    currentY = startY + (i * lineHeight);
+                }
+
+                const textObjectId = `textbox_${Date.now()}_${i}_${Math.random().toString(36).substr(2, 9)}`;
+                allRequests.push({
+                    createShape: {
+                        objectId: textObjectId,
+                        shapeType: 'TEXT_BOX',
+                        elementProperties: {
+                            pageObjectId: overviewSlide.objectId,
+                            size: {
+                                width: { magnitude: colWidth, unit: 'PT' },
+                                height: { magnitude: 30, unit: 'PT' }
+                            },
+                            transform: {
+                                scaleX: 1,
+                                scaleY: 1,
+                                translateX: currentX,
+                                translateY: currentY,
+                                unit: 'PT'
+                            }
+                        }
+                    }
+                });
+                allRequests.push({
+                    insertText: {
+                        objectId: textObjectId,
+                        text: timelineText
+                    }
+                });
+                allRequests.push({
+                    updateTextStyle: {
+                        objectId: textObjectId,
+                        style: {
+                            fontSize: { magnitude: 14, unit: 'PT' },
+                            fontFamily: 'Arial',
+                            foregroundColor: themeStyles.textColor
+                        },
+                        fields: 'fontSize,fontFamily,foregroundColor'
+                    }
+                });
             }
             idx++;
         }
 
-        // 2. 각 이력별 상세 슬라이드 생성
         for (let i = 0; i < sortedExperiences.length; i++) {
             const exp = sortedExperiences[i];
             if (!slidesArr[idx]) break;
@@ -787,83 +1212,95 @@ export function usePresentationLogic() {
             
             updatePptProgress(calculateSlideProgress(i, sortedExperiences.length), `타임라인 슬라이드 ${i + 1} 생성중`, i + 1, sortedExperiences.length);
             
-            // 슬라이드 배경색 설정
-            await setSlideBackground(presId, s.objectId, themeStyles.backgroundColor, currentToken);
-            
-            // 제목 텍스트박스
-            await addStyledTextBoxToSlide(presId, s.objectId, exp.title, currentToken, {
-                x: 50,
-                y: 50,
-                width: 400,
-                height: 60
-            }, {
-                bold: true,
-                fontSize: { magnitude: 24, unit: 'PT' },
-                fontFamily: 'Arial',
-                color: themeStyles.textColor
-            });
+            slideIdsToSetBackground.push(s.objectId);
 
-            // 기간 텍스트박스
-            await addStyledTextBoxToSlide(presId, s.objectId, exp.period, currentToken, {
-                x: 50,
-                y: 100,
-                width: 350,
-                height: 40
-            }, {
-                fontSize: { magnitude: 14, unit: 'PT' },
-                fontFamily: 'Arial',
-                color: themeStyles.textColor
-            });
-
-            // 설명 텍스트박스
-            await addStyledTextBoxToSlide(presId, s.objectId, exp.description, currentToken, {
-                x: 50,
-                y: 150,
-                width: 300,
-                height: 80
-            }, {
-                fontSize: { magnitude: 12, unit: 'PT' },
-                fontFamily: 'Arial',
-                color: themeStyles.textColor
-            });
-
-            // 이미지가 있는 경우 추가
             if (exp.imageUrls && exp.imageUrls.length > 0) {
-                const imageCount = exp.imageUrls.length;
-                const imageWidth = 200;
-                const imageHeight = 120;
-                const startX = 400;
-                const startY = 100;
-                
-                for (let j = 0; j < imageCount; j++) {
-                    const imageUrl = exp.imageUrls[j];
-                    const imagePosition = {
-                        x: startX,
-                        y: startY + j * (imageHeight + 20),
-                        width: imageWidth,
-                        height: imageHeight
-                    };
-                    
-                    await addImageToSlide(presId, s.objectId, imageUrl, currentToken, imagePosition);
+                const imageChunks = [];
+                for (let j = 0; j < exp.imageUrls.length; j += 2) {
+                    imageChunks.push(exp.imageUrls.slice(j, j + 2));
                 }
+
+                for (let chunkIndex = 0; chunkIndex < imageChunks.length; chunkIndex++) {
+                    const chunk = imageChunks[chunkIndex];
+                    const currentSlideForImages = slidesArr[idx + chunkIndex];
+
+                    if (!currentSlideForImages) break;
+
+                    if (chunkIndex > 0) {
+                        slideIdsToSetBackground.push(currentSlideForImages.objectId);
+                    }
+
+                    const textRequests = createExperienceTextRequests(currentSlideForImages.objectId, exp, themeStyles);
+                    allRequests.push(...textRequests);
+
+                    const imageWidth = 240;
+                    const imageHeight = 160;
+                    const imageX = 460;
+                    const imageY_start = 50;
+                    const imageMargin = 20;
+
+                    for (let imageInChunkIndex = 0; imageInChunkIndex < chunk.length; imageInChunkIndex++) {
+                        const imageUrl = chunk[imageInChunkIndex];
+                        const imagePosition = {
+                            x: imageX,
+                            y: imageY_start + (imageInChunkIndex * (imageHeight + imageMargin)),
+                            width: imageWidth,
+                            height: imageHeight
+                        };
+                        
+                        allRequests.push({
+                            createImage: {
+                                objectId: `image_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                                url: imageUrl,
+                                elementProperties: {
+                                    pageObjectId: currentSlideForImages.objectId,
+                                    size: {
+                                        width: { magnitude: imagePosition.width, unit: 'PT' },
+                                        height: { magnitude: imagePosition.height, unit: 'PT' }
+                                    },
+                                    transform: {
+                                        scaleX: 1,
+                                        scaleY: 1,
+                                        translateX: imagePosition.x,
+                                        translateY: imagePosition.y,
+                                        unit: 'PT'
+                                    }
+                                }
+                            }
+                        });
+                    }
+                }
+                idx += imageChunks.length;
+            } else {
+                const textRequests = createExperienceTextRequests(s.objectId, exp, themeStyles);
+                allRequests.push(...textRequests);
+                idx++;
             }
-            
-            idx++;
         }
+        
+        if (slideIdsToSetBackground.length > 0) {
+            await setMultipleSlideBackgrounds(presId, slideIdsToSetBackground, themeStyles.backgroundColor, currentToken);
+        }
+        
+        if (allRequests.length > 0) {
+            updatePptProgress(60, '타임라인 슬라이드 내용 추가중');
+            await batchUpdate(presId, currentToken, allRequests);
+        }
+        
+        updatePptProgress(80, '타임라인 템플릿 슬라이드 생성 완료');
     }
 
-    // 사진강조 템플릿 슬라이드 생성
     async function createPhotoTemplateSlides(presId, currentToken, slidesArr, selectedExperiences, updatePptProgress, calculateSlideProgress, selectedThemeColor = 'light') {
         const themeStyles = getThemeStyles(selectedThemeColor);
-        // 이미지가 있는 이력들만 필터링
         const experiencesWithImages = selectedExperiences.filter(exp => exp.imageUrls && exp.imageUrls.length > 0);
         
-        let idx = 1; // 표지 다음부터 시작
+        let idx = 1;
+        const allRequests = [];
+        const slideIdsToSetBackground = [];
+        const imageDimensionsPromises = [];
 
-        // 각 이미지별 슬라이드 생성
-        let slideCount = 0;
         const totalImages = experiencesWithImages.reduce((sum, exp) => sum + exp.imageUrls.length, 0);
-        
+
         for (let i = 0; i < experiencesWithImages.length; i++) {
             const exp = experiencesWithImages[i];
             
@@ -871,65 +1308,289 @@ export function usePresentationLogic() {
                 if (!slidesArr[idx]) break;
                 const s = slidesArr[idx];
                 
-                slideCount++;
-                updatePptProgress(calculateSlideProgress(slideCount - 1, totalImages), `사진 슬라이드 ${slideCount} 생성중`, slideCount, totalImages);
-                
-                // 슬라이드 배경색 설정
-                await setSlideBackground(presId, s.objectId, themeStyles.backgroundColor, currentToken);
-                
-                // 이력 제목
-                await addStyledTextBoxToSlide(presId, s.objectId, exp.title, currentToken, {
-                    x: 50,
-                    y: 50,
-                    width: 400,
-                    height: 50
-                }, {
-                    bold: true,
-                    fontSize: { magnitude: 20, unit: 'PT' },
-                    fontFamily: 'Arial',
-                    color: themeStyles.textColor
-                });
-
-                // 기간
-                await addStyledTextBoxToSlide(presId, s.objectId, exp.period, currentToken, {
-                    x: 50,
-                    y: 100,
-                    width: 300,
-                    height: 30
-                }, {
-                    fontSize: { magnitude: 14, unit: 'PT' },
-                    fontFamily: 'Arial',
-                    color: themeStyles.textColor
-                });
-
-                // 이미지 (중앙에 크게 배치)
+                slideIdsToSetBackground.push(s.objectId);
                 const imageUrl = exp.imageUrls[j];
-                const imagePosition = {
-                    x: 100,
-                    y: 150,
-                    width: 400,
-                    height: 300
-                };
-                
-                await addImageToSlide(presId, s.objectId, imageUrl, currentToken, imagePosition);
-                
-                // 이미지 설명 (선택적)
-                if (exp.description) {
-                    await addStyledTextBoxToSlide(presId, s.objectId, exp.description, currentToken, {
-                        x: 50,
-                        y: 470,
-                        width: 400,
-                        height: 60
-                    }, {
-                        fontSize: { magnitude: 12, unit: 'PT' },
-                        fontFamily: 'Arial',
-                        color: themeStyles.textColor
-                    });
-                }
+                imageDimensionsPromises.push(getImageDimensions(imageUrl).catch(() => ({ width: 1920, height: 1080 })));
                 
                 idx++;
             }
         }
+
+        updatePptProgress(30, '이미지 크기 확인중');
+        const imageDimensions = await Promise.all(imageDimensionsPromises);
+
+        idx = 1;
+        let dimIndex = 0;
+
+        for (let i = 0; i < experiencesWithImages.length; i++) {
+            const exp = experiencesWithImages[i];
+            
+            for (let j = 0; j < exp.imageUrls.length; j++) {
+                if (!slidesArr[idx]) break;
+                const s = slidesArr[idx];
+                
+                const imageUrl = exp.imageUrls[j];
+                const dimensions = imageDimensions[dimIndex++];
+                const isVertical = dimensions.width <= dimensions.height;
+
+                const titleObjectId = `textbox_${Date.now()}_${idx}_${Math.random().toString(36).substr(2, 9)}`;
+                allRequests.push({
+                    createShape: {
+                        objectId: titleObjectId,
+                        shapeType: 'TEXT_BOX',
+                        elementProperties: {
+                            pageObjectId: s.objectId,
+                            size: {
+                                width: { magnitude: 620, unit: 'PT' },
+                                height: { magnitude: 40, unit: 'PT' }
+                            },
+                            transform: {
+                                scaleX: 1,
+                                scaleY: 1,
+                                translateX: 50,
+                                translateY: 20,
+                                unit: 'PT'
+                            }
+                        }
+                    }
+                });
+                allRequests.push({
+                    insertText: {
+                        objectId: titleObjectId,
+                        text: exp.title
+                    }
+                });
+                allRequests.push({
+                    updateTextStyle: {
+                        objectId: titleObjectId,
+                        style: {
+                            bold: true,
+                            fontSize: { magnitude: 20, unit: 'PT' },
+                            fontFamily: 'Arial',
+                            foregroundColor: themeStyles.textColor
+                        },
+                        fields: 'bold,fontSize,fontFamily,foregroundColor'
+                    }
+                });
+
+                if (isVertical) {
+                    allRequests.push({
+                        createImage: {
+                            objectId: `image_${Date.now()}_${idx}_${Math.random().toString(36).substr(2, 9)}`,
+                            url: imageUrl,
+                            elementProperties: {
+                                pageObjectId: s.objectId,
+                                size: {
+                                    width: { magnitude: 300, unit: 'PT' },
+                                    height: { magnitude: 320, unit: 'PT' }
+                                },
+                                transform: {
+                                    scaleX: 1,
+                                    scaleY: 1,
+                                    translateX: 50,
+                                    translateY: 70,
+                                    unit: 'PT'
+                                }
+                            }
+                        }
+                    });
+
+                    const periodObjectId = `textbox_${Date.now()}_${idx}_period_${Math.random().toString(36).substr(2, 9)}`;
+                    allRequests.push({
+                        createShape: {
+                            objectId: periodObjectId,
+                            shapeType: 'TEXT_BOX',
+                            elementProperties: {
+                                pageObjectId: s.objectId,
+                                size: {
+                                    width: { magnitude: 300, unit: 'PT' },
+                                    height: { magnitude: 30, unit: 'PT' }
+                                },
+                                transform: {
+                                    scaleX: 1,
+                                    scaleY: 1,
+                                    translateX: 370,
+                                    translateY: 70,
+                                    unit: 'PT'
+                                }
+                            }
+                        }
+                    });
+                    allRequests.push({
+                        insertText: {
+                            objectId: periodObjectId,
+                            text: exp.period
+                        }
+                    });
+                    allRequests.push({
+                        updateTextStyle: {
+                            objectId: periodObjectId,
+                            style: {
+                                fontSize: { magnitude: 14, unit: 'PT' },
+                                fontFamily: 'Arial',
+                                foregroundColor: themeStyles.textColor
+                            },
+                            fields: 'fontSize,fontFamily,foregroundColor'
+                        }
+                    });
+
+                    if (exp.description) {
+                        const descObjectId = `textbox_${Date.now()}_${idx}_desc_${Math.random().toString(36).substr(2, 9)}`;
+                        allRequests.push({
+                            createShape: {
+                                objectId: descObjectId,
+                                shapeType: 'TEXT_BOX',
+                                elementProperties: {
+                                    pageObjectId: s.objectId,
+                                    size: {
+                                        width: { magnitude: 300, unit: 'PT' },
+                                        height: { magnitude: 280, unit: 'PT' }
+                                    },
+                                    transform: {
+                                        scaleX: 1,
+                                        scaleY: 1,
+                                        translateX: 370,
+                                        translateY: 110,
+                                        unit: 'PT'
+                                    }
+                                }
+                            }
+                        });
+                        allRequests.push({
+                            insertText: {
+                                objectId: descObjectId,
+                                text: exp.description
+                            }
+                        });
+                        allRequests.push({
+                            updateTextStyle: {
+                                objectId: descObjectId,
+                                style: {
+                                    fontSize: { magnitude: 12, unit: 'PT' },
+                                    fontFamily: 'Arial',
+                                    foregroundColor: themeStyles.textColor
+                                },
+                                fields: 'fontSize,fontFamily,foregroundColor'
+                            }
+                        });
+                    }
+                } else {
+                    const periodObjectId = `textbox_${Date.now()}_${idx}_period_${Math.random().toString(36).substr(2, 9)}`;
+                    allRequests.push({
+                        createShape: {
+                            objectId: periodObjectId,
+                            shapeType: 'TEXT_BOX',
+                            elementProperties: {
+                                pageObjectId: s.objectId,
+                                size: {
+                                    width: { magnitude: 620, unit: 'PT' },
+                                    height: { magnitude: 30, unit: 'PT' }
+                                },
+                                transform: {
+                                    scaleX: 1,
+                                    scaleY: 1,
+                                    translateX: 50,
+                                    translateY: 60,
+                                    unit: 'PT'
+                                }
+                            }
+                        }
+                    });
+                    allRequests.push({
+                        insertText: {
+                            objectId: periodObjectId,
+                            text: exp.period
+                        }
+                    });
+                    allRequests.push({
+                        updateTextStyle: {
+                            objectId: periodObjectId,
+                            style: {
+                                fontSize: { magnitude: 14, unit: 'PT' },
+                                fontFamily: 'Arial',
+                                foregroundColor: themeStyles.textColor
+                            },
+                            fields: 'fontSize,fontFamily,foregroundColor'
+                        }
+                    });
+
+                    allRequests.push({
+                        createImage: {
+                            objectId: `image_${Date.now()}_${idx}_${Math.random().toString(36).substr(2, 9)}`,
+                            url: imageUrl,
+                            elementProperties: {
+                                pageObjectId: s.objectId,
+                                size: {
+                                    width: { magnitude: 600, unit: 'PT' },
+                                    height: { magnitude: 250, unit: 'PT' }
+                                },
+                                transform: {
+                                    scaleX: 1,
+                                    scaleY: 1,
+                                    translateX: 60,
+                                    translateY: 100,
+                                    unit: 'PT'
+                                }
+                            }
+                        }
+                    });
+
+                    if (exp.description) {
+                        const descObjectId = `textbox_${Date.now()}_${idx}_desc_${Math.random().toString(36).substr(2, 9)}`;
+                        allRequests.push({
+                            createShape: {
+                                objectId: descObjectId,
+                                shapeType: 'TEXT_BOX',
+                                elementProperties: {
+                                    pageObjectId: s.objectId,
+                                    size: {
+                                        width: { magnitude: 620, unit: 'PT' },
+                                        height: { magnitude: 40, unit: 'PT' }
+                                    },
+                                    transform: {
+                                        scaleX: 1,
+                                        scaleY: 1,
+                                        translateX: 50,
+                                        translateY: 360,
+                                        unit: 'PT'
+                                    }
+                                }
+                            }
+                        });
+                        allRequests.push({
+                            insertText: {
+                                objectId: descObjectId,
+                                text: exp.description
+                            }
+                        });
+                        allRequests.push({
+                            updateTextStyle: {
+                                objectId: descObjectId,
+                                style: {
+                                    fontSize: { magnitude: 12, unit: 'PT' },
+                                    fontFamily: 'Arial',
+                                    foregroundColor: themeStyles.textColor
+                                },
+                                fields: 'fontSize,fontFamily,foregroundColor'
+                            }
+                        });
+                    }
+                }
+
+                idx++;
+            }
+        }
+        
+        if (slideIdsToSetBackground.length > 0) {
+            await setMultipleSlideBackgrounds(presId, slideIdsToSetBackground, themeStyles.backgroundColor, currentToken);
+        }
+        
+        if (allRequests.length > 0) {
+            updatePptProgress(60, '사진 슬라이드 내용 추가중');
+            await batchUpdate(presId, currentToken, allRequests);
+        }
+        
+        updatePptProgress(80, '사진강조 템플릿 슬라이드 생성 완료');
     }
 
     // PPT 생성 메인 함수
@@ -1064,38 +1725,37 @@ export function usePresentationLogic() {
                 await makeTitleAndBody(presId, data.slides[0].objectId, currentToken, cleanTitle, userName, selectedThemeColor);
             }
 
-            // 3) 템플릿별 슬라이드 추가 (기본 슬라이드만 먼저 생성)
-            let totalSlides = selectedExperiences.length;
-            if (templateName === 'timeline') {
-                totalSlides = selectedExperiences.length + 1; // 개요 슬라이드 1개 추가
-            } else if (templateName === 'photo') {
-                // 이미지가 있는 이력들의 이미지 개수만큼 슬라이드 생성
-                const experiencesWithImages = selectedExperiences.filter(exp => exp.imageUrls && exp.imageUrls.length > 0);
-                totalSlides = experiencesWithImages.reduce((sum, exp) => sum + exp.imageUrls.length, 0);
-            }
+            // 3) 템플릿별 슬라이드 추가 (batchUpdate로 한 번에 생성)
+            updatePptProgress(25, '슬라이드 생성중');
             
             if (templateName === 'basic') {
-                // 기본 템플릿: 이력별 슬라이드만 생성
-                for (let i = 0; i < selectedExperiences.length; i++) {
-                    await addSlide(presId, currentToken);
-                }
-            } else if (templateName === 'timeline') {
-                // 타임라인 템플릿: 타임라인 개요 슬라이드 + 이력별 슬라이드 (시작일 기준 정렬)
-                await addSlide(presId, currentToken); // 타임라인 개요 슬라이드
-                for (let i = 0; i < selectedExperiences.length; i++) {
-                    await addSlide(presId, currentToken);
-                }
-            } else if (templateName === 'photo') {
-                // 사진강조 템플릿: 이미지별 슬라이드만 생성
-                // 이미지가 있는 이력들만 필터링하고 이미지별로 슬라이드 생성
-                const experiencesWithImages = selectedExperiences.filter(exp => exp.imageUrls && exp.imageUrls.length > 0);
-                for (let i = 0; i < experiencesWithImages.length; i++) {
-                    const exp = experiencesWithImages[i];
-                    // 이미지 개수만큼 슬라이드 생성
-                    for (let j = 0; j < exp.imageUrls.length; j++) {
-                        await addSlide(presId, currentToken);
+                let totalSlidesForBasic = 0;
+                for (const exp of selectedExperiences) {
+                    totalSlidesForBasic++;
+                    const imageCount = exp.imageUrls?.length || 0;
+                    if (imageCount > 2) {
+                        totalSlidesForBasic += Math.ceil((imageCount - 2) / 2);
                     }
                 }
+                await addMultipleSlides(presId, currentToken, totalSlidesForBasic);
+            } else if (templateName === 'timeline') {
+                let totalSlidesForTimeline = 1;
+                for (const exp of selectedExperiences) {
+                    totalSlidesForTimeline++;
+                    const imageCount = exp.imageUrls?.length || 0;
+                    if (imageCount > 2) {
+                        totalSlidesForTimeline += Math.ceil((imageCount - 2) / 2);
+                    }
+                }
+                await addMultipleSlides(presId, currentToken, totalSlidesForTimeline);
+            } else if (templateName === 'photo') {
+                const experiencesWithImages = selectedExperiences.filter(exp => exp.imageUrls && exp.imageUrls.length > 0);
+                let totalSlidesForPhoto = 0;
+                for (let i = 0; i < experiencesWithImages.length; i++) {
+                    const exp = experiencesWithImages[i];
+                    totalSlidesForPhoto += exp.imageUrls.length;
+                }
+                await addMultipleSlides(presId, currentToken, totalSlidesForPhoto);
             }
 
             // 4) 최신 데이터 가져오기
@@ -1149,6 +1809,8 @@ export function usePresentationLogic() {
     return {
         createPresentation,
         addSlide,
+        addMultipleSlides,
+        batchUpdate,
         makeTitleAndBody,
         getPresentationData,
         updateElementText,

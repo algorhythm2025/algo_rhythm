@@ -373,31 +373,176 @@ export function useUILogic(driveService = null) {
         setSelectedTemplateForModal(null);
     }
 
-    // 템플릿 설명 객체
     const templateDescriptions = {
         basic: {
             name: '기본 템플릿',
             description: '깔끔하고 전문적인 레이아웃으로 구성된 템플릿입니다. 각 이력사항을 개별 슬라이드로 구성하여 명확하고 간결하게 표현할 수 있습니다.',
             features: ['깔끔한 디자인', '이력별 개별 슬라이드', '전문적인 레이아웃', '이미지와 텍스트 조화'],
-            previewImages: [
-                `${process.env.PUBLIC_URL}/template/img/sample1.png`,
-                `${process.env.PUBLIC_URL}/template/img/sample2.png`,
-                `${process.env.PUBLIC_URL}/template/img/sample3.png`
-            ]
+            previewImages: {
+                light: [
+                    process.env.PUBLIC_URL + '/template/img/sample1.png',
+                    process.env.PUBLIC_URL + '/template/img/sample2.png',
+                    process.env.PUBLIC_URL + '/template/img/sample3.png'
+                ],
+                dark: [
+                    process.env.PUBLIC_URL + '/template/img/basic_sample(black_white)1.JPG',
+                    process.env.PUBLIC_URL + '/template/img/basic_sample(black_white)2.JPG',
+                    process.env.PUBLIC_URL + '/template/img/basic_sample(black_white)3.JPG'
+                ],
+                'navy-white': [
+                    process.env.PUBLIC_URL + '/template/img/basic_sample(navy_white)1.JPG',
+                    process.env.PUBLIC_URL + '/template/img/basic_sample(navy_white)2.JPG',
+                    process.env.PUBLIC_URL + '/template/img/basic_sample(navy_white)3.JPG'
+                ],
+                'navy-yellow': [
+                    process.env.PUBLIC_URL + '/template/img/basic_sample(navy_yellow)1.JPG',
+                    process.env.PUBLIC_URL + '/template/img/basic_sample(navy_yellow)2.JPG',
+                    process.env.PUBLIC_URL + '/template/img/basic_sample(navy_yellow)3.JPG'
+                ],
+                'darkgray-white': [
+                    process.env.PUBLIC_URL + '/template/img/basic_sample(gray_white)1.JPG',
+                    process.env.PUBLIC_URL + '/template/img/basic_sample(gray_white)2.JPG',
+                    process.env.PUBLIC_URL + '/template/img/basic_sample(gray_white)3.JPG'
+                ],
+                'darkgreen-white': [
+                    process.env.PUBLIC_URL + '/template/img/basic_sample(green_white)1.JPG',
+                    process.env.PUBLIC_URL + '/template/img/basic_sample(green_white)2.JPG',
+                    process.env.PUBLIC_URL + '/template/img/basic_sample(green_white)3.JPG'
+                ],
+                'lavenderpurple-black': [
+                    process.env.PUBLIC_URL + '/template/img/basic_sample(lavender_black)1.JPG',
+                    process.env.PUBLIC_URL + '/template/img/basic_sample(lavender_black)2.JPG',
+                    process.env.PUBLIC_URL + '/template/img/basic_sample(lavender_black)3.JPG'
+                ]
+            }
         },
         timeline: {
             name: '타임라인 템플릿',
             description: '시간의 흐름에 따라 이력사항을 구성하는 템플릿입니다. 연도별로 정리된 타임라인과 함께 각 이력의 상세 내용을 보여줍니다.',
             features: ['시간순 구성', '타임라인 시각화', '연도별 정리', '발전 과정 표현'],
-            previewImages: []
+            previewImages: {
+                light: [
+                    process.env.PUBLIC_URL + '/template/img/sample1.png',
+                    process.env.PUBLIC_URL + '/template/img/timeline_sample(white_black)1.JPG',
+                    process.env.PUBLIC_URL + '/template/img/sample2.png',
+                    process.env.PUBLIC_URL + '/template/img/sample3.png'
+                ],
+                dark: [
+                    process.env.PUBLIC_URL + '/template/img/basic_sample(black_white)1.JPG',
+                    process.env.PUBLIC_URL + '/template/img/timeline_sample(black_white)1.JPG',
+                    process.env.PUBLIC_URL + '/template/img/basic_sample(black_white)2.JPG',
+                    process.env.PUBLIC_URL + '/template/img/basic_sample(black_white)3.JPG'
+                ],
+                'navy-white': [
+                    process.env.PUBLIC_URL + '/template/img/basic_sample(navy_white)1.JPG',
+                    process.env.PUBLIC_URL + '/template/img/timeline_sample(navy_white)1.JPG',
+                    process.env.PUBLIC_URL + '/template/img/basic_sample(navy_white)2.JPG',
+                    process.env.PUBLIC_URL + '/template/img/basic_sample(navy_white)3.JPG'
+                ],
+                'navy-yellow': [
+                    process.env.PUBLIC_URL + '/template/img/basic_sample(navy_yellow)1.JPG',
+                    process.env.PUBLIC_URL + '/template/img/timeline_sample(navy_yellow)1.JPG',
+                    process.env.PUBLIC_URL + '/template/img/basic_sample(navy_yellow)2.JPG',
+                    process.env.PUBLIC_URL + '/template/img/basic_sample(navy_yellow)3.JPG'
+                ],
+                'darkgray-white': [
+                    process.env.PUBLIC_URL + '/template/img/basic_sample(gray_white)1.JPG',
+                    process.env.PUBLIC_URL + '/template/img/timeline_sample(gray_white)1.JPG',
+                    process.env.PUBLIC_URL + '/template/img/basic_sample(gray_white)2.JPG',
+                    process.env.PUBLIC_URL + '/template/img/basic_sample(gray_white)3.JPG'
+                ],
+                'darkgreen-white': [
+                    process.env.PUBLIC_URL + '/template/img/basic_sample(green_white)1.JPG',
+                    process.env.PUBLIC_URL + '/template/img/timeline_sample(green_white)1.JPG',
+                    process.env.PUBLIC_URL + '/template/img/basic_sample(green_white)2.JPG',
+                    process.env.PUBLIC_URL + '/template/img/basic_sample(green_white)3.JPG'
+                ],
+                'lavenderpurple-black': [
+                    process.env.PUBLIC_URL + '/template/img/basic_sample(lavender_black)1.JPG',
+                    process.env.PUBLIC_URL + '/template/img/timeline_sample(lavender_white)1.JPG',
+                    process.env.PUBLIC_URL + '/template/img/basic_sample(lavender_black)2.JPG',
+                    process.env.PUBLIC_URL + '/template/img/basic_sample(lavender_black)3.JPG'
+                ]
+            }
         },
         photo: {
             name: '사진강조 템플릿',
             description: '이미지와 사진을 중심으로 구성된 템플릿입니다. 시각적 임팩트가 강한 레이아웃으로 포트폴리오의 핵심 내용을 효과적으로 전달할 수 있습니다.',
             features: ['이미지 중심 구성', '시각적 임팩트', '사진 강조', '효과적 전달'],
-            previewImages: []
+            previewImages: {
+                light: [
+                    process.env.PUBLIC_URL + '/template/img/sample1.png',
+                    process.env.PUBLIC_URL + '/template/img/photo_sample(white_black)1.JPG',
+                    process.env.PUBLIC_URL + '/template/img/photo_sample(white_black)2.JPG',
+                    process.env.PUBLIC_URL + '/template/img/photo_sample(white_black)3.JPG'
+                ],
+                dark: [
+                    process.env.PUBLIC_URL + '/template/img/basic_sample(black_white)1.JPG',
+                    process.env.PUBLIC_URL + '/template/img/photo_sample(black_white)1.JPG',
+                    process.env.PUBLIC_URL + '/template/img/photo_sample(black_white)2.JPG',
+                    process.env.PUBLIC_URL + '/template/img/photo_sample(black_white)3.JPG'
+                ],
+                'navy-white': [
+                    process.env.PUBLIC_URL + '/template/img/basic_sample(navy_white)1.JPG',
+                    process.env.PUBLIC_URL + '/template/img/photo_sample(navy_white)1.JPG',
+                    process.env.PUBLIC_URL + '/template/img/photo_sample(navy_white)2.JPG',
+                    process.env.PUBLIC_URL + '/template/img/photo_sample(navy_white)3.JPG'
+                ],
+                'navy-yellow': [
+                    process.env.PUBLIC_URL + '/template/img/basic_sample(navy_yellow)1.JPG',
+                    process.env.PUBLIC_URL + '/template/img/photo_sample(navy_yellow)1.JPG',
+                    process.env.PUBLIC_URL + '/template/img/photo_sample(navy_yellow)2.JPG',
+                    process.env.PUBLIC_URL + '/template/img/photo_sample(navy_yellow)3.JPG'
+                ],
+                'darkgray-white': [
+                    process.env.PUBLIC_URL + '/template/img/basic_sample(gray_white)1.JPG',
+                    process.env.PUBLIC_URL + '/template/img/photo_sample(gray_white)1.JPG',
+                    process.env.PUBLIC_URL + '/template/img/photo_sample(gray_white)2.JPG',
+                    process.env.PUBLIC_URL + '/template/img/photo_sample(gray_white)3.JPG'
+                ],
+                'darkgreen-white': [
+                    process.env.PUBLIC_URL + '/template/img/basic_sample(green_white)1.JPG',
+                    process.env.PUBLIC_URL + '/template/img/photo_sample(green_white)1.JPG',
+                    process.env.PUBLIC_URL + '/template/img/photo_sample(green_white)2.JPG',
+                    process.env.PUBLIC_URL + '/template/img/photo_sample(green_white)3.JPG'
+                ],
+                'lavenderpurple-black': [
+                    process.env.PUBLIC_URL + '/template/img/basic_sample(lavender_black)1.JPG',
+                    process.env.PUBLIC_URL + '/template/img/photo_sample(lavender_black)1.JPG',
+                    process.env.PUBLIC_URL + '/template/img/photo_sample(lavender_black)2.JPG',
+                    process.env.PUBLIC_URL + '/template/img/photo_sample(lavender_black)3.JPG'
+                ]
+            }
         }
     };
+
+    function getPaginatedItems(items, currentPage, itemsPerPage) {
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const endIndex = startIndex + itemsPerPage;
+        return items.slice(startIndex, endIndex);
+    }
+
+    function getTotalPages(items, itemsPerPage) {
+        return Math.max(1, Math.ceil(items.length / itemsPerPage));
+    }
+
+    function goToPage(page, setCurrentPage, totalPages) {
+        if (page >= 1 && page <= totalPages) {
+            setCurrentPage(page);
+        }
+    }
+
+    function goToNextPage(currentPage, totalPages, setCurrentPage) {
+        if (currentPage < totalPages) {
+            setCurrentPage(currentPage + 1);
+        }
+    }
+
+    function goToPrevPage(currentPage, setCurrentPage) {
+        if (currentPage > 1) {
+            setCurrentPage(currentPage - 1);
+        }
+    }
 
     return {
         showSection,
@@ -420,6 +565,11 @@ export function useUILogic(driveService = null) {
         convertImageUrl,
         openTemplateModal,
         handleTemplateCancel,
-        templateDescriptions
+        templateDescriptions,
+        getPaginatedItems,
+        getTotalPages,
+        goToPage,
+        goToNextPage,
+        goToPrevPage
     };
 }

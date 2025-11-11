@@ -6,7 +6,7 @@ import { useExperienceLogic } from './logic/experience/experienceLogic';
 import { usePresentationLogic } from './logic/presentation/presentationLogic';
 import { useUILogic } from './logic/ui/uiLogic';
 
-export const SECTION_LIST = ['main', 'drive', 'portal', 'pptMaker', 'myPage'];
+export const SECTION_LIST = ['main', 'drive', 'History', 'pptMaker', 'myPage'];
 
 function useAppLogic()
 {
@@ -29,6 +29,12 @@ function useAppLogic()
       // localStorage에서 스프레드시트 ID 복원
       return localStorage.getItem('spreadsheetId') || null;
     });
+    const [expSortBy, setExpSortBy] = useState('startDate');
+    const [expSortOrder, setExpSortOrder] = useState('desc');
+    const [pptSortBy, setPptSortBy] = useState('createdTime');
+    const [pptSortOrder, setPptSortOrder] = useState('desc');
+    const [driveSortBy, setDriveSortBy] = useState('name');
+    const [driveSortOrder, setDriveSortOrder] = useState('asc');
 
     const [isSheetsInitialized, setIsSheetsInitialized] = useState(false);
     const [isDriveInitialized, setIsDriveInitialized] = useState(false);
@@ -96,6 +102,8 @@ function useAppLogic()
     const [presentationId, setPresentationId] = useState(null);
     const [selectedTemplate, setSelectedTemplate] = useState('');
     const [selectedExperiences, setSelectedExperiences] = useState([]);
+    const [selectedBgImage, setSelectedBgImage] = useState(null);
+    const [bgImagePreview, setBgImagePreview] = useState(null);
     const [driveViewMode, setDriveViewMode] = useState(() =>
     {
       // localStorage에서 저장된 뷰 모드 복원
@@ -113,6 +121,12 @@ function useAppLogic()
     const [showTermsOfService, setShowTermsOfService] = useState(() => {
       return window.location.pathname === '/terms-of-service.html';
     }); // 사용자 약관 표시 여부
+    const [pptHistoryCurrentPage, setPptHistoryCurrentPage] = useState(1);
+    const [experienceCurrentPage, setExperienceCurrentPage] = useState(1);
+    const [pptMakerExperienceCurrentPage, setPptMakerExperienceCurrentPage] = useState(1);
+    const pptHistoryItemsPerPage = 8;
+    const experienceItemsPerPage = 6;
+    const pptMakerExperienceItemsPerPage = 6;
     const formRef = useRef();
   
     // 통합 인증 서비스 인스턴스
@@ -169,8 +183,7 @@ function useAppLogic()
         if (!currentSpreadsheetId) {
 
           try {
-            // 포트폴리오 이력 폴더가 있는지 확인 (생성하지 않고 찾기만)
-            const portfolioFolder = await driveService.current.findFolder('포트폴리오 이력');
+            const portfolioFolder = await driveService.current.findPortfolioFolder();
 
             if (portfolioFolder) {
 
@@ -502,6 +515,55 @@ function useAppLogic()
       setSelectedThemeColor(themeColor);
     }
 
+    // 배경 이미지 핸들러
+    const handleBgImageSelect = (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        if (file.size > 5 * 1024 * 1024) {
+            alert('배경 이미지 파일 크기는 5MB 이하여야 합니다.');
+            return;
+        }
+        if (!file.type.startsWith('image/')) {
+            alert('이미지 파일만 업로드할 수 있습니다.');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            setBgImagePreview(e.target.result);
+            setSelectedBgImage(file);
+        };
+        reader.readAsDataURL(file);
+        event.target.value = '';
+    };
+
+    const handleBgImageDrop = (files) => {
+        const file = files[0];
+        if (!file) return;
+
+        if (file.size > 5 * 1024 * 1024) {
+            alert('배경 이미지 파일 크기는 5MB 이하여야 합니다.');
+            return;
+        }
+        if (!file.type.startsWith('image/')) {
+            alert('이미지 파일만 업로드할 수 있습니다.');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            setBgImagePreview(e.target.result);
+            setSelectedBgImage(file);
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const removeBgImage = () => {
+        setBgImagePreview(null);
+        setSelectedBgImage(null);
+    };
+
     // 포트폴리오 폴더 ID 설정
     async function setPortfolioFolder() {
       if (!driveService.current) return;
@@ -532,6 +594,67 @@ function useAppLogic()
         localStorage.setItem('portfolioFolderId', portfolioFolderId);
       }
     }, [portfolioFolderId]);
+
+    const sortPptHistory = (history, sortBy, sortOrder) => {
+        if (!history || history.length === 0) return [];
+        const sorted = [...history];
+        const isAsc = sortOrder === 'asc';
+        const field = sortBy;
+
+        sorted.sort((a, b) => {
+            let valA;
+            let valB;
+
+            if (field === 'name') {
+                valA = a.name.toLowerCase();
+                valB = b.name.toLowerCase();
+
+                if (valA < valB) return isAsc ? -1 : 1;
+                if (valA > valB) return isAsc ? 1 : -1;
+                return 0;
+            } else if (field === 'createdTime' || field === 'modifiedTime') {
+                valA = new Date(a[field] || 0).getTime();
+                valB = new Date(b[field] || 0).getTime();
+                return isAsc ? valA - valB : valB - valA;
+            }
+            return 0;
+        });
+        return sorted;
+    };
+
+    const sortExperiences = (expList, sortBy, sortOrder) => {
+        if (!expList || expList.length === 0) return [];
+        const sorted = [...expList];
+        const isAsc = sortOrder === 'asc';
+        const field = sortBy;
+
+        sorted.sort((a, b) => {
+            let valA;
+            let valB;
+
+            if (field === 'title') {
+                valA = a.title.toLowerCase();
+                valB = b.title.toLowerCase();
+
+                if (valA < valB) return isAsc ? -1 : 1;
+                if (valA > valB) return isAsc ? 1 : -1;
+                return 0;
+            } else if (field === 'startDate') {
+                const dateA = new Date(a.startDate);
+                const dateB = new Date(b.startDate);
+
+                valA = !isNaN(dateA.getTime()) ? dateA.getTime() : 0;
+                valB = !isNaN(dateB.getTime()) ? dateB.getTime() : 0;
+
+                return isAsc ? valA - valB : valB - valA;
+            }
+            return 0;
+        });
+        return sorted;
+    };
+
+    const sortedPptHistory = sortPptHistory(pptHistory, pptSortBy, pptSortOrder);
+    const sortedExperiences = sortExperiences(experiences, expSortBy, expSortOrder);
 
     // 마이페이지 섹션이 활성화될 때 PPT 기록과 이력 목록 로드
     useEffect(() => {
@@ -732,7 +855,7 @@ function useAppLogic()
       isLoggedIn,
       activeSection,
       authStatus,
-      experiences,
+      experiences: sortedExperiences,
       selected,
       spreadsheetId,
       isSheetsInitialized,
@@ -761,7 +884,7 @@ function useAppLogic()
       selectedImages,
       imagePreviews,
       showImageModal,
-      pptHistory,
+      pptHistory: sortedPptHistory,
       selectedImageForModal,
       imageLoadingStates,
       selectedExperience,
@@ -779,6 +902,12 @@ function useAppLogic()
       accessToken,
       selectedExperiences,
       templateDescriptions: uiLogic.templateDescriptions,
+      pptHistoryCurrentPage,
+      experienceCurrentPage,
+      pptMakerExperienceCurrentPage,
+      pptHistoryItemsPerPage,
+      experienceItemsPerPage,
+      pptMakerExperienceItemsPerPage,
       // 함수들
       showSection: (section) => uiLogic.showSection(section, setActiveSection),
       logout,
@@ -842,7 +971,40 @@ function useAppLogic()
       showPrivacyPolicy,
       showTermsOfService,
       setShowPrivacyPolicy,
-      setShowTermsOfService
+      setShowTermsOfService,
+      // 페이지네이션 함수들
+      getPaginatedItems: (items, currentPage, itemsPerPage) => uiLogic.getPaginatedItems(items, currentPage, itemsPerPage),
+      getTotalPages: (items, itemsPerPage) => uiLogic.getTotalPages(items, itemsPerPage),
+      goToPptHistoryPage: (page) => uiLogic.goToPage(page, setPptHistoryCurrentPage, uiLogic.getTotalPages(pptHistory, pptHistoryItemsPerPage)),
+      goToPptHistoryNextPage: () => uiLogic.goToNextPage(pptHistoryCurrentPage, uiLogic.getTotalPages(pptHistory, pptHistoryItemsPerPage), setPptHistoryCurrentPage),
+      goToPptHistoryPrevPage: () => uiLogic.goToPrevPage(pptHistoryCurrentPage, setPptHistoryCurrentPage),
+      goToExperiencePage: (page) => uiLogic.goToPage(page, setExperienceCurrentPage, uiLogic.getTotalPages(experiences, experienceItemsPerPage)),
+      goToExperienceNextPage: () => uiLogic.goToNextPage(experienceCurrentPage, uiLogic.getTotalPages(experiences, experienceItemsPerPage), setExperienceCurrentPage),
+      goToExperiencePrevPage: () => uiLogic.goToPrevPage(experienceCurrentPage, setExperienceCurrentPage),
+      goToPptMakerExperiencePage: (page) => uiLogic.goToPage(page, setPptMakerExperienceCurrentPage, uiLogic.getTotalPages(experiences, pptMakerExperienceItemsPerPage)),
+      goToPptMakerExperienceNextPage: () => uiLogic.goToNextPage(pptMakerExperienceCurrentPage, uiLogic.getTotalPages(experiences, pptMakerExperienceItemsPerPage), setPptMakerExperienceCurrentPage),
+      goToPptMakerExperiencePrevPage: () => uiLogic.goToPrevPage(pptMakerExperienceCurrentPage, setPptMakerExperienceCurrentPage),
+      setPptHistoryCurrentPage,
+      setExperienceCurrentPage,
+      setPptMakerExperienceCurrentPage,
+      selectedBgImage,
+      bgImagePreview,
+      handleBgImageSelect,
+      handleBgImageDrop,
+      removeBgImage,
+      pptSortBy,
+      setPptSortBy,
+      pptSortOrder,
+      setPptSortOrder,
+      expSortBy,
+      setExpSortBy,
+      expSortOrder,
+      setExpSortOrder,
+      driveSortBy,
+      setDriveSortBy,
+      driveSortOrder,
+      setDriveSortOrder,
+      handleDriveFileDownload
     };
 }
 

@@ -551,12 +551,6 @@ a.btn-google:hover {
     border-top: none;
 }
 
-/* 학교 포털 페이지와 구글 드라이브 페이지에도 짧은 선 적용 */
-#portalSection .mac-window h2,
-#driveSection .mac-window h2 {
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
-}
-
 #portalSection .mac-window-content,
 #driveSection .mac-window-content {
     border-top: none !important;
@@ -1418,6 +1412,12 @@ a.btn:hover,
     background: rgba(255,255,255,.02);
 }
 
+.mac-modal .image-upload-container.dragover {
+    border-color: var(--ink-line-strong);
+    background: rgba(255,255,255,.05);
+    transform: scale(1.02);
+}
+
 .mac-modal .image-upload-icon {
     font-size: 2rem;
     color: var(--ink-muted);
@@ -2024,8 +2024,15 @@ a.btn:hover,
     background: rgba(255,255,255,.12); 
 }
 
+.top-actions {
+    justify-self: end;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-portal,
 .btn-logout {
-    justify-self: end; 
     padding: 8px 12px;
     border-radius: 10px;
     border: 1px solid rgba(255,255,255,.12);
@@ -2035,16 +2042,35 @@ a.btn:hover,
     pointer-events: auto;
     display: flex; 
     align-items: center; 
-    gap: 2px;
+    gap: 6px;
     justify-content: center;
     transition: background .2s ease, border-color .2s ease;
     font-size: 13px;
     font-weight: 500;
+    text-decoration: none;
+    white-space: nowrap;
 }
 
+.btn-portal:hover,
 .btn-logout:hover { 
     background: rgba(255,255,255,.12); 
     border-color: rgba(255,255,255,.18); 
+}
+
+.btn-portal .portal-text {
+    display: inline;
+}
+
+@media (max-width: 900px) {
+    .btn-portal .portal-text {
+        display: none;
+    }
+    .btn-portal {
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        justify-content: center;
+    }
 }
 
 /* 로그인 페이지 하단 링크 */
@@ -2381,12 +2407,43 @@ a.btn:hover,
     font-weight: 700;
     margin-bottom: 20px;
     font-size: 24px;
+    padding-bottom: 12px;
+}
+
+.content-section:not(.content-main) .mac-window .d-flex h2 {
     border-bottom: 1px solid var(--ink-line);
     padding-bottom: 12px;
+    margin-bottom: 0;
+}
+
+#driveSection .mac-window > h2 {
+    border-bottom: none;
+}
+
+#driveSection .mac-window-content {
+    border-top: none;
+}
+
+#historyPageSection .mac-window-content {
+    border-top: none;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 32px 40px;
+}
+
+#historyPageSection .mac-window-content form {
+    max-width: 100%;
+}
+
+@media (max-width: 900px) {
+    #historyPageSection .mac-window-content {
+        padding: 24px 20px;
+    }
 }
 
 /* 포커스 접근성 */
 .nav-link:focus-visible, 
+.btn-portal:focus-visible,
 .btn-logout:focus-visible, 
 .brand-logo:focus-visible {
     outline: 2px solid rgba(255,255,255,.35);
@@ -2407,6 +2464,9 @@ a.btn:hover,
         grid-template-columns: 1fr !important;
         row-gap: 16px;
         text-align: center;
+    }
+    .top-actions {
+        gap: 6px;
     }
     .btn-logout .logout-text {
         display: none;
@@ -2540,6 +2600,28 @@ a.btn:hover,
     position: relative;
 }
 
+.file-item .d-flex {
+    min-width: 0;
+}
+
+.experience-content {
+    min-width: 0;
+    flex: 1 1 auto;
+    overflow: hidden;
+}
+
+.experience-description {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+}
+
+.experience-actions {
+    flex-shrink: 0;
+    flex-wrap: nowrap;
+}
+
 /* 파일 액션 버튼 스타일 */
 .file-actions {
     display: flex;
@@ -2620,6 +2702,16 @@ a.btn:hover,
 }
 
 /* 이미지 삭제 버튼 스타일 */
+.experience-preview-image {
+    width: 100%;
+    height: 150px;
+    object-fit: cover;
+}
+
+.experience-image-delete-btn {
+    z-index: 10;
+}
+
 .image-delete-btn {
     width: 24px;
     height: 24px;
@@ -2743,4 +2835,138 @@ a.btn:hover,
     content: "A";
     font-size: 18px;
     font-weight: bold;
+}
+
+/* 템플릿 모달 캐러셀 컨테이너 */
+.carousel-container {
+    width: 100%;
+    height: 350px;
+    position: relative;
+    margin: 0 auto 20px auto;
+    border-radius: 12px;
+    background-color: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--ink-line);
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.2);
+}
+
+/* 이미지가 없을 때의 플레이스홀더 */
+.carousel-container-placeholder {
+    width: 100%;
+    height: 350px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    background-color: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--ink-line);
+    color: var(--ink-muted);
+}
+.carousel-container-placeholder i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+.carousel-container-placeholder p {
+    font-size: 1rem;
+    color: var(--ink-muted) !important;
+    margin: 0;
+}
+
+
+.carousel-slide-wrapper {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    border-radius: 12px;
+}
+
+.carousel-slides {
+    display: flex;
+    height: 100%;
+    transition: transform 0.4s ease-in-out;
+}
+
+.carousel-slide {
+    min-width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+}
+
+.carousel-slide img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+.carousel-button {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: rgba(0, 0, 0, 0.4);
+    color: white;
+    border: none;
+    padding: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 18px;
+    z-index: 10;
+    line-height: 36px;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.7;
+    transition: all 0.2s;
+}
+
+.carousel-button:hover {
+    opacity: 1;
+    background-color: rgba(0, 0, 0, 0.6);
+}
+
+.carousel-button.prev {
+    left: 12px;
+}
+
+.carousel-button.next {
+    right: 12px;
+}
+
+.carousel-indicators {
+    position: absolute;
+    bottom: 15px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 8px;
+    z-index: 10;
+}
+
+.indicator-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: rgba(255, 255, 255, 0.4);
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+    padding: 0;
+}
+
+.indicator-dot:hover {
+    background-color: rgba(255, 255, 255, 0.7);
+}
+
+.indicator-dot.active {
+    background-color: white;
+    width: 20px;
+    border-radius: 4px;
+}
+
+.pagination-info {
+    text-align: center;
 }
