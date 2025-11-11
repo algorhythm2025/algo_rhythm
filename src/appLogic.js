@@ -183,8 +183,7 @@ function useAppLogic()
         if (!currentSpreadsheetId) {
 
           try {
-            // 포트폴리오 이력 폴더가 있는지 확인 (생성하지 않고 찾기만)
-            const portfolioFolder = await driveService.current.findFolder('포트폴리오 이력');
+            const portfolioFolder = await driveService.current.findPortfolioFolder();
 
             if (portfolioFolder) {
 

@@ -311,33 +311,26 @@ class GoogleSheetsService {
     }
   }
 
-  // 시트 생성 (sheetsLogic에서 통합)
   async createSheet(driveService, setPortfolioFolderId, setSpreadsheetId, loadDriveFiles, setIsSheetLoading) {
     if (!driveService.current) return;
 
     try {
       setIsSheetLoading(true);
 
-      // 포트폴리오 이력 폴더 생성 또는 찾기
-      const portfolioFolder = await driveService.current.ensurePortfolioFolder();
+      const portfolioFolder = await driveService.current.createPortfolioFolder();
       setPortfolioFolderId(portfolioFolder.id);
       localStorage.setItem('portfolioFolderId', portfolioFolder.id);
 
-      // 이미지 폴더도 생성
       await driveService.current.ensureImageFolder(portfolioFolder.id);
 
-      // 시트 생성
       const spreadsheet = await this.createSpreadsheet('포트폴리오 이력', portfolioFolder.id);
       const newSpreadsheetId = spreadsheet.spreadsheetId;
 
-      // 상태 업데이트
       setSpreadsheetId(newSpreadsheetId);
       localStorage.setItem('spreadsheetId', newSpreadsheetId);
 
-      // 헤더 설정
       await this.setupHeaders(newSpreadsheetId);
 
-      // 파일 목록 새로고침
       await loadDriveFiles();
 
       alert('포트폴리오 시트와 폴더가 생성되었습니다!');
