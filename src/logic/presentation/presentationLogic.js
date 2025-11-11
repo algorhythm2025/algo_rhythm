@@ -1,5 +1,31 @@
 // PPT 생성 관련 로직
 export function usePresentationLogic() {
+    async function getImageDimensions(url) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => {
+                resolve({
+                    width: img.naturalWidth,
+                    height: img.naturalHeight
+                });
+            };
+            img.onerror = (err) => {
+                console.error('이미지 크기 로드 실패:', url, err);
+                resolve({ width: 1920, height: 1080 });
+            };
+
+            try {
+                if (url.startsWith('http')) {
+                    img.crossOrigin = 'anonymous';
+                }
+            } catch(e) {
+                console.warn('crossOrigin 설정 실패', e);
+            }
+
+            img.src = url;
+        });
+    }
+
     // 프레젠테이션 생성
     async function createPresentation(title, token) {
         const res = await fetch('https://slides.googleapis.com/v1/presentations', {
@@ -613,49 +639,35 @@ export function usePresentationLogic() {
 
     // 슬라이드 배경색 설정 함수
     async function setSlideBackground(presId, slideId, backgroundColor, token) {
-        const requests = [{
-            updatePageProperties: {
-                objectId: slideId,
-                pageProperties: {
-                    pageBackgroundFill: {
-                        solidFill: {
-                            color: backgroundColor
+        try {
+            const requests = [{
+                updatePageProperties: {
+                    objectId: slideId,
+                    pageProperties: {
+                        pageBackgroundFill: {
+                            solidFill: {
+                                color: backgroundColor
+                            }
                         }
-                    }
-                },
-                fields: 'pageBackgroundFill'
-            }
-        }];
+                    },
+                    fields: 'pageBackgroundFill'
+                }
+            }];
 
-        await window.gapi.client.slides.presentations.batchUpdate({
-            presentationId: presId,
-            requests: requests
-        });
+            await window.gapi.client.slides.presentations.batchUpdate({
+                presentationId: presId,
+                requests: requests
+            });
+        } catch (error) {
+            console.error('슬라이드 배경색 설정 실패:', error);
+        }
     }
 
-    // 기본 템플릿 슬라이드 생성
-    async function createBasicTemplateSlides(presId, currentToken, slidesArr, selectedExperiences, updatePptProgress, calculateSlideProgress, selectedThemeColor = 'light') {
-        const themeStyles = getThemeStyles(selectedThemeColor);
-        let idx = 1; // 표지 다음부터 시작
-        for (let i = 0; i < selectedExperiences.length; i++) {
-            const exp = selectedExperiences[i];
-            if (!slidesArr[idx]) break;
-            const s = slidesArr[idx];
-            
-            // 슬라이드 생성 완료
-            updatePptProgress(calculateSlideProgress(i, selectedExperiences.length), `슬라이드 ${i + 1} 생성중`, i + 1, selectedExperiences.length);
-            
-            // 슬라이드 내용 삽입 시작
-            updatePptProgress(calculateSlideProgress(i, selectedExperiences.length) + 5, `슬라이드 ${i + 1} 내용 삽입중`, i + 1, selectedExperiences.length);
-
-            // 슬라이드 배경색 설정
-            await setSlideBackground(presId, s.objectId, themeStyles.backgroundColor, currentToken);
-
-            // 제목, 기간, 설명을 위한 새로운 텍스트박스들을 생성
-            // 1. 제목 텍스트박스 (제목 스타일 적용)
-            await addStyledTextBoxToSlide(presId, s.objectId, exp.title, currentToken, {
-                x: 50,   // 왼쪽에서 50pt
-                y: 50,   // 상단에서 50pt
+    async function addExperienceTextToSlide(presId, slideId, exp, currentToken, themeStyles) {
+        try {
+            await addStyledTextBoxToSlide(presId, slideId, exp.title, currentToken, {
+                x: 50,
+                y: 50,
                 width: 400,
                 height: 60
             }, {
@@ -665,11 +677,10 @@ export function usePresentationLogic() {
                 color: themeStyles.textColor
             });
 
-            // 2. 기간 텍스트박스 (일반 스타일, 가로 길이 증가)
-            await addStyledTextBoxToSlide(presId, s.objectId, exp.period, currentToken, {
-                x: 50,   // 왼쪽에서 50pt
-                y: 100,  // 제목 아래 간격을 줄임 (120 → 100)
-                width: 350,  // 가로 길이를 늘림 (200 → 350)
+            await addStyledTextBoxToSlide(presId, slideId, exp.period, currentToken, {
+                x: 50,
+                y: 100,
+                width: 350,
                 height: 40
             }, {
                 fontSize: { magnitude: 14, unit: 'PT' },
@@ -677,10 +688,9 @@ export function usePresentationLogic() {
                 color: themeStyles.textColor
             });
 
-            // 3. 설명 텍스트박스 (일반 스타일, 위치 조정)
-            await addStyledTextBoxToSlide(presId, s.objectId, exp.description, currentToken, {
-                x: 50,   // 왼쪽에서 50pt
-                y: 150,  // 기간 아래 간격을 줄임 (170 → 150)
+            await addStyledTextBoxToSlide(presId, slideId, exp.description, currentToken, {
+                x: 50,
+                y: 150,
                 width: 300,
                 height: 80
             }, {
@@ -688,35 +698,81 @@ export function usePresentationLogic() {
                 fontFamily: 'Arial',
                 color: themeStyles.textColor
             });
+
+        } catch (textBoxError) {
+            console.error(`슬라이드 ${slideId}에 텍스트박스 추가 실패:`, textBoxError);
+        }
+    }
+
+    // 기본 템플릿 슬라이드 생성
+    async function createBasicTemplateSlides(presId, currentToken, slidesArr, selectedExperiences, updatePptProgress, calculateSlideProgress, selectedThemeColor = 'light') {
+        const themeStyles = getThemeStyles(selectedThemeColor);
+
+        let idx = 1;
+        for (let i = 0; i < selectedExperiences.length; i++) {
+            const exp = selectedExperiences[i];
+            if (!slidesArr[idx]) break;
+            const s = slidesArr[idx];
+
+            updatePptProgress(calculateSlideProgress(i, selectedExperiences.length), `슬라이드 ${i + 1} 생성중`, i + 1, selectedExperiences.length);
+
+            updatePptProgress(calculateSlideProgress(i, selectedExperiences.length) + 5, `슬라이드 ${i + 1} 내용 삽입중`, i + 1, selectedExperiences.length);
+
+            await setSlideBackground(presId, s.objectId, themeStyles.backgroundColor, currentToken);
             
-            // 이미지가 있는 경우 슬라이드에 추가
             if (exp.imageUrls && exp.imageUrls.length > 0) {
                 updatePptProgress(calculateSlideProgress(i, selectedExperiences.length) + 10, `슬라이드 ${i + 1} 이미지 삽입중`, i + 1, selectedExperiences.length, 0, exp.imageUrls.length);
-                // 모든 이미지를 추가 (세로로 일렬 배치)
-                const imageCount = exp.imageUrls.length;
-                const imageWidth = 250;
-                const imageHeight = 150;
-                const imageSpacing = 20;
-                const startX = 400; // 텍스트 영역 오른쪽
-                const startY = 100; // 상단에서 100pt
-                
-                for (let j = 0; j < imageCount; j++) {
-                    const imageUrl = exp.imageUrls[j];
-                    
-                    // 이미지 위치 계산 (세로로 일렬 배치)
-                    const imagePosition = {
-                        x: startX,
-                        y: startY + j * (imageHeight + imageSpacing),
-                        width: imageWidth,
-                        height: imageHeight
-                    };
-                    
-                    await addImageToSlide(presId, s.objectId, imageUrl, currentToken, imagePosition);
-                    updatePptProgress(calculateSlideProgress(i, selectedExperiences.length) + 10 + (j + 1) * 2, `이미지 ${j + 1} 삽입중`, i + 1, selectedExperiences.length, j + 1, imageCount);
+
+                const imageChunks = [];
+                for (let j = 0; j < exp.imageUrls.length; j += 2) {
+                    imageChunks.push(exp.imageUrls.slice(j, j + 2));
                 }
+
+                let totalImageCountForExp = exp.imageUrls.length;
+                let processedImageCount = 0;
+
+                for (let chunkIndex = 0; chunkIndex < imageChunks.length; chunkIndex++) {
+                    const chunk = imageChunks[chunkIndex];
+                    const currentSlideForImages = slidesArr[idx + chunkIndex];
+
+                    if (!currentSlideForImages) break;
+
+                    if (chunkIndex > 0) {
+                        await setSlideBackground(presId, currentSlideForImages.objectId, themeStyles.backgroundColor, currentToken);
+                    }
+
+                    await addExperienceTextToSlide(presId, currentSlideForImages.objectId, exp, currentToken, themeStyles);
+
+                    try {
+                        for (let imageInChunkIndex = 0; imageInChunkIndex < chunk.length; imageInChunkIndex++) {
+                            const imageUrl = chunk[imageInChunkIndex];
+
+                            const imageWidth = 240;
+                            const imageHeight = 160;
+                            const imageX = 460;
+                            const imageY_start = 50;
+                            const imageMargin = 20;
+
+                            const imagePosition = {
+                                x: imageX,
+                                y: imageY_start + (imageInChunkIndex * (imageHeight + imageMargin)),
+                                width: imageWidth,
+                                height: imageHeight
+                            };
+
+                            await addImageToSlide(presId, currentSlideForImages.objectId, imageUrl, currentToken, imagePosition);
+                            processedImageCount++;
+                            updatePptProgress(calculateSlideProgress(i, selectedExperiences.length) + 10 + (processedImageCount * 2), `이미지 ${processedImageCount} 삽입중`, i + 1, selectedExperiences.length, processedImageCount, totalImageCountForExp);
+                        }
+                    } catch (imageError) {
+                        console.error(`슬라이드 ${idx + chunkIndex + 1}에 이미지 추가 실패:`, imageError);
+                    }
+                }
+                idx += imageChunks.length;
+            } else{
+                await addExperienceTextToSlide(presId, s.objectId, exp, currentToken, themeStyles);
+                idx++;
             }
-            
-            idx++;
         }
     }
 
@@ -741,7 +797,6 @@ export function usePresentationLogic() {
             await setSlideBackground(presId, overviewSlide.objectId, themeStyles.backgroundColor, currentToken);
             
             try {
-                // 타임라인 제목
                 await addStyledTextBoxToSlide(presId, overviewSlide.objectId, '타임라인', currentToken, {
                     x: 50,
                     y: 50,
@@ -754,24 +809,45 @@ export function usePresentationLogic() {
                     color: themeStyles.textColor
                 });
 
-                // 타임라인 목록 생성
-                let timelineY = 150;
-                for (let i = 0; i < sortedExperiences.length; i++) {
+                const totalExperiences = sortedExperiences.length;
+                const isSplit = totalExperiences >= 5;
+                const splitPoint = Math.ceil(totalExperiences / 2);
+
+                const colWidth = isSplit ? 320 : 600;
+                const startX_left = 60;
+                const startX_right = 390;
+                const startY = 150;
+                const lineHeight = 40;
+
+                for (let i = 0; i < totalExperiences; i++) {
                     const exp = sortedExperiences[i];
                     const timelineText = `${i + 1}. ${exp.title} (${exp.period})`;
-                    
+
+                    let currentX, currentY;
+
+                    if (isSplit) {
+                        if (i < splitPoint) {
+                            currentX = startX_left;
+                            currentY = startY + (i * lineHeight);
+                        } else {
+                            currentX = startX_right;
+                            currentY = startY + ((i - splitPoint) * lineHeight);
+                        }
+                    } else {
+                        currentX = startX_left;
+                        currentY = startY + (i * lineHeight);
+                    }
+
                     await addStyledTextBoxToSlide(presId, overviewSlide.objectId, timelineText, currentToken, {
-                        x: 80,
-                        y: timelineY,
-                        width: 450,
+                        x: currentX,
+                        y: currentY,
+                        width: colWidth,
                         height: 30
                     }, {
                         fontSize: { magnitude: 14, unit: 'PT' },
                         fontFamily: 'Arial',
                         color: themeStyles.textColor
                     });
-                    
-                    timelineY += 40;
                 }
             } catch (error) {
                 console.error('타임라인 개요 슬라이드 생성 실패:', error);
@@ -787,83 +863,91 @@ export function usePresentationLogic() {
             
             updatePptProgress(calculateSlideProgress(i, sortedExperiences.length), `타임라인 슬라이드 ${i + 1} 생성중`, i + 1, sortedExperiences.length);
             
-            // 슬라이드 배경색 설정
             await setSlideBackground(presId, s.objectId, themeStyles.backgroundColor, currentToken);
-            
-            // 제목 텍스트박스
-            await addStyledTextBoxToSlide(presId, s.objectId, exp.title, currentToken, {
-                x: 50,
-                y: 50,
-                width: 400,
-                height: 60
-            }, {
-                bold: true,
-                fontSize: { magnitude: 24, unit: 'PT' },
-                fontFamily: 'Arial',
-                color: themeStyles.textColor
-            });
 
-            // 기간 텍스트박스
-            await addStyledTextBoxToSlide(presId, s.objectId, exp.period, currentToken, {
-                x: 50,
-                y: 100,
-                width: 350,
-                height: 40
-            }, {
-                fontSize: { magnitude: 14, unit: 'PT' },
-                fontFamily: 'Arial',
-                color: themeStyles.textColor
-            });
-
-            // 설명 텍스트박스
-            await addStyledTextBoxToSlide(presId, s.objectId, exp.description, currentToken, {
-                x: 50,
-                y: 150,
-                width: 300,
-                height: 80
-            }, {
-                fontSize: { magnitude: 12, unit: 'PT' },
-                fontFamily: 'Arial',
-                color: themeStyles.textColor
-            });
-
-            // 이미지가 있는 경우 추가
             if (exp.imageUrls && exp.imageUrls.length > 0) {
-                const imageCount = exp.imageUrls.length;
-                const imageWidth = 200;
-                const imageHeight = 120;
-                const startX = 400;
-                const startY = 100;
-                
-                for (let j = 0; j < imageCount; j++) {
-                    const imageUrl = exp.imageUrls[j];
-                    const imagePosition = {
-                        x: startX,
-                        y: startY + j * (imageHeight + 20),
-                        width: imageWidth,
-                        height: imageHeight
-                    };
-                    
-                    await addImageToSlide(presId, s.objectId, imageUrl, currentToken, imagePosition);
+                updatePptProgress(calculateSlideProgress(i, sortedExperiences.length) + 10, `타임라인 슬라이드 ${i + 1} 이미지 삽입중`, i + 1, sortedExperiences.length, 0, exp.imageUrls.length);
+
+                const imageChunks = [];
+                for (let j = 0; j < exp.imageUrls.length; j += 2) {
+                    imageChunks.push(exp.imageUrls.slice(j, j + 2));
                 }
+
+                let totalImageCountForExp = exp.imageUrls.length;
+                let processedImageCount = 0;
+
+                for (let chunkIndex = 0; chunkIndex < imageChunks.length; chunkIndex++) {
+                    const chunk = imageChunks[chunkIndex];
+                    const currentSlideForImages = slidesArr[idx + chunkIndex];
+
+                    if (!currentSlideForImages) break;
+
+                    if (chunkIndex > 0) {
+                        await setSlideBackground(presId, currentSlideForImages.objectId, themeStyles.backgroundColor, currentToken);
+                    }
+
+                    await addExperienceTextToSlide(presId, currentSlideForImages.objectId, exp, currentToken, themeStyles);
+
+                    try {
+                        for (let imageInChunkIndex = 0; imageInChunkIndex < chunk.length; imageInChunkIndex++) {
+                            const imageUrl = chunk[imageInChunkIndex];
+
+                            const imageWidth = 240;
+                            const imageHeight = 160;
+                            const imageX = 460;
+                            const imageY_start = 50;
+                            const imageMargin = 20;
+
+                            const imagePosition = {
+                                x: imageX,
+                                y: imageY_start + (imageInChunkIndex * (imageHeight + imageMargin)),
+                                width: imageWidth,
+                                height: imageHeight
+                            };
+
+                            await addImageToSlide(presId, currentSlideForImages.objectId, imageUrl, currentToken, imagePosition);
+                            processedImageCount++;
+                            updatePptProgress(calculateSlideProgress(i, sortedExperiences.length) + 10 + (processedImageCount * 2), `이미지 ${processedImageCount} 삽입중`, i + 1, sortedExperiences.length, processedImageCount, totalImageCountForExp);
+                        }
+                    } catch (imageError) {
+                        console.error(`슬라이드 ${idx + chunkIndex + 1}에 이미지 추가 실패:`, imageError);
+                    }
+                }
+                idx += imageChunks.length;
+            } else {
+                await addExperienceTextToSlide(presId, s.objectId, exp, currentToken, themeStyles);
+                idx++;
             }
-            
-            idx++;
         }
     }
 
     // 사진강조 템플릿 슬라이드 생성
     async function createPhotoTemplateSlides(presId, currentToken, slidesArr, selectedExperiences, updatePptProgress, calculateSlideProgress, selectedThemeColor = 'light') {
         const themeStyles = getThemeStyles(selectedThemeColor);
-        // 이미지가 있는 이력들만 필터링
         const experiencesWithImages = selectedExperiences.filter(exp => exp.imageUrls && exp.imageUrls.length > 0);
         
-        let idx = 1; // 표지 다음부터 시작
+        let idx = 1;
 
-        // 각 이미지별 슬라이드 생성
         let slideCount = 0;
         const totalImages = experiencesWithImages.reduce((sum, exp) => sum + exp.imageUrls.length, 0);
-        
+
+        const titleStyle = {
+            bold: true,
+            fontSize: { magnitude: 20, unit: 'PT' },
+            fontFamily: 'Arial',
+            color: themeStyles.textColor
+        };
+        const periodStyle = {
+            fontSize: { magnitude: 14, unit: 'PT' },
+            fontFamily: 'Arial',
+            color: themeStyles.textColor
+        };
+        const descStyle = {
+            fontSize: { magnitude: 12, unit: 'PT' },
+            fontFamily: 'Arial',
+            color: themeStyles.textColor
+        };
+
         for (let i = 0; i < experiencesWithImages.length; i++) {
             const exp = experiencesWithImages[i];
             
@@ -873,60 +957,62 @@ export function usePresentationLogic() {
                 
                 slideCount++;
                 updatePptProgress(calculateSlideProgress(slideCount - 1, totalImages), `사진 슬라이드 ${slideCount} 생성중`, slideCount, totalImages);
-                
-                // 슬라이드 배경색 설정
-                await setSlideBackground(presId, s.objectId, themeStyles.backgroundColor, currentToken);
-                
-                // 이력 제목
-                await addStyledTextBoxToSlide(presId, s.objectId, exp.title, currentToken, {
-                    x: 50,
-                    y: 50,
-                    width: 400,
-                    height: 50
-                }, {
-                    bold: true,
-                    fontSize: { magnitude: 20, unit: 'PT' },
-                    fontFamily: 'Arial',
-                    color: themeStyles.textColor
-                });
 
-                // 기간
-                await addStyledTextBoxToSlide(presId, s.objectId, exp.period, currentToken, {
-                    x: 50,
-                    y: 100,
-                    width: 300,
-                    height: 30
-                }, {
-                    fontSize: { magnitude: 14, unit: 'PT' },
-                    fontFamily: 'Arial',
-                    color: themeStyles.textColor
-                });
-
-                // 이미지 (중앙에 크게 배치)
                 const imageUrl = exp.imageUrls[j];
-                const imagePosition = {
-                    x: 100,
-                    y: 150,
-                    width: 400,
-                    height: 300
-                };
-                
-                await addImageToSlide(presId, s.objectId, imageUrl, currentToken, imagePosition);
-                
-                // 이미지 설명 (선택적)
-                if (exp.description) {
-                    await addStyledTextBoxToSlide(presId, s.objectId, exp.description, currentToken, {
-                        x: 50,
-                        y: 470,
-                        width: 400,
-                        height: 60
-                    }, {
-                        fontSize: { magnitude: 12, unit: 'PT' },
-                        fontFamily: 'Arial',
-                        color: themeStyles.textColor
-                    });
+
+                await setSlideBackground(presId, s.objectId, themeStyles.backgroundColor, currentToken);
+
+                try {
+                    let dimensions;
+                    try {
+                        dimensions = await getImageDimensions(imageUrl);
+                    } catch (dimError) {
+                        console.warn('이미지 크기를 가져올 수 없어, 가로 모드로 기본 설정합니다.', dimError);
+                        dimensions = { width: 1920, height: 1080 };
+                    }
+
+                    const isVertical = dimensions.width <= dimensions.height;
+
+                    await addStyledTextBoxToSlide(presId, s.objectId, exp.title, currentToken, {
+                        x: 50, y: 20, width: 620, height: 40
+                    }, titleStyle);
+
+
+                    if (isVertical) {
+                        await addImageToSlide(presId, s.objectId, imageUrl, currentToken, {
+                            x: 50, y: 70, width: 300, height: 320
+                        });
+
+                        await addStyledTextBoxToSlide(presId, s.objectId, exp.period, currentToken, {
+                            x: 370, y: 70, width: 300, height: 30
+                        }, periodStyle);
+
+                        if (exp.description) {
+                            await addStyledTextBoxToSlide(presId, s.objectId, exp.description, currentToken, {
+                                x: 370, y: 110, width: 300, height: 280
+                            }, descStyle);
+                        }
+
+                    } else {
+                        await addStyledTextBoxToSlide(presId, s.objectId, exp.period, currentToken, {
+                            x: 50, y: 60, width: 620, height: 30
+                        }, periodStyle);
+
+                        await addImageToSlide(presId, s.objectId, imageUrl, currentToken, {
+                            x: 60, y: 100, width: 600, height: 250
+                        });
+
+                        if (exp.description) {
+                            await addStyledTextBoxToSlide(presId, s.objectId, exp.description, currentToken, {
+                                x: 50, y: 360, width: 620, height: 40
+                            }, descStyle);
+                        }
+                    }
+
+                } catch (error) {
+                    console.error(`사진 슬라이드 ${slideCount} 생성 실패:`, error);
                 }
-                
+
                 idx++;
             }
         }
@@ -1067,22 +1153,35 @@ export function usePresentationLogic() {
             // 3) 템플릿별 슬라이드 추가 (기본 슬라이드만 먼저 생성)
             let totalSlides = selectedExperiences.length;
             if (templateName === 'timeline') {
-                totalSlides = selectedExperiences.length + 1; // 개요 슬라이드 1개 추가
+                totalSlides = selectedExperiences.length + 1;
             } else if (templateName === 'photo') {
-                // 이미지가 있는 이력들의 이미지 개수만큼 슬라이드 생성
                 const experiencesWithImages = selectedExperiences.filter(exp => exp.imageUrls && exp.imageUrls.length > 0);
                 totalSlides = experiencesWithImages.reduce((sum, exp) => sum + exp.imageUrls.length, 0);
             }
             
             if (templateName === 'basic') {
-                // 기본 템플릿: 이력별 슬라이드만 생성
-                for (let i = 0; i < selectedExperiences.length; i++) {
+                let totalSlidesForBasic = 0;
+                for (const exp of selectedExperiences) {
+                    totalSlidesForBasic++;
+                    const imageCount = exp.imageUrls?.length || 0;
+                    if (imageCount > 2) {
+                        totalSlidesForBasic += Math.ceil((imageCount - 2) / 2);
+                    }
+                }
+                for (let i = 0; i < totalSlidesForBasic; i++) {
                     await addSlide(presId, currentToken);
                 }
             } else if (templateName === 'timeline') {
-                // 타임라인 템플릿: 타임라인 개요 슬라이드 + 이력별 슬라이드 (시작일 기준 정렬)
-                await addSlide(presId, currentToken); // 타임라인 개요 슬라이드
-                for (let i = 0; i < selectedExperiences.length; i++) {
+                await addSlide(presId, currentToken);
+                let totalSlidesForTimeline = 0;
+                for (const exp of selectedExperiences) {
+                    totalSlidesForTimeline++;
+                    const imageCount = exp.imageUrls?.length || 0;
+                    if (imageCount > 2) {
+                        totalSlidesForTimeline += Math.ceil((imageCount - 2) / 2);
+                    }
+                }
+                for (let i = 0; i < totalSlidesForTimeline; i++) {
                     await addSlide(presId, currentToken);
                 }
             } else if (templateName === 'photo') {
