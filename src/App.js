@@ -1153,12 +1153,11 @@ function App() {
                   {activeSection === 'History' && (
                       <div id="historyPageSection" className="content-section">
                           <div className="mac-window">
-                              <div className="modal-content mac-modal" style={{border: 'none', borderRadius: '0', background: 'transparent'}}>
-                                  <div className="modal-header">
-                                      <h5 className="modal-title">{editingIndex !== null ? '이력 수정' : '새 이력 추가'}</h5>
-                                  </div>
+                              <div className="d-flex justify-content-between align-items-center mb-3">
+                                  <h2>{editingIndex !== null ? '이력 수정' : '새 이력 추가'}</h2>
+                              </div>
+                              <div className="mac-window-content">
                                   <form onSubmit={handleSubmitExperiencePage} ref={formRef}>
-                                      <div className="modal-body">
                                           <div className="mb-3">
                                               <label className="form-label">제목</label>
                                               <input type="text" className="form-control" required value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} />
@@ -1260,8 +1259,7 @@ function App() {
                                                                       <img
                                                                           src={preview}
                                                                           alt={`이미지 ${index + 1}`}
-                                                                          className="img-fluid rounded"
-                                                                          style={{ width: '100%', height: '150px', objectFit: 'cover' }}
+                                                                          className="img-fluid rounded experience-preview-image"
                                                                           onError={async (e) => {
                                                                               if (e.target.dataset.converting === 'true') { return; }
                                                                               e.target.dataset.converting = 'true';
@@ -1271,9 +1269,8 @@ function App() {
                                                                       />
                                                                       <button
                                                                           type="button"
-                                                                          className="btn btn-sm btn-outline-danger position-absolute top-0 end-0 m-1 image-delete-btn"
+                                                                          className="btn btn-sm btn-outline-danger position-absolute top-0 end-0 m-1 image-delete-btn experience-image-delete-btn"
                                                                           onClick={() => removeImage(index)}
-                                                                          style={{ zIndex: 10 }}
                                                                       >
                                                                       </button>
                                                                   </div>
@@ -1286,11 +1283,10 @@ function App() {
                                                   <small className="white-text">최대 파일 크기: 5MB, 지원 형식: JPG, PNG, GIF</small>
                                               </div>
                                           </div>
-                                      </div>
-                                      <div className="modal-footer">
+                                      <div className="d-flex justify-content-end gap-2 mt-4">
                                           <button
                                               type="button"
-                                              className="btn btn-secondary"
+                                              className="btn btn-outline-secondary"
                                               onClick={() => {
                                                   closeModal();
                                                   setActiveSection('main');
@@ -1299,7 +1295,7 @@ function App() {
                                           >
                                               취소
                                           </button>
-                                          <button type="submit" className="btn btn-primary" disabled={isExperienceLoading}>
+                                          <button type="submit" className="btn btn-outline-primary" disabled={isExperienceLoading}>
                                               {isExperienceLoading ? (
                                                   <>
                                                       <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>

@@ -551,12 +551,6 @@ a.btn-google:hover {
     border-top: none;
 }
 
-/* 학교 포털 페이지와 구글 드라이브 페이지에도 짧은 선 적용 */
-#portalSection .mac-window h2,
-#driveSection .mac-window h2 {
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
-}
-
 #portalSection .mac-window-content,
 #driveSection .mac-window-content {
     border-top: none !important;
@@ -2413,8 +2407,38 @@ a.btn:hover,
     font-weight: 700;
     margin-bottom: 20px;
     font-size: 24px;
+    padding-bottom: 12px;
+}
+
+.content-section:not(.content-main) .mac-window .d-flex h2 {
     border-bottom: 1px solid var(--ink-line);
     padding-bottom: 12px;
+    margin-bottom: 0;
+}
+
+#driveSection .mac-window > h2 {
+    border-bottom: none;
+}
+
+#driveSection .mac-window-content {
+    border-top: none;
+}
+
+#historyPageSection .mac-window-content {
+    border-top: none;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 32px 40px;
+}
+
+#historyPageSection .mac-window-content form {
+    max-width: 100%;
+}
+
+@media (max-width: 900px) {
+    #historyPageSection .mac-window-content {
+        padding: 24px 20px;
+    }
 }
 
 /* 포커스 접근성 */
@@ -2678,6 +2702,16 @@ a.btn:hover,
 }
 
 /* 이미지 삭제 버튼 스타일 */
+.experience-preview-image {
+    width: 100%;
+    height: 150px;
+    object-fit: cover;
+}
+
+.experience-image-delete-btn {
+    z-index: 10;
+}
+
 .image-delete-btn {
     width: 24px;
     height: 24px;
