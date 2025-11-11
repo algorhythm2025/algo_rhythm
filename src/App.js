@@ -141,6 +141,74 @@ function HeroCarousel({ onSelect }) {
     );
 }
 
+function TemplateCarousel({ images = [] }) {
+    const [currentIndex, setCurrentIndex] = useState(0);
+
+    useEffect(() => {
+        setCurrentIndex(0);
+    }, [images]);
+
+    const prevSlide = () => {
+        const isFirstSlide = currentIndex === 0;
+        const newIndex = isFirstSlide ? images.length - 1 : currentIndex - 1;
+        setCurrentIndex(newIndex);
+    };
+
+    const nextSlide = () => {
+        const isLastSlide = currentIndex === images.length - 1;
+        const newIndex = isLastSlide ? 0 : currentIndex + 1;
+        setCurrentIndex(newIndex);
+    };
+
+    if (!images || images.length === 0) {
+        return (
+            <div className="carousel-container-placeholder">
+                <i className="fas fa-image"></i>
+                <p>미리보기 이미지가 없습니다.</p>
+            </div>
+        );
+    }
+
+    return (
+        <div className="carousel-container">
+            {images.length > 1 && (
+                <>
+                    <button type="button" onClick={prevSlide} className="carousel-button prev">
+                        &#10094;
+                    </button>
+                    <button type="button" onClick={nextSlide} className="carousel-button next">
+                        &#10095;
+                    </button>
+                </>
+            )}
+            <div className="carousel-slide-wrapper">
+                <div
+                    className="carousel-slides"
+                    style={{ transform: `translateX(-${currentIndex * 100}%)` }}
+                >
+                    {images.map((image, index) => (
+                        <div className="carousel-slide" key={index}>
+                            <img src={image} alt={`템플릿 미리보기 ${index + 1}`} />
+                        </div>
+                    ))}
+                </div>
+            </div>
+            {images.length > 1 && (
+                <div className="carousel-indicators">
+                    {images.map((_, index) => (
+                        <button
+                            type="button"
+                            key={index}
+                            className={`indicator-dot ${currentIndex === index ? 'active' : ''}`}
+                            onClick={() => setCurrentIndex(index)}
+                            aria-label={`슬라이드 ${index + 1}로 이동`}
+                        ></button>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
 
 function App() {
     // appLogic에서 모든 상태와 함수들을 가져옴
@@ -210,6 +278,10 @@ function App() {
     handleTemplateCancel,
     handleTemplateUse,
     handleThemeColorSelect,
+    bgImagePreview,
+    handleBgImageSelect,
+    handleBgImageDrop,
+    removeBgImage,
     closeModal,
     saveExperience,
     closeImageModal,
@@ -1756,7 +1828,16 @@ function App() {
         )}
 
         {/* 템플릿 선택 모달 */}
-        {showTemplateModal && selectedTemplateForModal && (
+        {showTemplateModal && selectedTemplateForModal && (() => {
+            const templateInfo = templateDescriptions[selectedTemplateForModal];
+            if (!templateInfo) return null;
+
+            const imagesForCurrentTheme =
+            (templateInfo.previewImages && templateInfo.previewImages[selectedThemeColor]) ||
+            (templateInfo.previewImages && templateInfo.previewImages['light']) ||
+            [];
+
+            return(
           <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
             <div className="modal-dialog modal-lg modal-dialog-centered">
               <div className="modal-content mac-modal">
@@ -1775,59 +1856,13 @@ function App() {
                         {templateDescriptions[selectedTemplateForModal]?.description}
                       </p>
                       
-                      {/* 템플릿 미리보기 이미지 */}
                       <div className="mb-4">
-                        <h6 className="mb-3 white-text">템플릿 미리보기</h6>
-                        <div className="template-preview-container">
-                          {templateDescriptions[selectedTemplateForModal]?.previewImages && 
-                           templateDescriptions[selectedTemplateForModal].previewImages.length > 0 ? (
-                            <div className="row g-3">
-                              {templateDescriptions[selectedTemplateForModal].previewImages.map((imagePath, index) => (
-                                <div key={index} className="col-md-4">
-                                  <div className="template-preview-item">
-                                    <img 
-                                      src={imagePath} 
-                                      alt={`템플릿 미리보기 ${index + 1}`}
-                                      className="img-fluid rounded"
-                                      style={{
-                                        width: '100%',
-                                        height: '200px',
-                                        objectFit: 'cover',
-                                        border: '2px solid #007bff',
-                                        cursor: 'pointer',
-                                        transition: 'transform 0.2s ease'
-                                      }}
-                                      onMouseOver={(e) => e.target.style.transform = 'scale(1.05)'}
-                                      onMouseOut={(e) => e.target.style.transform = 'scale(1)'}
-                                      onClick={() => {
-                                        setSelectedImageForModal({
-                                          url: imagePath,
-                                          title: `템플릿 미리보기 ${index + 1}`
-                                        });
-                                        setShowImageModal(true);
-                                      }}
-                                    />
-                                    <div className="text-center mt-2">
-                                      <small style={{ color: '#ccc' }}>미리보기 {index + 1}</small>
-                                    </div>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <div className="text-center py-4">
-                              <i className="fas fa-image fa-3x mb-3" style={{ color: 'rgba(255, 255, 255, 0.3)' }}></i>
-                              <p className="mb-0" style={{ color: 'rgba(255, 255, 255, 0.6)' }}>
-                                미리보기 이미지가 준비 중입니다
-                              </p>
-                            </div>
-                          )}
+                            <h6 className="mb-3 white-text">템플릿 미리보기</h6>
+                            <TemplateCarousel images={imagesForCurrentTheme} />
                         </div>
-                      </div>
                       
-                     {/* 테마 색상 선택 */}
                      <div className="theme-color-selector">
-                       <h6>테마 색상</h6>
+                       <h6 className="white-text">테마 색상</h6>
                        <div className="theme-color-options">
                          <div
                            className={`theme-color-option light ${selectedThemeColor === 'light' ? 'selected' : ''}`}
@@ -1876,6 +1911,55 @@ function App() {
                           </div>
                         ))}
                       </div>
+                        <hr style={{ borderTop: '1px solid var(--ink-line)', margin: '20px 0' }} />
+                        <h6 className="mb-3 white-text">배경 이미지 업로드 (선택)</h6>
+                        <p className="mb-3" style={{ color: 'var(--ink-muted)', fontSize: '14px' }}>
+                            이미지를 업로드하면 모든 슬라이드의 배경으로 적용됩니다. (테마 색상 무시)
+                        </p>
+
+                        {!bgImagePreview ? (
+                            <div
+                                className="image-upload-container"
+                                onClick={() => document.getElementById('bgImageInput').click()}
+                                onDragOver={(e) => {
+                                    e.preventDefault();
+                                    e.currentTarget.classList.add('dragover');
+                                }}
+                                onDragLeave={(e) => {
+                                    e.preventDefault();
+                                    e.currentTarget.classList.remove('dragover');
+                                }}
+                                onDrop={(e) => {
+                                    e.preventDefault();
+                                    e.currentTarget.classList.remove('dragover');
+                                    const files = Array.from(e.dataTransfer.files);
+                                    handleBgImageDrop(files);
+                                }}
+                            >
+                                <input
+                                    type="file"
+                                    id="bgImageInput"
+                                    className="file-input"
+                                    accept="image/*"
+                                    onChange={handleBgImageSelect}
+                                    style={{ display: 'none' }}
+                                />
+                                <i className="fas fa-image image-upload-icon"></i>
+                                <div className="image-upload-text">클릭하여 배경 이미지 선택</div>
+                                <div className="image-upload-subtext">또는 이미지를 여기로 드래그하세요 (5MB 이하)</div>
+                            </div>
+                        ) : (
+                            <div className="image-preview">
+                                <img src={bgImagePreview} alt="배경 이미지 미리보기" />
+                                <button
+                                    type="button"
+                                    className="remove-image"
+                                    onClick={removeBgImage}
+                                >
+                                    &times;
+                                </button>
+                            </div>
+                        )}
                     </div>
                   </div>
                 </div>
@@ -1890,7 +1974,8 @@ function App() {
                 </div>
               </div>
             </div>
-        )}
+            );
+        })()}
       </div>
   );
 }

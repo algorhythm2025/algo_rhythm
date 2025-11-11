@@ -96,6 +96,8 @@ function useAppLogic()
     const [presentationId, setPresentationId] = useState(null);
     const [selectedTemplate, setSelectedTemplate] = useState('');
     const [selectedExperiences, setSelectedExperiences] = useState([]);
+    const [selectedBgImage, setSelectedBgImage] = useState(null);
+    const [bgImagePreview, setBgImagePreview] = useState(null);
     const [driveViewMode, setDriveViewMode] = useState(() =>
     {
       // localStorage에서 저장된 뷰 모드 복원
@@ -508,6 +510,55 @@ function useAppLogic()
       setSelectedThemeColor(themeColor);
     }
 
+    // 배경 이미지 핸들러
+    const handleBgImageSelect = (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        if (file.size > 5 * 1024 * 1024) {
+            alert('배경 이미지 파일 크기는 5MB 이하여야 합니다.');
+            return;
+        }
+        if (!file.type.startsWith('image/')) {
+            alert('이미지 파일만 업로드할 수 있습니다.');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            setBgImagePreview(e.target.result);
+            setSelectedBgImage(file);
+        };
+        reader.readAsDataURL(file);
+        event.target.value = '';
+    };
+
+    const handleBgImageDrop = (files) => {
+        const file = files[0];
+        if (!file) return;
+
+        if (file.size > 5 * 1024 * 1024) {
+            alert('배경 이미지 파일 크기는 5MB 이하여야 합니다.');
+            return;
+        }
+        if (!file.type.startsWith('image/')) {
+            alert('이미지 파일만 업로드할 수 있습니다.');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            setBgImagePreview(e.target.result);
+            setSelectedBgImage(file);
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const removeBgImage = () => {
+        setBgImagePreview(null);
+        setSelectedBgImage(null);
+    };
+
     // 포트폴리오 폴더 ID 설정
     async function setPortfolioFolder() {
       if (!driveService.current) return;
@@ -869,7 +920,12 @@ function useAppLogic()
       goToPptMakerExperiencePrevPage: () => uiLogic.goToPrevPage(pptMakerExperienceCurrentPage, setPptMakerExperienceCurrentPage),
       setPptHistoryCurrentPage,
       setExperienceCurrentPage,
-      setPptMakerExperienceCurrentPage
+      setPptMakerExperienceCurrentPage,
+      selectedBgImage,
+      bgImagePreview,
+      handleBgImageSelect,
+      handleBgImageDrop,
+      removeBgImage
     };
 }
 
