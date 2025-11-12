@@ -885,8 +885,23 @@ function App() {
                   {/* 구글 드라이브 섹션 */}
                   {activeSection === 'drive' && (
                       <div id="driveSection" className="content-section">
-                        <div className="mac-window">
-                          <h2>구글 드라이브</h2>
+                        <div className="mac-window glass-card">
+                          <div className="d-flex justify-content-between align-items-center mb-3">
+                            <div className="d-flex align-items-center gap-2">
+                              <i className="fab fa-google-drive" style={{ opacity: 0.9 }}></i>
+                              <h2 className="mb-0">구글 드라이브</h2>
+                            </div>
+                            <div className="d-flex align-items-center flex-wrap gap-2">
+                              <span className="drive-view-badge">
+                                {driveViewMode === 'all' ? '전체 파일' : '포트폴리오 폴더'}
+                              </span>
+                              {currentPath.map((node, i) => (
+                                <span key={node.id} className="drive-path-badge">
+                                  {node.name}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
                           <div className="mac-window-content">
                             {/* 드라이브 연동 상태 - 로그인된 상태에서는 초기화 중이거나 연동 실패 시에만 표시 */}
                             {!isDriveInitialized && (
@@ -914,9 +929,12 @@ function App() {
 
                             {/* 시트 관리 버튼 */}
                             {isDriveInitialized && (
-                                <div className="sheet-management">
-                                  <div className="d-flex justify-content-between align-items-center mb-3">
-                                    <h4>포트폴리오 시트 관리</h4>
+                                <div className="glass-card mb-4">
+                                  <div className="d-flex justify-content-between align-items-center">
+                                    <div className="d-flex align-items-center gap-2">
+                                      <i className="fas fa-table"></i>
+                                      <h4 className="mb-0">포트폴리오 시트 관리</h4>
+                                    </div>
                                     <div>
                                       {spreadsheetId ? (
                                           <button
@@ -956,7 +974,7 @@ function App() {
                                     </div>
                                   </div>
                                   {!spreadsheetId && (
-                                      <div className="alert alert-info" role="alert">
+                                      <div className="alert alert-info mt-3 mb-0" role="alert">
                                         <i className="fas fa-info-circle me-2"></i>
                                         시트파일이 없습니다. 새로 생성해주세요.
                                       </div>

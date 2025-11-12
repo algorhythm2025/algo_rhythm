@@ -1122,11 +1122,46 @@ a.btn:hover,
 }
 
 /* 구분선 */
+.glass-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 18px;
+    padding: 1.8rem;
+    box-shadow: 0 6px 25px rgba(0, 0, 0, 0.35);
+    transition: all 0.3s ease;
+}
+
+.glass-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+}
+
+.glass-row {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    padding: 1rem 1.2rem;
+    margin-bottom: 0.6rem;
+    transition: all 0.2s ease;
+}
+
+.glass-row:hover {
+    background: rgba(255, 255, 255, 0.08);
+    transform: translateY(-2px);
+}
+
 .gradient-divider {
-    border: none;
-    height: 2px;
-    background: linear-gradient(to right, #007bff, #6c757d, #007bff);
-    margin: 20px 0;
+    border: 0;
+    height: 1px;
+    margin: 1.5rem 0;
+    background: linear-gradient(
+        90deg,
+        rgba(122, 92, 255, 0) 0%,
+        rgba(122, 92, 255, 0.6) 50%,
+        rgba(122, 92, 255, 0) 100%
+    );
 }
 
 .simple-divider {
@@ -2296,11 +2331,13 @@ a.btn:hover,
     width: 88%;
     height: 88%;
     object-fit: contain;
-    border-radius: 16px;
+    border-radius: 20px;
     box-shadow: 0 10px 30px rgba(0,0,0,.45),
     inset 0 1px 0 rgba(255,255,255,.06);
     filter: drop-shadow(0 8px 18px rgba(0,0,0,.35));
     transition: transform 0.4s ease;
+    mask-image: radial-gradient(ellipse 95% 95% at center, black 90%, transparent 100%);
+    -webkit-mask-image: radial-gradient(ellipse 95% 95% at center, black 90%, transparent 100%);
 }
 
 .hero-visual img:hover {
@@ -2499,6 +2536,49 @@ a.btn:hover,
     border-bottom: 1px solid var(--ink-line);
     padding-bottom: 12px;
     margin-bottom: 0;
+}
+
+.drive-view-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 16px;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1.5px solid rgba(255, 255, 255, 0.25);
+    border-radius: 12px;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    transition: all 0.2s ease;
+}
+
+.drive-view-badge:hover {
+    background: rgba(255, 255, 255, 0.16);
+    border-color: rgba(255, 255, 255, 0.35);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    transform: translateY(-1px);
+}
+
+.drive-path-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 14px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.2px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+    transition: all 0.2s ease;
+}
+
+.drive-path-badge:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.3);
+    color: #fff;
 }
 
 #driveSection .mac-window > h2 {
