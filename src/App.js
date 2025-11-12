@@ -14,8 +14,39 @@ export const NAV_ITEMS = [
     { id: "myPage", label: "마이페이지",    icon: "fas fa-user" },
 ];
 
-/** Apple TV+ 스타일 캐러셀 (순수 React) */
+/** Apple TV+ 스타일 캐러셀 (이미지 지원 + 경로 자동 처리) */
 function HeroCarousel({ onSelect }) {
+    const driveToDirect = (url) => {
+        const m = url?.match(/\/d\/([^/]+)/) || url?.match(/[?&]id=([^&]+)/);
+        return m ? `https://drive.google.com/uc?export=view&id=${m[1]}` : url;
+    };
+
+    const normalizeSrc = (src) => {
+        if (!src) return null;
+        if (/^https?:\/\//i.test(src)) return driveToDirect(src);
+        if (src.startsWith("/")) return src;
+        return `${process.env.PUBLIC_URL}/${src.replace(/^\.?\/*/, "")}`;
+    };
+
+    const FALLBACK =
+        "data:image/svg+xml;utf8," +
+        encodeURIComponent(`
+      <svg xmlns="http://www.w3.org/2000/svg" width="800" height="600">
+        <defs>
+          <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#1f232c"/>
+            <stop offset="1" stop-color="#12151b"/>
+          </linearGradient>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#g)"/>
+        <g fill="#9aa3b2" font-family="sans-serif">
+          <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="22">
+            image not found
+          </text>
+        </g>
+      </svg>
+    `);
+
     const slides = [
         {
             key: "pptMaker",
@@ -24,6 +55,7 @@ function HeroCarousel({ onSelect }) {
             subtitle: "템플릿으로 빠르게, 더 세련되게",
             bg: "linear-gradient(135deg,#0F1115 0%, #171B22 50%, #0E0F13 100%)",
             accent: "linear-gradient(90deg,#e2e2e2, #f5f5f5)",
+            img: "assets/hero/ppt-preview.jpg",
         },
         {
             key: "drive",
@@ -32,6 +64,7 @@ function HeroCarousel({ onSelect }) {
             subtitle: "파일 업로드부터 공유까지 한 번에",
             bg: "linear-gradient(135deg,#0F1115 0%, #151922 55%, #0E0F13 100%)",
             accent: "linear-gradient(90deg,#d9e2ff, #eff3ff)",
+            img: "assets/hero/drive-preview.jpg",
         },
         {
             key: "myPage",
@@ -40,6 +73,7 @@ function HeroCarousel({ onSelect }) {
             subtitle: "내 기록과 제작 이력 한눈에",
             bg: "linear-gradient(135deg,#0F1115 0%, #171B22 55%, #0E0F13 100%)",
             accent: "linear-gradient(90deg,#e2e2e2, #f5f5f5)",
+            img: "assets/hero/mypage-preview.jpg",
         },
     ];
 
@@ -103,7 +137,19 @@ function HeroCarousel({ onSelect }) {
                         </p>
                     </div>
 
-                    <div className="hero-visual" />
+                    <div className="hero-visual">
+                        {slideData.img && (
+                            <img
+                                src={normalizeSrc(slideData.img)}
+                                alt={`${slideData.title} preview`}
+                                loading="lazy"
+                                decoding="async"
+                                onError={(e) => {
+                                    e.currentTarget.src = FALLBACK;
+                                }}
+                            />
+                        )}
+                    </div>
                 </div>
             ))}
 

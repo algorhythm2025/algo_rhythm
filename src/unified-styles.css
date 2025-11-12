@@ -2241,12 +2241,48 @@ a.btn:hover,
 
 
 .hero-slide .hero-visual {
-    align-self: stretch;
-    border-radius: 16px;
-    background: rgba(255,255,255,.02);
+    position: absolute;
+    right: 24px;
+    top: 24px;
+    bottom: 24px;
+    width: min(42%, 560px);
+    border-radius: 18px;
+    background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
     border: 1px solid rgba(255,255,255,.08);
-    box-shadow: inset 0 0 0 1px rgba(255,255,255,.02);
     backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.hero-visual img {
+    width: 88%;
+    height: 88%;
+    object-fit: contain;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.45),
+    inset 0 1px 0 rgba(255,255,255,.06);
+    filter: drop-shadow(0 8px 18px rgba(0,0,0,.35));
+    transition: transform 0.4s ease;
+}
+
+.hero-visual img:hover {
+    transform: scale(1.03);
+}
+
+@media (max-width: 1024px) {
+    .hero-visual { 
+        position: static; 
+        width: 100%; 
+        height: 260px; 
+        margin-top: 14px; 
+    }
+    .hero-visual img { 
+        width: 92%; 
+        height: 100%; 
+    }
 }
 
 /* 캐러셀 네비게이션 화살표 */
