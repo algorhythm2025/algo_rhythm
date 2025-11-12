@@ -67,6 +67,15 @@ function HeroCarousel({ onSelect }) {
             img: "assets/hero/drive-preview.jpg",
         },
         {
+            key: "portal",
+            eyebrow: "Campus",
+            title: "학교 포털 바로가기",
+            subtitle: "학사 일정과 공지 확인",
+            bg: "linear-gradient(135deg,#0F1115 0%, #161b21 50%, #0F1218 100%)",
+            accent: "linear-gradient(90deg,#e9e9e9,#f7f7f7)",
+            img: "assets/hero/portal-preview.png",
+        },
+        {
             key: "myPage",
             eyebrow: "Profile",
             title: "마이페이지",
