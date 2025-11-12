@@ -545,16 +545,30 @@ export function usePresentationLogic() {
     }
 
     // PPT 기록 조회
-    async function loadPptHistory(driveService, setPptHistory, setIsLoading) {
+    async function loadPptHistory(driveService, setPptHistory, setIsLoading, portfolioFolderId) {
         if (!driveService.current) return;
         
         try {
             setIsLoading(true);
             
-            // 포트폴리오 폴더 확인/생성
-            const portfolioFolder = await driveService.current.ensurePortfolioFolder();
+            let portfolioFolder;
+            if (portfolioFolderId) {
+                const gapiClient = driveService.current.authService.getAuthenticatedGapiClient();
+                try {
+                    const response = await gapiClient.drive.files.get({
+                        fileId: portfolioFolderId,
+                        fields: 'id, name, mimeType'
+                    });
+                    if (response.result && response.result.mimeType === 'application/vnd.google-apps.folder') {
+                        portfolioFolder = response.result;
+                    }
+                } catch (error) {
+                    portfolioFolder = await driveService.current.ensurePortfolioFolder();
+                }
+            } else {
+                portfolioFolder = await driveService.current.ensurePortfolioFolder();
+            }
             
-            // PPT 폴더 찾기
             const pptFolder = await driveService.current.findFolder('PPT', portfolioFolder.id);
             
             if (!pptFolder) {
@@ -562,24 +576,20 @@ export function usePresentationLogic() {
                 return;
             }
             
-            // PPT 폴더에서 PPT 파일들 조회
-            const files = await driveService.current.getFilesInFolder(pptFolder.id);
+            const gapiClient = driveService.current.authService.getAuthenticatedGapiClient();
+            const response = await gapiClient.drive.files.list({
+                q: `'${pptFolder.id}' in parents and mimeType='application/vnd.google-apps.presentation' and trashed=false`,
+                fields: 'files(id, name, mimeType, createdTime, modifiedTime, size)',
+                orderBy: 'createdTime desc'
+            });
             
-            // PPT 파일만 필터링 (Google Slides 파일)
-            const pptFiles = files.filter(file => 
-                file.mimeType === 'application/vnd.google-apps.presentation'
-            );
+            const pptFiles = response.result.files || [];
             
-            // 생성일 기준으로 최신순 정렬
-            const sortedPptFiles = pptFiles.sort((a, b) => 
-                new Date(b.createdTime) - new Date(a.createdTime)
-            );
-            
-            setPptHistory(sortedPptFiles);
+            setPptHistory(pptFiles);
             
         } catch (error) {
             console.error('PPT 기록 조회 오류:', error);
-            alert('PPT 기록을 불러오는데 실패했습니다.');
+            alert('PPT 기록을 불러오는데 실패했습니다: ' + (error?.message || error));
         } finally {
             setIsLoading(false);
         }

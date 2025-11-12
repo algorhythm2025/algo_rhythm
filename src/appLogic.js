@@ -50,7 +50,7 @@ function useAppLogic()
     const [editingIndex, setEditingIndex] = useState(null);
     const [deletingFileIds, setDeletingFileIds] = useState(new Set()); // 삭제 중인 파일 ID들
     const [isViewModeLoading, setIsViewModeLoading] = useState(false);
-    const [isPptCreating, setIsPptCreating] = useState(false); // PPT 생성 로딩 상태
+    const [isPptCreating, setIsPptCreating] = useState(false);
 
     // PPT 생성 진행 상황을 위한 상태
     const [pptProgress, setPptProgress] = useState(0);
@@ -455,7 +455,7 @@ function useAppLogic()
 
     // PPT 기록 조회
     async function loadPptHistory() {
-      await presentationLogic.loadPptHistory(driveService, setPptHistory, setIsLoading);
+      await presentationLogic.loadPptHistory(driveService, setPptHistory, setIsLoading, portfolioFolderId);
     }
 
     // PPT 수정을 위한 슬라이드 데이터 로드
@@ -683,9 +683,8 @@ function useAppLogic()
     useEffect(() => {
       if (activeSection === 'myPage' && isDriveInitialized) {
         loadPptHistory();
-        // 이력 목록도 자동으로 새로고침
         if (isSheetsInitialized) {
-          loadExperiencesFromSheets(null);
+          refreshSheetsData();
         }
       }
     }, [activeSection, isDriveInitialized, isSheetsInitialized]);
