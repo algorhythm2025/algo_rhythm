@@ -479,7 +479,8 @@ function useAppLogic()
         setActiveSection,
         setAccessToken,
         accessToken,
-        selectedThemeColor
+        selectedThemeColor,
+        selectedBgImage
       });
     }
 
@@ -508,6 +509,10 @@ function useAppLogic()
       }
       
       await handleTemplateSelect(selectedTemplateForModal, token);
+      
+      // PPT 생성 후 배경 이미지 상태 초기화
+      setBgImagePreview(null);
+      setSelectedBgImage(null);
     }
 
     // 테마 색상 선택 함수

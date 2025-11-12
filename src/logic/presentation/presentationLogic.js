@@ -587,50 +587,7 @@ export function usePresentationLogic() {
 
     // PPT 수정을 위한 슬라이드 데이터 로드
     async function loadPptForEdit(pptId, authService, getPresentationData, setSlides, setPresentationId, setActiveSection, setIsLoading) {
-        try {
-            setIsLoading(true);
-            
-            // 인증 서비스를 통해 토큰 확인 및 갱신
-            if (!authService.current) {
-                alert('인증 서비스가 초기화되지 않았습니다. 다시 로그인해주세요.');
-                return;
-            }
-            
-            // 인증 상태 확인
-            const isAuthenticated = await authService.current.isAuthenticated();
-            if (!isAuthenticated) {
-                alert('인증이 필요합니다. 다시 로그인해주세요.');
-                return;
-            }
-            
-            // 액세스 토큰 가져오기
-            const token = await authService.current.getAccessToken();
-            if (!token) {
-                alert('액세스 토큰을 가져올 수 없습니다. 다시 로그인해주세요.');
-                return;
-            }
-            
-            // 프레젠테이션 데이터 가져오기
-            const data = await getPresentationData(pptId, token);
-            
-            // 슬라이드 데이터 설정
-            setSlides(data.slides || []);
-            setPresentationId(pptId);
-            
-            
-            // 에디터 섹션으로 이동
-            setActiveSection('editor');
-            
-        } catch (error) {
-            console.error('PPT 수정 데이터 로드 오류:', error);
-            if (error.message && error.message.includes('인증')) {
-                alert('인증이 만료되었습니다. 다시 로그인해주세요.');
-            } else {
-                alert('PPT 데이터를 불러오는데 실패했습니다: ' + (error.message || error));
-            }
-        } finally {
-            setIsLoading(false);
-        }
+        window.open(`https://docs.google.com/presentation/d/${pptId}/edit`, '_blank');
     }
 
     // 슬라이드별 진행 상황 계산 함수
@@ -724,6 +681,26 @@ export function usePresentationLogic() {
                     pageBackgroundFill: {
                         solidFill: {
                             color: backgroundColor
+                        }
+                    }
+                },
+                fields: 'pageBackgroundFill'
+            }
+        }));
+
+        await batchUpdate(presId, token, requests);
+    }
+
+    async function setMultipleSlideBackgroundImages(presId, slideIds, imageUrl, token) {
+        if (slideIds.length === 0 || !imageUrl) return;
+        
+        const requests = slideIds.map(slideId => ({
+            updatePageProperties: {
+                objectId: slideId,
+                pageProperties: {
+                    pageBackgroundFill: {
+                        stretchedPictureFill: {
+                            contentUrl: imageUrl
                         }
                     }
                 },
@@ -1608,7 +1585,8 @@ export function usePresentationLogic() {
         setActiveSection,
         setAccessToken,
         accessToken,
-        selectedThemeColor = 'light'
+        selectedThemeColor = 'light',
+        selectedBgImage = null
     }) {
         const title = prompt('슬라이드 제목을 입력하세요:', '나의 포트폴리오');
         if (!title) {
@@ -1787,6 +1765,27 @@ export function usePresentationLogic() {
                 await createPhotoTemplateSlides(presId, currentToken, slidesArr, selectedExperiences, updatePptProgress, calculateSlideProgress, selectedThemeColor);
             }
 
+            // 5-1) 배경 이미지가 있으면 드라이브에 업로드하고 모든 슬라이드에 적용
+            let bgImageUrl = null;
+            if (selectedBgImage) {
+                try {
+                    updatePptProgress(85, '배경 이미지 업로드 중...');
+                    bgImageUrl = await driveService.current.uploadImageToDrive(selectedBgImage, 'PPT 배경 이미지');
+                    
+                    // 최신 슬라이드 데이터 가져오기
+                    const refreshedData = await getPresentationData(presId, currentToken);
+                    const allSlideIds = refreshedData.slides?.map(slide => slide.objectId) || [];
+                    
+                    if (allSlideIds.length > 0) {
+                        updatePptProgress(90, '배경 이미지 적용 중...');
+                        await setMultipleSlideBackgroundImages(presId, allSlideIds, bgImageUrl, currentToken);
+                    }
+                } catch (error) {
+                    console.error('배경 이미지 업로드/적용 실패:', error);
+                    alert('배경 이미지 적용에 실패했습니다. PPT는 생성되었지만 배경 이미지는 적용되지 않았습니다.');
+                }
+            }
+
             // 6) 최종 상태 반영
             const refreshed = await getPresentationData(presId, currentToken);
             setSlides(refreshed.slides || []);
@@ -1797,7 +1796,7 @@ export function usePresentationLogic() {
             
             updatePptProgress(100, 'PPT 생성 완료!');
             alert('PPT가 생성되었습니다.');
-            setActiveSection('editor');
+            window.open(`https://docs.google.com/presentation/d/${presId}/edit`, '_blank');
         } catch (error) {
             console.error('PPT 생성 오류:', error);
             alert('PPT 생성에 실패했습니다: ' + (error?.message || error));

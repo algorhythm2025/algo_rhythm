@@ -1373,6 +1373,19 @@ function App() {
                                           >
                                             <i className="fas fa-trash-alt"></i> 삭제
                                           </button>
+                                          <button
+                                              className="btn btn-outline-secondary btn-sm ppt-menu-btn"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                              }}
+                                              title="더보기"
+                                          >
+                                            <span className="ppt-menu-dots">
+                                              <span></span>
+                                              <span></span>
+                                              <span></span>
+                                            </span>
+                                          </button>
                                         </div>
                                       </div>
                                   ))}
