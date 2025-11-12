@@ -545,7 +545,7 @@ function App() {
                               <button className="btn btn-outline-dark me-2" onClick={() => selectAllExperiences(false)} disabled={isExperienceLoading}>전체 해제</button>
                               <button className="btn btn-outline-dark me-2" onClick={() => selectAllExperiences(true)} disabled={isExperienceLoading}>전체 선택</button>
                               <button
-                                  className="btn btn-dark"
+                                  className="btn btn-outline-primary"
                                   id="nextButton"
                                   disabled={selected.length === 0 || isExperienceLoading}
                                   onClick={() => {
