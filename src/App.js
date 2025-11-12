@@ -14,8 +14,39 @@ export const NAV_ITEMS = [
     { id: "myPage", label: "마이페이지",    icon: "fas fa-user" },
 ];
 
-/** Apple TV+ 스타일 캐러셀 (순수 React) */
+/** Apple TV+ 스타일 캐러셀 (이미지 지원 + 경로 자동 처리) */
 function HeroCarousel({ onSelect }) {
+    const driveToDirect = (url) => {
+        const m = url?.match(/\/d\/([^/]+)/) || url?.match(/[?&]id=([^&]+)/);
+        return m ? `https://drive.google.com/uc?export=view&id=${m[1]}` : url;
+    };
+
+    const normalizeSrc = (src) => {
+        if (!src) return null;
+        if (/^https?:\/\//i.test(src)) return driveToDirect(src);
+        if (src.startsWith("/")) return src;
+        return `${process.env.PUBLIC_URL}/${src.replace(/^\.?\/*/, "")}`;
+    };
+
+    const FALLBACK =
+        "data:image/svg+xml;utf8," +
+        encodeURIComponent(`
+      <svg xmlns="http://www.w3.org/2000/svg" width="800" height="600">
+        <defs>
+          <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#1f232c"/>
+            <stop offset="1" stop-color="#12151b"/>
+          </linearGradient>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#g)"/>
+        <g fill="#9aa3b2" font-family="sans-serif">
+          <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="22">
+            image not found
+          </text>
+        </g>
+      </svg>
+    `);
+
     const slides = [
         {
             key: "pptMaker",
@@ -24,6 +55,7 @@ function HeroCarousel({ onSelect }) {
             subtitle: "템플릿으로 빠르게, 더 세련되게",
             bg: "linear-gradient(135deg,#0F1115 0%, #171B22 50%, #0E0F13 100%)",
             accent: "linear-gradient(90deg,#e2e2e2, #f5f5f5)",
+            img: "assets/hero/ppt-preview.jpg",
         },
         {
             key: "drive",
@@ -32,6 +64,16 @@ function HeroCarousel({ onSelect }) {
             subtitle: "파일 업로드부터 공유까지 한 번에",
             bg: "linear-gradient(135deg,#0F1115 0%, #151922 55%, #0E0F13 100%)",
             accent: "linear-gradient(90deg,#d9e2ff, #eff3ff)",
+            img: "assets/hero/drive-preview.jpg",
+        },
+        {
+            key: "portal",
+            eyebrow: "Campus",
+            title: "학교 포털 바로가기",
+            subtitle: "학사 일정과 공지 확인",
+            bg: "linear-gradient(135deg,#0F1115 0%, #161b21 50%, #0F1218 100%)",
+            accent: "linear-gradient(90deg,#e9e9e9,#f7f7f7)",
+            img: "assets/hero/portal-preview.png",
         },
         {
             key: "myPage",
@@ -40,6 +82,7 @@ function HeroCarousel({ onSelect }) {
             subtitle: "내 기록과 제작 이력 한눈에",
             bg: "linear-gradient(135deg,#0F1115 0%, #171B22 55%, #0E0F13 100%)",
             accent: "linear-gradient(90deg,#e2e2e2, #f5f5f5)",
+            img: "assets/hero/mypage-preview.jpg",
         },
     ];
 
@@ -103,7 +146,19 @@ function HeroCarousel({ onSelect }) {
                         </p>
                     </div>
 
-                    <div className="hero-visual" />
+                    <div className="hero-visual">
+                        {slideData.img && (
+                            <img
+                                src={normalizeSrc(slideData.img)}
+                                alt={`${slideData.title} preview`}
+                                loading="lazy"
+                                decoding="async"
+                                onError={(e) => {
+                                    e.currentTarget.src = FALLBACK;
+                                }}
+                            />
+                        )}
+                    </div>
                 </div>
             ))}
 
@@ -330,7 +385,15 @@ function App() {
     goToExperiencePrevPage,
     goToPptMakerExperiencePage,
     goToPptMakerExperienceNextPage,
-    goToPptMakerExperiencePrevPage
+    goToPptMakerExperiencePrevPage,
+    expSortBy,
+    setExpSortBy,
+    expSortOrder,
+    setExpSortOrder,
+    pptSortBy,
+    setPptSortBy,
+    pptSortOrder,
+    setPptSortOrder
   } = useAppLogic();
 
   /* 스크롤 시 상단바 스타일 토글 */
@@ -479,6 +542,8 @@ function App() {
                           <div className="d-flex justify-content-between align-items-center mb-3">
                             <h2 className="mb-0">포트폴리오 내용 선택</h2>
                             <div>
+                              <button className="btn btn-outline-dark me-2" onClick={() => selectAllExperiences(false)} disabled={isExperienceLoading}>전체 해제</button>
+                              <button className="btn btn-outline-dark me-2" onClick={() => selectAllExperiences(true)} disabled={isExperienceLoading}>전체 선택</button>
                               <button
                                   className="btn btn-dark"
                                   id="nextButton"
@@ -488,7 +553,7 @@ function App() {
                                         .sort((a,b)=>a-b)
                                         .map(i => experiences[i]);
                                     setSelectedExperiences(picked);
-                                    setActiveSection('templateSelection'); // 템플릿 선택 탭으로 전환
+                                    setActiveSection('templateSelection');
                                   }}
                               >
                                 다음
@@ -497,21 +562,36 @@ function App() {
                           </div>
                           <div className="mac-window-content">
                             <div className="d-flex justify-content-end align-items-center mb-3">
-                              <div>
-                                <button className="btn btn-outline-primary me-2" onClick={refreshSheetsData} disabled={isExperienceLoading}>
+                              <div className="sort-controls">
+                                <select 
+                                  className="form-select form-select-sm sort-select" 
+                                  value={expSortBy} 
+                                  onChange={(e) => setExpSortBy(e.target.value)}
+                                  disabled={isExperienceLoading}
+                                >
+                                  <option value="createdAt">등록순</option>
+                                  <option value="startDate">날짜순</option>
+                                </select>
+                                <button 
+                                  className={`btn btn-outline-secondary btn-sm sort-order-btn sort-${expSortOrder}`}
+                                  onClick={() => setExpSortOrder(expSortOrder === 'asc' ? 'desc' : 'asc')}
+                                  disabled={isExperienceLoading}
+                                  title={expSortOrder === 'asc' ? '오름차순' : '내림차순'}
+                                >
+                                  {expSortOrder === 'asc' ? '↑' : '↓'}
+                                </button>
+                                <button 
+                                  className="btn btn-outline-secondary btn-sm refresh-btn" 
+                                  onClick={refreshSheetsData} 
+                                  disabled={isExperienceLoading}
+                                  title="새로고침"
+                                >
                                   {isExperienceLoading ? (
-                                      <>
-                                        <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
-                                        새로고침 중...
-                                      </>
+                                      <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
                                   ) : (
-                                      <>
-                                        <i className="fas fa-sync-alt"></i> 시트 새로고침
-                                      </>
+                                      <span className="refresh-icon">↺</span>
                                   )}
                                 </button>
-                                <button className="btn btn-outline-dark me-2" onClick={() => selectAllExperiences(false)} disabled={isExperienceLoading}>전체 해제</button>
-                                <button className="btn btn-outline-dark me-2" onClick={() => selectAllExperiences(true)} disabled={isExperienceLoading}>전체 선택</button>
                               </div>
                             </div>
                             <div id="experienceList" className="mac-list">
@@ -519,9 +599,6 @@ function App() {
                                   <div className="empty-state">
                                     <i className="fas fa-clipboard-list fa-3x mb-3"></i>
                                     <p>등록된 이력이 없습니다.</p>
-                                    <button className="btn btn-outline-primary" onClick={refreshSheetsData}>
-                                      <i className="fas fa-sync-alt"></i> 구글 시트에서 불러오기
-                                    </button>
                                   </div>
                               ) : (
                                 <>
@@ -808,8 +885,23 @@ function App() {
                   {/* 구글 드라이브 섹션 */}
                   {activeSection === 'drive' && (
                       <div id="driveSection" className="content-section">
-                        <div className="mac-window">
-                          <h2>구글 드라이브</h2>
+                        <div className="mac-window glass-card">
+                          <div className="d-flex justify-content-between align-items-center mb-3">
+                            <div className="d-flex align-items-center gap-2">
+                              <i className="fab fa-google-drive" style={{ opacity: 0.9 }}></i>
+                              <h2 className="mb-0">구글 드라이브</h2>
+                            </div>
+                            <div className="d-flex align-items-center flex-wrap gap-2">
+                              <span className="drive-view-badge">
+                                {driveViewMode === 'all' ? '전체 파일' : '포트폴리오 폴더'}
+                              </span>
+                              {currentPath.map((node, i) => (
+                                <span key={node.id} className="drive-path-badge">
+                                  {node.name}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
                           <div className="mac-window-content">
                             {/* 드라이브 연동 상태 - 로그인된 상태에서는 초기화 중이거나 연동 실패 시에만 표시 */}
                             {!isDriveInitialized && (
@@ -837,9 +929,12 @@ function App() {
 
                             {/* 시트 관리 버튼 */}
                             {isDriveInitialized && (
-                                <div className="sheet-management">
-                                  <div className="d-flex justify-content-between align-items-center mb-3">
-                                    <h4>포트폴리오 시트 관리</h4>
+                                <div className="glass-card mb-4">
+                                  <div className="d-flex justify-content-between align-items-center">
+                                    <div className="d-flex align-items-center gap-2">
+                                      <i className="fas fa-table"></i>
+                                      <h4 className="mb-0">포트폴리오 시트 관리</h4>
+                                    </div>
                                     <div>
                                       {spreadsheetId ? (
                                           <button
@@ -879,7 +974,7 @@ function App() {
                                     </div>
                                   </div>
                                   {!spreadsheetId && (
-                                      <div className="alert alert-info" role="alert">
+                                      <div className="alert alert-info mt-3 mb-0" role="alert">
                                         <i className="fas fa-info-circle me-2"></i>
                                         시트파일이 없습니다. 새로 생성해주세요.
                                       </div>
@@ -948,16 +1043,15 @@ function App() {
                                       </h4>
                                     </div>
                                     <div>
-                                      <label htmlFor="drive-upload-input" className={`btn btn-outline-success btn-sm me-2 ${isUploadLoading ? 'disabled file-upload-btn' : ''}`}>
+                                      <label 
+                                        htmlFor="drive-upload-input" 
+                                        className={`btn btn-outline-secondary btn-sm upload-btn me-2 ${isUploadLoading ? 'disabled' : ''}`}
+                                        title="파일 업로드"
+                                      >
                                         {isUploadLoading ? (
-                                            <>
-                                              <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
-                                              업로드 중...
-                                            </>
+                                            <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
                                         ) : (
-                                            <>
-                                              <i className="fas fa-upload"></i> 업로드
-                                            </>
+                                            <span className="upload-icon">↥</span>
                                         )}
                                       </label>
                                       <input
@@ -966,16 +1060,16 @@ function App() {
                                           className="hidden-input"
                                           onChange={handleDriveFileUpload}
                                       />
-                                      <button className="btn btn-outline-primary btn-sm" onClick={handleDriveRefresh} disabled={isRefreshLoading}>
+                                      <button 
+                                        className="btn btn-outline-secondary btn-sm refresh-btn" 
+                                        onClick={handleDriveRefresh} 
+                                        disabled={isRefreshLoading}
+                                        title="새로고침"
+                                      >
                                         {isRefreshLoading ? (
-                                            <>
-                                              <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
-                                              새로고침 중...
-                                            </>
+                                            <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
                                         ) : (
-                                            <>
-                                              <i className="fas fa-sync-alt"></i> 새로고침
-                                            </>
+                                            <span className="refresh-icon">↺</span>
                                         )}
                                       </button>
                                     </div>
@@ -1024,25 +1118,23 @@ function App() {
                                                           </small>
                                                         </div>
                                                         <div className="file-actions d-flex align-items-center">
-                                                          <button
-                                                              className="btn btn-sm btn-outline-danger"
-                                                              onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleDriveFileDelete(file.id);
-                                                              }}
-                                                              disabled={isDeleteLoading}
-                                                          >
-                                                            {isDeleteLoading ? (
-                                                                <>
-                                                                  <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
-                                                                  삭제 중...
-                                                                </>
-                                                            ) : (
-                                                                <>
-                                                                  <i className="fas fa-trash-alt"></i> 삭제
-                                                                </>
-                                                            )}
-                                                          </button>
+                                                          {driveViewMode !== 'portfolio' && (
+                                                            <button
+                                                                className="btn btn-outline-secondary btn-sm delete-btn"
+                                                                onClick={(e) => {
+                                                                  e.stopPropagation();
+                                                                  handleDriveFileDelete(file.id);
+                                                                }}
+                                                                disabled={isDeleteLoading}
+                                                                title="삭제"
+                                                            >
+                                                              {isDeleteLoading ? (
+                                                                  <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                                              ) : (
+                                                                  <span className="delete-icon">✕</span>
+                                                              )}
+                                                            </button>
+                                                          )}
                                                         </div>
                                                       </div>
                                                     </div>
@@ -1069,7 +1161,7 @@ function App() {
                                               .filter(file => file.mimeType !== 'application/vnd.google-apps.folder')
                                               .map((file, index, array) => (
                                                   <div key={file.id}>
-                                                    <div className="file-item list-group-item">
+                                                    <div className="file-item list-group-item" onClick={() => openFileInNewTab(file)}>
                                                       <div className="d-flex align-items-center">
                                                         <i className={`fas ${
                                                             file.mimeType === 'application/vnd.google-apps.spreadsheet' ? 'fa-file-excel' :
@@ -1082,10 +1174,7 @@ function App() {
                                                                   file.mimeType === 'application/vnd.google-apps.presentation' ? 'file-type-presentation' :
                                                                       file.mimeType.startsWith('image/') ? 'file-type-image' : ''}`}></i>
                                                         <div className="flex-grow-1">
-                                                          <h6
-                                                              className="mb-1 file-name file-item"
-                                                              onClick={() => openFileInNewTab(file)}
-                                                          >
+                                                          <h6 className="mb-1 file-name">
                                                             {file.name}
                                                           </h6>
                                                           <small className="white-text">
@@ -1102,30 +1191,28 @@ function App() {
                                                             수정날짜 {new Date(file.modifiedTime).toLocaleDateString()}
                                                           </small>
                                                         </div>
-                                                        <div className="file-actions d-flex align-items-center">
+                                                        <div className="file-actions d-flex align-items-center" onClick={(e) => e.stopPropagation()}>
                                                           <button
-                                                              className="btn btn-sm btn-outline-primary"
+                                                              className="btn btn-outline-secondary btn-sm download-btn"
                                                               onClick={() => downloadFile(file)}
                                                               title="파일 다운로드"
                                                           >
-                                                            <i className="fas fa-download"></i> 다운로드
+                                                            <span className="download-icon">⤓</span>
                                                           </button>
-                                                          <button
-                                                              className="btn btn-sm btn-outline-danger"
-                                                              onClick={() => handleDriveFileDelete(file.id)}
-                                                              disabled={deletingFileIds.has(file.id)}
-                                                          >
-                                                            {deletingFileIds.has(file.id) ? (
-                                                                <>
-                                                                  <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
-                                                                  삭제 중...
-                                                                </>
-                                                            ) : (
-                                                                <>
-                                                                  <i className="fas fa-trash-alt"></i> 삭제
-                                                                </>
-                                                            )}
-                                                          </button>
+                                                          {driveViewMode !== 'portfolio' && (
+                                                            <button
+                                                                className="btn btn-outline-secondary btn-sm delete-btn"
+                                                                onClick={() => handleDriveFileDelete(file.id)}
+                                                                disabled={deletingFileIds.has(file.id)}
+                                                                title="삭제"
+                                                            >
+                                                              {deletingFileIds.has(file.id) ? (
+                                                                  <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                                              ) : (
+                                                                  <span className="delete-icon">✕</span>
+                                                              )}
+                                                            </button>
+                                                          )}
                                                         </div>
                                                       </div>
                                                     </div>
@@ -1286,7 +1373,7 @@ function App() {
                                       <div className="d-flex justify-content-end gap-2 mt-4">
                                           <button
                                               type="button"
-                                              className="btn btn-outline-secondary"
+                                              className="btn btn-outline-dark"
                                               onClick={() => {
                                                   closeModal();
                                                   setActiveSection('main');
@@ -1295,7 +1382,7 @@ function App() {
                                           >
                                               취소
                                           </button>
-                                          <button type="submit" className="btn btn-outline-primary" disabled={isExperienceLoading}>
+                                          <button type="submit" className="btn btn-dark" disabled={isExperienceLoading}>
                                               {isExperienceLoading ? (
                                                   <>
                                                       <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
@@ -1318,9 +1405,39 @@ function App() {
                           <div className="mac-window">
                             <div className="d-flex justify-content-between align-items-center mb-3">
                               <h2>PPT 기록</h2>
-                              <button className="btn btn-outline-primary btn-sm" onClick={loadPptHistory}>
-                                <i className="fas fa-sync-alt"></i> 새로고침
-                              </button>
+                              <div className="d-flex align-items-center gap-2">
+                                <div className="sort-controls">
+                                  <select 
+                                    className="form-select form-select-sm sort-select" 
+                                    value={pptSortBy} 
+                                    onChange={(e) => setPptSortBy(e.target.value)}
+                                    disabled={isLoading}
+                                  >
+                                    <option value="createdTime">등록순</option>
+                                    <option value="modifiedTime">날짜순</option>
+                                  </select>
+                                  <button 
+                                    className={`btn btn-outline-secondary btn-sm sort-order-btn sort-${pptSortOrder}`}
+                                    onClick={() => setPptSortOrder(pptSortOrder === 'asc' ? 'desc' : 'asc')}
+                                    disabled={isLoading}
+                                    title={pptSortOrder === 'asc' ? '오름차순' : '내림차순'}
+                                  >
+                                    {pptSortOrder === 'asc' ? '↑' : '↓'}
+                                  </button>
+                                </div>
+                                <button 
+                                  className="btn btn-outline-secondary btn-sm refresh-btn" 
+                                  onClick={loadPptHistory}
+                                  disabled={isLoading}
+                                  title="새로고침"
+                                >
+                                  {isLoading ? (
+                                    <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                  ) : (
+                                    <span className="refresh-icon">↺</span>
+                                  )}
+                                </button>
+                              </div>
                             </div>
                             <div id="pptHistory" className="mac-list">
                               {isLoading ? (
@@ -1354,24 +1471,26 @@ function App() {
                                         </div>
                                         <div className="d-flex align-items-center gap-2">
                                           <button
-                                              className="btn btn-outline-secondary btn-sm"
+                                              className="btn btn-outline-secondary btn-sm download-btn"
                                               onClick={(e) => {
                                                 e.stopPropagation();
-                                                loadPptForEdit(ppt.id);
+                                                downloadFile(ppt);
                                               }}
+                                              title="다운로드"
                                           >
-                                            <i className="fas fa-edit"></i> 수정
+                                            <span className="download-icon">⤓</span>
                                           </button>
                                           <button
-                                              className="btn btn-outline-danger btn-sm"
+                                              className="btn btn-outline-secondary btn-sm delete-btn"
                                               onClick={(e) => {
                                                 e.stopPropagation();
                                                 if (window.confirm(`"${ppt.name}" 파일을 삭제하시겠습니까?`)) {
                                                   handleDriveFileDelete(ppt.id, true);
                                                 }
                                               }}
+                                              title="삭제"
                                           >
-                                            <i className="fas fa-trash-alt"></i> 삭제
+                                            <span className="delete-icon">✕</span>
                                           </button>
                                         </div>
                                       </div>
@@ -1419,18 +1538,39 @@ function App() {
                           <div className="mac-window">
                             <div className="d-flex justify-content-between align-items-center mb-3">
                               <h2>이력 관리</h2>
-                              <button className="btn btn-outline-primary btn-sm" onClick={refreshSheetsData} disabled={isExperienceLoading}>
-                                {isExperienceLoading ? (
-                                  <>
-                                    <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                                    새로고침 중...
-                                  </>
-                                ) : (
-                                  <>
-                                    <i className="fas fa-sync-alt"></i> 시트 새로고침
-                                  </>
-                                )}
-                              </button>
+                              <div className="d-flex align-items-center gap-2">
+                                <div className="sort-controls">
+                                  <select 
+                                    className="form-select form-select-sm sort-select" 
+                                    value={expSortBy} 
+                                    onChange={(e) => setExpSortBy(e.target.value)}
+                                    disabled={isExperienceLoading}
+                                  >
+                                    <option value="createdAt">등록순</option>
+                                    <option value="startDate">날짜순</option>
+                                  </select>
+                                  <button 
+                                    className={`btn btn-outline-secondary btn-sm sort-order-btn sort-${expSortOrder}`}
+                                    onClick={() => setExpSortOrder(expSortOrder === 'asc' ? 'desc' : 'asc')}
+                                    disabled={isExperienceLoading}
+                                    title={expSortOrder === 'asc' ? '오름차순' : '내림차순'}
+                                  >
+                                    {expSortOrder === 'asc' ? '↑' : '↓'}
+                                  </button>
+                                </div>
+                                <button 
+                                  className="btn btn-outline-secondary btn-sm refresh-btn" 
+                                  onClick={refreshSheetsData} 
+                                  disabled={isExperienceLoading}
+                                  title="새로고침"
+                                >
+                                  {isExperienceLoading ? (
+                                    <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                  ) : (
+                                    <span className="refresh-icon">↺</span>
+                                  )}
+                                </button>
+                              </div>
                             </div>
                             <div id="experienceManagement" className="mac-list">
                               {isExperienceLoading ? (
@@ -1444,9 +1584,6 @@ function App() {
                                   <div className="empty-state">
                                     <i className="fas fa-clipboard-list fa-3x mb-3"></i>
                                     <p>등록된 이력이 없습니다.</p>
-                                    <button className="btn btn-outline-primary" onClick={refreshSheetsData}>
-                                      <i className="fas fa-sync-alt"></i> 구글 시트에서 불러오기
-                                    </button>
                                   </div>
                               ) : (
                                 <>
@@ -1526,14 +1663,15 @@ function App() {
                                               <i className="fas fa-edit"></i> 수정
                                             </button>
                                             <button
-                                                className="btn btn-outline-danger btn-sm"
+                                                className="btn btn-outline-secondary btn-sm delete-btn"
                                                 onClick={(e) => {
                                                   e.stopPropagation();
                                                   deleteIndividualExperience(originalIndex);
                                                 }}
                                                 disabled={isExperienceLoading}
+                                                title="삭제"
                                             >
-                                              <i className="fas fa-trash-alt"></i> 삭제
+                                              <span className="delete-icon">✕</span>
                                             </button>
                                           </div>
                                         </div>
@@ -1583,33 +1721,33 @@ function App() {
                         </div>
                       </div>
                   )}
+
+                  {/* 푸터 - 모든 섹션에 표시 */}
+                  {isLoggedIn && !showPrivacyPolicy && !showTermsOfService && (
+                    <footer className="main-footer">
+                      <div className="footer-content">
+                        <div className="footer-links">
+                          <button 
+                            onClick={() => setShowPrivacyPolicy(true)}
+                            className="footer-link-btn"
+                          >
+                            개인정보처리방침
+                          </button>
+                          <span className="footer-link-separator">|</span>
+                          <button 
+                            onClick={() => setShowTermsOfService(true)}
+                            className="footer-link-btn"
+                          >
+                            사용자 약관
+                          </button>
+                        </div>
+                        <p className="footer-copyright">© 2025 Portra. All rights reserved.</p>
+                      </div>
+                    </footer>
+                  )}
                 </div>
               </div>
             </div>
-        )}
-
-        {/* 푸터 - 모든 섹션에 표시 */}
-        {isLoggedIn && !showPrivacyPolicy && !showTermsOfService && (
-          <footer className="main-footer">
-            <div className="footer-content">
-              <div className="footer-links">
-                <button 
-                  onClick={() => setShowPrivacyPolicy(true)}
-                  className="footer-link-btn"
-                >
-                  개인정보처리방침
-                </button>
-                <span className="footer-link-separator">|</span>
-                <button 
-                  onClick={() => setShowTermsOfService(true)}
-                  className="footer-link-btn"
-                >
-                  사용자 약관
-                </button>
-              </div>
-              <p className="footer-copyright">© 2025 Portra. All rights reserved.</p>
-            </div>
-          </footer>
         )}
 
 
@@ -1836,18 +1974,18 @@ function App() {
                 <div className="modal-body">
                   <div className="row">
                     <div className="col-12">
-                      <h6 className="mb-3 white-text">템플릿 설명</h6>
-                      <p className="mb-4" style={{ whiteSpace: 'pre-wrap', color: 'white' }}>
+                      <h6 className="mb-3">템플릿 설명</h6>
+                      <p className="mb-4" style={{ whiteSpace: 'pre-wrap' }}>
                         {templateDescriptions[selectedTemplateForModal]?.description}
                       </p>
                       
                       <div className="mb-4">
-                            <h6 className="mb-3 white-text">템플릿 미리보기</h6>
+                            <h6 className="mb-3">템플릿 미리보기</h6>
                             <TemplateCarousel images={imagesForCurrentTheme} />
                         </div>
                       
                      <div className="theme-color-selector">
-                       <h6 className="white-text">테마 색상</h6>
+                       <h6>테마 색상</h6>
                        <div className="theme-color-options">
                          <div
                            className={`theme-color-option light ${selectedThemeColor === 'light' ? 'selected' : ''}`}
@@ -1887,18 +2025,9 @@ function App() {
                        </div>
                      </div>
                       
-                      <h6 className="mb-3 white-text">주요 특징</h6>
-                      <div className="template-features">
-                        {templateDescriptions[selectedTemplateForModal]?.features.map((feature, index) => (
-                          <div key={index} className="feature-item mb-2 d-flex align-items-center">
-                            <i className="fas fa-check-circle text-success me-2"></i>
-                            <span className="white-text">{feature}</span>
-                          </div>
-                        ))}
-                      </div>
                         <hr style={{ borderTop: '1px solid var(--ink-line)', margin: '20px 0' }} />
-                        <h6 className="mb-3 white-text">배경 이미지 업로드 (선택)</h6>
-                        <p className="mb-3" style={{ color: 'var(--ink-muted)', fontSize: '14px' }}>
+                        <h6 className="mb-3">배경 이미지 업로드 (선택)</h6>
+                        <p className="mb-3" style={{ fontSize: '14px' }}>
                             이미지를 업로드하면 모든 슬라이드의 배경으로 적용됩니다. (테마 색상 무시)
                         </p>
 
@@ -1949,10 +2078,10 @@ function App() {
                   </div>
                 </div>
                 <div className="modal-footer">
-                  <button type="button" className="btn btn-secondary" onClick={handleTemplateCancel}>
+                  <button type="button" className="btn btn-outline-dark" onClick={handleTemplateCancel}>
                     취소
                   </button>
-                  <button type="button" className="btn btn-primary" onClick={handleTemplateUse}>
+                  <button type="button" className="btn btn-dark" onClick={handleTemplateUse}>
                     템플릿 사용
                   </button>
                   </div>
