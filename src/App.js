@@ -545,7 +545,7 @@ function App() {
                               <button className="btn btn-outline-dark me-2" onClick={() => selectAllExperiences(false)} disabled={isExperienceLoading}>전체 해제</button>
                               <button className="btn btn-outline-dark me-2" onClick={() => selectAllExperiences(true)} disabled={isExperienceLoading}>전체 선택</button>
                               <button
-                                  className="btn btn-outline-primary"
+                                  className="btn btn-dark"
                                   id="nextButton"
                                   disabled={selected.length === 0 || isExperienceLoading}
                                   onClick={() => {
@@ -1355,7 +1355,7 @@ function App() {
                                       <div className="d-flex justify-content-end gap-2 mt-4">
                                           <button
                                               type="button"
-                                              className="btn btn-outline-secondary"
+                                              className="btn btn-outline-dark"
                                               onClick={() => {
                                                   closeModal();
                                                   setActiveSection('main');
@@ -1364,7 +1364,7 @@ function App() {
                                           >
                                               취소
                                           </button>
-                                          <button type="submit" className="btn btn-outline-primary" disabled={isExperienceLoading}>
+                                          <button type="submit" className="btn btn-dark" disabled={isExperienceLoading}>
                                               {isExperienceLoading ? (
                                                   <>
                                                       <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
@@ -1956,18 +1956,18 @@ function App() {
                 <div className="modal-body">
                   <div className="row">
                     <div className="col-12">
-                      <h6 className="mb-3 white-text">템플릿 설명</h6>
-                      <p className="mb-4" style={{ whiteSpace: 'pre-wrap', color: 'white' }}>
+                      <h6 className="mb-3">템플릿 설명</h6>
+                      <p className="mb-4" style={{ whiteSpace: 'pre-wrap' }}>
                         {templateDescriptions[selectedTemplateForModal]?.description}
                       </p>
                       
                       <div className="mb-4">
-                            <h6 className="mb-3 white-text">템플릿 미리보기</h6>
+                            <h6 className="mb-3">템플릿 미리보기</h6>
                             <TemplateCarousel images={imagesForCurrentTheme} />
                         </div>
                       
                      <div className="theme-color-selector">
-                       <h6 className="white-text">테마 색상</h6>
+                       <h6>테마 색상</h6>
                        <div className="theme-color-options">
                          <div
                            className={`theme-color-option light ${selectedThemeColor === 'light' ? 'selected' : ''}`}
@@ -2008,8 +2008,8 @@ function App() {
                      </div>
                       
                         <hr style={{ borderTop: '1px solid var(--ink-line)', margin: '20px 0' }} />
-                        <h6 className="mb-3 white-text">배경 이미지 업로드 (선택)</h6>
-                        <p className="mb-3" style={{ color: 'var(--ink-muted)', fontSize: '14px' }}>
+                        <h6 className="mb-3">배경 이미지 업로드 (선택)</h6>
+                        <p className="mb-3" style={{ fontSize: '14px' }}>
                             이미지를 업로드하면 모든 슬라이드의 배경으로 적용됩니다. (테마 색상 무시)
                         </p>
 
@@ -2060,10 +2060,10 @@ function App() {
                   </div>
                 </div>
                 <div className="modal-footer">
-                  <button type="button" className="btn btn-secondary" onClick={handleTemplateCancel}>
+                  <button type="button" className="btn btn-outline-dark" onClick={handleTemplateCancel}>
                     취소
                   </button>
-                  <button type="button" className="btn btn-primary" onClick={handleTemplateUse}>
+                  <button type="button" className="btn btn-dark" onClick={handleTemplateUse}>
                     템플릿 사용
                   </button>
                   </div>
