@@ -29,7 +29,7 @@ function useAppLogic()
       // localStorage에서 스프레드시트 ID 복원
       return localStorage.getItem('spreadsheetId') || null;
     });
-    const [expSortBy, setExpSortBy] = useState('startDate');
+    const [expSortBy, setExpSortBy] = useState('createdAt');
     const [expSortOrder, setExpSortOrder] = useState('desc');
     const [pptSortBy, setPptSortBy] = useState('createdTime');
     const [pptSortOrder, setPptSortOrder] = useState('desc');
@@ -645,8 +645,26 @@ function useAppLogic()
                 if (valA > valB) return isAsc ? 1 : -1;
                 return 0;
             } else if (field === 'startDate') {
-                const dateA = new Date(a.startDate);
-                const dateB = new Date(b.startDate);
+                const periodA = a.period || '';
+                const periodB = b.period || '';
+                
+                const dateMatchA = periodA.match(/(\d{4})\.(\d{2})\.(\d{2})/);
+                const dateMatchB = periodB.match(/(\d{4})\.(\d{2})\.(\d{2})/);
+                
+                if (dateMatchA && dateMatchB) {
+                    const dateA = new Date(`${dateMatchA[1]}-${dateMatchA[2]}-${dateMatchA[3]}`);
+                    const dateB = new Date(`${dateMatchB[1]}-${dateMatchB[2]}-${dateMatchB[3]}`);
+                    valA = !isNaN(dateA.getTime()) ? dateA.getTime() : 0;
+                    valB = !isNaN(dateB.getTime()) ? dateB.getTime() : 0;
+                } else {
+                    valA = dateMatchA ? new Date(`${dateMatchA[1]}-${dateMatchA[2]}-${dateMatchA[3]}`).getTime() : 0;
+                    valB = dateMatchB ? new Date(`${dateMatchB[1]}-${dateMatchB[2]}-${dateMatchB[3]}`).getTime() : 0;
+                }
+
+                return isAsc ? valA - valB : valB - valA;
+            } else if (field === 'createdAt') {
+                const dateA = new Date(a.createdAt || 0);
+                const dateB = new Date(b.createdAt || 0);
 
                 valA = !isNaN(dateA.getTime()) ? dateA.getTime() : 0;
                 valB = !isNaN(dateB.getTime()) ? dateB.getTime() : 0;
