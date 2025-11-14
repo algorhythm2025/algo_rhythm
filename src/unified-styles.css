@@ -2234,6 +2234,122 @@ hr[style*="gradient"] {
     }
 }
 
+@media (max-width: 768px) {
+    .start-hero {
+        grid-template-columns: 1fr;
+        row-gap: 24px;
+        padding: 24px 16px 40px;
+        min-height: 100vh;
+    }
+    
+    .theme-apple .hero-left {
+        text-align: center;
+        order: 1;
+    }
+    
+    .theme-apple .hero-right {
+        transform: none;
+        order: 2;
+        display: flex;
+        justify-content: center;
+    }
+    
+    .theme-apple .brand-title {
+        font-size: clamp(32px, 8vw, 56px);
+        margin-bottom: 8px;
+    }
+    
+    .theme-apple .brand-sub {
+        font-size: 13px;
+        margin-bottom: 16px;
+    }
+    
+    .theme-apple .hero-left::after {
+        width: 120px;
+        margin: 12px auto 10px;
+    }
+    
+    .theme-apple .feature-list {
+        gap: 8px;
+        margin-top: 16px;
+    }
+    
+    .theme-apple .feature-list li {
+        font-size: 14px;
+    }
+    
+    .theme-apple .login-card {
+        max-width: 100%;
+        width: 100%;
+        padding: 20px 18px;
+        margin: 0 auto;
+    }
+    
+    .theme-apple .login-title {
+        font-size: 20px;
+        margin-bottom: 12px;
+    }
+    
+    .theme-apple .login-hint {
+        font-size: 13px;
+        line-height: 1.5;
+    }
+    
+    #gisLoginBtn,
+    .gsi-anchor button {
+        width: 100%;
+        max-width: 100%;
+        padding: 12px 20px;
+        font-size: 15px;
+    }
+    
+    .login-footer-links {
+        flex-direction: column;
+        gap: 8px;
+        margin-top: 16px;
+    }
+    
+    .footer-link-separator {
+        display: none;
+    }
+}
+
+@media (max-width: 480px) {
+    .start-hero {
+        padding: 20px 12px 32px;
+    }
+    
+    .theme-apple .brand-title {
+        font-size: clamp(28px, 9vw, 48px);
+    }
+    
+    .theme-apple .brand-sub {
+        font-size: 12px;
+    }
+    
+    .theme-apple .feature-list li {
+        font-size: 13px;
+    }
+    
+    .theme-apple .login-card {
+        padding: 18px 16px;
+    }
+    
+    .theme-apple .login-title {
+        font-size: 18px;
+    }
+    
+    .theme-apple .login-hint {
+        font-size: 12px;
+    }
+    
+    #gisLoginBtn,
+    .gsi-anchor button {
+        font-size: 14px;
+        padding: 10px 16px;
+    }
+}
+
 /* Apple-like 테마 변수 */
 :root {
     --ink-bg-0: #0c0d10;
@@ -2269,8 +2385,9 @@ hr[style*="gradient"] {
     height: 44px;
     padding: 0 clamp(16px,4vw,28px);
     display: grid; 
-    grid-template-columns: 1fr auto 1fr; 
+    grid-template-columns: auto 1fr auto; 
     align-items: center;
+    gap: 8px;
     background: linear-gradient(180deg, rgba(8,10,14,1), rgba(8,10,14,.95));
     backdrop-filter: saturate(180%) blur(12px);
     border-bottom: 1px solid rgba(255,255,255,.04);
@@ -2361,18 +2478,6 @@ hr[style*="gradient"] {
 
 .btn-portal .portal-text {
     display: inline;
-}
-
-@media (max-width: 900px) {
-    .btn-portal .portal-text {
-        display: none;
-    }
-    .btn-portal {
-        width: 32px;
-        height: 32px;
-        padding: 0;
-        justify-content: center;
-    }
 }
 
 /* 로그인 페이지 하단 링크 */
@@ -2838,44 +2943,1528 @@ hr[style*="gradient"] {
 
 /* 모바일 대응 */
 @media (max-width: 900px) {
+    .mac-titlebar.is-minimal {
+        height: auto;
+        min-height: 50px;
+        padding: 8px 8px;
+        grid-template-columns: auto 1fr auto;
+        gap: 6px;
+        align-items: stretch;
+    }
+    
+    .mac-titlebar.is-minimal.is-scrolled {
+        height: auto;
+        min-height: 48px;
+    }
+    
+    .brand-logo {
+        font-size: 16px;
+        padding: 6px 8px;
+        white-space: nowrap;
+    }
+    
     .mac-nav { 
-        gap: 12px; 
+        gap: 4px; 
+        flex-wrap: nowrap;
+        justify-content: flex-start;
+        flex: 1;
+        min-width: 0;
+        max-width: 100%;
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+        padding: 0 4px;
+    }
+    .mac-nav::-webkit-scrollbar {
+        display: none;
     }
     .mac-nav .nav-link { 
-        font-size: 12px; 
-        padding: 6px 8px; 
+        font-size: 11px; 
+        padding: 6px 10px; 
+        min-width: auto;
+        min-height: 36px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        flex-shrink: 0;
+        white-space: nowrap;
+    }
+    .mac-nav .nav-link i {
+        font-size: 14px;
+        flex-shrink: 0;
+    }
+    .mac-nav .nav-link span {
+        display: inline;
+        font-size: 10px;
+        white-space: nowrap;
     }
     .hero-slide {
         grid-template-columns: 1fr !important;
         row-gap: 16px;
         text-align: center;
+        padding: 32px 20px !important;
+    }
+    .hero-visual {
+        order: -1;
+        margin-bottom: 16px;
+    }
+    .hero-content {
+        order: 1;
+    }
+    
+    .hero-visual img {
+        max-width: 100%;
+        height: auto;
+        border-radius: 12px;
     }
     .top-actions {
         gap: 6px;
+        flex-wrap: nowrap;
+        justify-content: flex-end;
+        flex-shrink: 0;
     }
-    .btn-logout .logout-text {
-        display: none;
-    }
-    .btn-logout {
-        width: 32px;
-        height: 32px;
+    .btn-theme-toggle {
+        width: 36px;
+        height: 36px;
+        min-width: 36px;
+        min-height: 36px;
         padding: 0;
+        display: flex;
+        align-items: center;
         justify-content: center;
+    }
+    .btn-theme-toggle svg {
+        width: 18px;
+        height: 18px;
+    }
+    .btn-logout,
+    .btn-portal {
+        min-width: auto;
+        min-height: 36px;
+        padding: 6px 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 3px;
+        font-size: 9px;
+        white-space: nowrap;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+    .btn-logout .logout-text,
+    .btn-portal .portal-text {
+        display: inline;
+        font-size: 9px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 50px;
+    }
+    .btn-logout i,
+    .btn-portal i {
+        font-size: 12px;
+        flex-shrink: 0;
     }
     
     /* 개별 페이지 모바일 대응 */
     .content-section:not(.content-main) {
-        padding: 20px 16px;
+        padding: 16px 12px;
     }
     
     .content-section:not(.content-main) .mac-window {
-        padding: 20px;
-        margin-bottom: 16px;
+        padding: 16px;
+        margin-bottom: 12px;
+        border-radius: 12px;
     }
     
     .content-section:not(.content-main) .mac-window h2 {
-        font-size: 20px;
+        font-size: 18px;
+        margin-bottom: 12px;
+        padding: 12px 16px;
+    }
+    
+    .mac-window-content {
+        padding: 16px;
+    }
+    
+    .mac-content {
+        padding: 16px 12px;
+    }
+    
+    .mac-container {
+        height: calc(100vh - 60px);
+    }
+    
+    .hero-carousel {
+        height: clamp(300px, 45vh, 500px);
+        border-radius: 16px;
         margin-bottom: 16px;
+    }
+    
+    .hero-title {
+        font-size: clamp(24px, 5vw, 36px) !important;
+    }
+    
+    .hero-subtitle {
+        font-size: clamp(14px, 3vw, 18px) !important;
+    }
+    
+    .mac-grid-2 {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+    
+    .mac-card {
+        padding: 24px 20px;
+    }
+    
+    .mac-card h3 {
+        font-size: 1.2rem;
+    }
+    
+    .mac-card p {
+        font-size: 0.9rem;
+    }
+    
+    .file-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .file-item .d-flex {
+        width: 100%;
+        flex-wrap: wrap;
+    }
+    
+    .file-size,
+    .file-modification-date {
+        position: static;
+        width: auto;
+        text-align: left;
+        margin-top: 4px;
+    }
+    
+    .file-actions {
+        margin-top: 8px;
+        width: 100%;
+        justify-content: flex-end;
+        gap: 8px;
+    }
+    
+    .file-actions .download-btn,
+    .file-actions .delete-btn {
+        min-width: 40px;
+        height: 40px;
+        font-size: 14px;
+    }
+    
+    #driveSection .file-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+        padding: 12px;
+    }
+    
+    #driveSection .file-item > .me-3 {
+        align-self: flex-start;
+    }
+    
+    #driveSection .file-item > .flex-grow-1 {
+        width: 100%;
+        order: 1;
+    }
+    
+    #driveSection .file-item > .d-flex.align-items-center {
+        width: 100%;
+        justify-content: flex-end;
+        order: 2;
+        margin-top: 4px;
+        gap: 8px;
+    }
+    
+    #driveSection .file-item .download-btn,
+    #driveSection .file-item .delete-btn {
+        min-width: 40px;
+        height: 40px;
+        font-size: 14px;
+    }
+    
+    .experience-list-item .d-flex {
+        flex-wrap: wrap;
+    }
+    
+    .experience-content {
+        width: 100%;
+        margin-top: 8px;
+    }
+    
+    .experience-actions {
+        width: 100%;
+        justify-content: flex-end;
+        margin-top: 8px;
+    }
+    
+    .drive-view-badge,
+    .drive-path-badge {
+        font-size: 11px;
+        padding: 4px 8px;
+    }
+    
+    .view-mode-selector .btn-group {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .view-mode-selector .btn {
+        width: 100%;
+        margin-bottom: 4px;
+    }
+    
+    .template-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+        padding: 12px;
+    }
+    
+    .pagination-controls {
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+    
+    .pagination-pages {
+        flex-wrap: wrap;
+    }
+    
+    .pagination-pages .btn {
+        min-width: 32px;
+        padding: 4px 8px;
+        font-size: 12px;
+    }
+    
+    .sort-controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        align-items: center;
+    }
+    
+    .sort-select {
+        min-width: 100px;
+        font-size: 12px !important;
+        flex: 0 0 auto;
+    }
+    
+    .sort-order-btn,
+    .refresh-btn {
+        flex: 0 0 auto;
+        min-width: 36px;
+    }
+    
+    #pptMakerSection .mac-window-content .d-flex.justify-content-end {
+        justify-content: flex-start;
+        width: 100%;
+    }
+    
+    #pptMakerSection .mac-window-content .sort-controls {
+        width: 100%;
+        justify-content: flex-start;
+        gap: 6px;
+    }
+    
+    #pptMakerSection .mac-window-content .sort-select {
+        min-width: 100px;
+        font-size: 12px !important;
+    }
+    
+    #pptMakerSection .mac-window-content .sort-order-btn,
+    #pptMakerSection .mac-window-content .refresh-btn {
+        min-width: 36px;
+        height: 36px;
+    }
+    
+    #pptMakerSection .experience-list-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+        padding: 12px;
+    }
+    
+    #pptMakerSection .experience-list-item > .d-flex.align-items-center {
+        width: 100%;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    
+    #pptMakerSection .experience-list-item .form-check {
+        width: 100%;
+        justify-content: flex-end;
+        margin-top: 8px;
+        order: 3;
+    }
+    
+    #pptMakerSection .experience-list-item .experience-image-container {
+        order: 1;
+    }
+    
+    #pptMakerSection .experience-list-item .flex-grow-1 {
+        order: 2;
+        width: 100%;
+    }
+    
+    .image-previews-container .row {
+        margin: 0;
+    }
+    
+    .image-previews-container .col-md-4,
+    .image-previews-container .col-sm-6 {
+        flex: 0 0 100%;
+        max-width: 100%;
+        padding: 0 0 8px 0;
+    }
+    
+    .experience-images .col-6 {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+    
+    .modal-dialog {
+        margin: 0.5rem;
+        max-width: calc(100% - 1rem);
+    }
+    
+    .modal-dialog-centered {
+        min-height: calc(100% - 1rem);
+    }
+    
+    .mac-modal .modal-header,
+    .mac-modal .modal-body,
+    .mac-modal .modal-footer {
+        padding: 16px;
+    }
+    
+    .mac-modal .modal-title {
+        font-size: 18px;
+    }
+    
+    .mac-modal .modal-body .row {
+        flex-direction: column;
+    }
+    
+    .mac-modal .modal-body .col-md-6 {
+        flex: 0 0 100%;
+        max-width: 100%;
+        margin-bottom: 16px;
+    }
+    
+    .modal-dialog.modal-xl {
+        max-width: calc(100% - 1rem);
+    }
+    
+    .modal-dialog.modal-lg {
+        max-width: calc(100% - 1rem);
+    }
+    
+    .carousel-container {
+        height: 250px;
+    }
+    
+    .carousel-container-placeholder {
+        height: 250px;
+    }
+    
+    .image-thumbnail {
+        height: 120px !important;
+    }
+    
+    .theme-color-selector {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    
+    .theme-color-options {
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+    
+    .theme-color-option {
+        width: 36px;
+        height: 36px;
+    }
+    
+    .custom-color-picker {
+        flex-direction: column;
+        gap: 16px;
+    }
+    
+    .color-picker-section {
+        min-width: 100%;
+    }
+    
+    .rgb-slider-group {
+        gap: 8px;
+    }
+    
+    .rgb-input {
+        width: 50px;
+        font-size: 12px;
+    }
+    
+    .hex-input {
+        font-size: 12px;
+    }
+    
+    .image-upload-container {
+        padding: 24px 16px;
+    }
+    
+    .image-upload-text {
+        font-size: 14px;
+    }
+    
+    .image-upload-subtext {
+        font-size: 12px;
+    }
+    
+    .period-container .row {
+        flex-direction: column;
+    }
+    
+    .period-container .col-6 {
+        flex: 0 0 100%;
+        max-width: 100%;
+        margin-bottom: 12px;
+    }
+    
+    .btn-group {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .btn-group .btn {
+        width: 100%;
+        margin-bottom: 8px;
+        margin-right: 0;
+    }
+    
+    .d-flex.justify-content-between {
+        flex-direction: column;
+        gap: 12px;
+        align-items: flex-start;
+    }
+    
+    .d-flex.justify-content-between > h2,
+    .d-flex.justify-content-between > h3,
+    .d-flex.justify-content-between > h4 {
+        width: 100%;
+        margin-bottom: 0;
+        text-align: left;
+    }
+    
+    .d-flex.justify-content-between > div {
+        width: 100%;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: flex-start;
+    }
+    
+    .d-flex.justify-content-end {
+        flex-direction: column;
+        gap: 8px;
+        align-items: flex-start;
+    }
+    
+    .d-flex.justify-content-end > * {
+        width: 100%;
+    }
+    
+    #pptMakerSection .d-flex.justify-content-between > div {
+        flex-wrap: wrap;
+        justify-content: flex-start;
+    }
+    
+    #pptMakerSection .d-flex.justify-content-between > div > button {
+        flex: 1 1 auto;
+        min-width: calc(50% - 4px);
+    }
+    
+    #historyPageSection .d-flex.justify-content-end {
+        flex-direction: row;
+        justify-content: flex-end;
+        gap: 8px;
+    }
+    
+    #historyPageSection .d-flex.justify-content-end > button {
+        flex: 0 0 auto;
+        min-width: auto;
+    }
+    
+    #myPageSection .d-flex.justify-content-between {
+        flex-direction: column;
+        gap: 12px;
+        align-items: flex-start;
+    }
+    
+    #myPageSection .d-flex.justify-content-between > h2 {
+        width: 100%;
+        margin-bottom: 0;
+        text-align: left;
+    }
+    
+    #myPageSection .d-flex.justify-content-between > div {
+        width: 100%;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: flex-start;
+        align-items: center;
+    }
+    
+    #myPageSection .d-flex.justify-content-between > div > .d-flex.align-items-center {
+        width: 100% !important;
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        gap: 8px !important;
+        justify-content: flex-start !important;
+        align-items: center !important;
+        overflow: visible !important;
+    }
+    
+    #myPageSection .d-flex.justify-content-between > div > .d-flex.align-items-center.gap-2 {
+        gap: 8px !important;
+    }
+    
+    #myPageSection .d-flex.justify-content-between .sort-controls {
+        display: inline-flex !important;
+        flex-wrap: nowrap !important;
+        gap: 6px !important;
+        align-items: center !important;
+        flex-shrink: 0 !important;
+        margin: 0 !important;
+        margin-right: 8px !important;
+        padding: 0 !important;
+        position: relative !important;
+        z-index: 1 !important;
+        width: auto !important;
+        min-width: auto !important;
+        max-width: none !important;
+    }
+    
+    #myPageSection .d-flex.justify-content-between .sort-controls .sort-select {
+        flex-shrink: 0 !important;
+        margin: 0 !important;
+        margin-right: 6px !important;
+        padding: 6px 30px 6px 12px !important;
+        min-width: 100px !important;
+        max-width: 150px !important;
+        width: auto !important;
+        box-sizing: border-box !important;
+    }
+    
+    #myPageSection .d-flex.justify-content-between .sort-controls .sort-order-btn {
+        flex-shrink: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        min-width: 36px !important;
+        max-width: 36px !important;
+        width: 36px !important;
+        height: 36px !important;
+        box-sizing: border-box !important;
+    }
+    
+    #myPageSection .d-flex.justify-content-between .sort-select {
+        flex-shrink: 0 !important;
+        margin: 0 !important;
+        margin-right: 6px !important;
+        padding: 6px 30px 6px 12px !important;
+        min-width: 100px !important;
+        max-width: 150px !important;
+        width: auto !important;
+        box-sizing: border-box !important;
+    }
+    
+    #myPageSection .d-flex.justify-content-between .sort-order-btn {
+        flex-shrink: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        min-width: 36px !important;
+        max-width: 36px !important;
+        width: 36px !important;
+        height: 36px !important;
+        box-sizing: border-box !important;
+    }
+    
+    #myPageSection .d-flex.justify-content-between .refresh-btn {
+        flex-shrink: 0 !important;
+        margin: 0 !important;
+        margin-left: 0 !important;
+        padding: 0 !important;
+        min-width: 36px !important;
+        max-width: 36px !important;
+        width: 36px !important;
+        height: 36px !important;
+        box-sizing: border-box !important;
+        position: relative !important;
+        z-index: 1 !important;
+    }
+    
+    #myPageSection .file-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 12px;
+    }
+    
+    #myPageSection .file-item > .me-3 {
+        align-self: flex-start;
+    }
+    
+    #myPageSection .file-item > .flex-grow-1 {
+        width: 100%;
+        order: 1;
+    }
+    
+    #myPageSection .file-item > .d-flex.align-items-center {
+        width: 100%;
+        justify-content: flex-end;
+        order: 2;
+        margin-top: 4px;
+    }
+    
+    #myPageSection .file-item .download-btn,
+    #myPageSection .file-item .delete-btn {
+        min-width: 40px;
+        height: 40px;
+        font-size: 14px;
+    }
+    
+    #driveSection .d-flex.justify-content-between {
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    #driveSection .d-flex.justify-content-between > div:first-child {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    #driveSection .d-flex.justify-content-between > div:last-child {
+        width: 100%;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: flex-start;
+    }
+    
+    #templateSelection h2 {
+        text-align: left;
+        margin-bottom: 16px;
+    }
+    
+    .container-xl {
+        padding: 0 12px;
+    }
+    
+    .content-main {
+        padding: 16px 12px;
+    }
+    
+    .hero-arrow {
+        width: 32px;
+        height: 32px;
+        font-size: 20px;
+    }
+    
+    .hero-dots {
+        bottom: 12px;
+        gap: 6px;
+    }
+    
+    .hero-dots .dot {
+        width: 6px;
+        height: 6px;
+    }
+    
+    .hero-dots .dot.active {
+        width: 16px;
+    }
+    
+    .loading-progress-container {
+        max-width: 100%;
+        padding: 0 16px;
+    }
+    
+    .loading-log {
+        max-width: 100%;
+        padding: 0 16px;
+    }
+    
+    .empty-state {
+        padding: 32px 16px;
+    }
+    
+    .empty-state i {
+        font-size: 2rem;
+    }
+    
+    .empty-state p {
+        font-size: 1rem;
+    }
+    
+    .experience-image-wrapper {
+        width: 40px;
+        height: 40px;
+    }
+    
+    .experience-image-wrapper.ppt-size {
+        width: 50px;
+        height: 50px;
+    }
+    
+    .experience-no-image {
+        width: 40px;
+        height: 40px;
+    }
+    
+    .experience-no-image.ppt-size {
+        width: 50px;
+        height: 50px;
+    }
+    
+    .experience-image-count {
+        font-size: 10px;
+        padding: 2px 4px;
+    }
+    
+    .form-control,
+    .form-select {
+        font-size: 14px;
+        padding: 8px 12px;
+    }
+    
+    .form-label {
+        font-size: 14px;
+        margin-bottom: 6px;
+    }
+    
+    textarea.form-control {
+        font-size: 14px;
+        padding: 8px 12px;
+    }
+    
+    .btn {
+        font-size: 14px;
+        padding: 8px 16px;
+    }
+    
+    .btn-sm {
+        font-size: 12px;
+        padding: 6px 12px;
+    }
+    
+    h2, h3, h4, h5, h6 {
+        word-break: break-word;
+    }
+    
+    .file-name {
+        word-break: break-word;
+        font-size: 14px;
+    }
+    
+    .folder-name {
+        word-break: break-word;
+        font-size: 14px;
+    }
+    
+    .experience-description {
+        font-size: 13px;
+        line-height: 1.4;
+    }
+    
+    .list-group-item {
+        padding: 12px 16px;
+    }
+    
+    .list-group-item h6 {
+        font-size: 15px;
+    }
+    
+    .list-group-item small {
+        font-size: 12px;
+    }
+    
+    .drive-status {
+        margin-bottom: 16px;
+    }
+    
+    .status-indicator {
+        padding: 10px 12px;
+        font-size: 13px;
+    }
+    
+    .glass-card {
+        padding: 16px;
+    }
+    
+    .glass-card h4 {
+        font-size: 16px;
+    }
+    
+    .alert {
+        padding: 12px 16px;
+        font-size: 13px;
+    }
+    
+    .gradient-divider {
+        margin: 16px 0;
+    }
+    
+    .simple-divider {
+        margin: 12px 0;
+    }
+    
+    .drive-files {
+        margin-top: 16px;
+    }
+    
+    .drive-files h4 {
+        font-size: 16px;
+    }
+    
+    .file-list {
+        margin-top: 12px;
+    }
+    
+    .folder-item {
+        padding: 12px 16px;
+    }
+    
+    .folder-icon {
+        font-size: 18px;
+    }
+    
+    .editor-toolbar {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .editor-toolbar .btn {
+        width: 100%;
+    }
+    
+    .editor-canvas {
+        margin-top: 16px;
+    }
+    
+    .editor-slide {
+        margin-bottom: 16px;
+        padding: 16px;
+    }
+    
+    .slide-header {
+        font-size: 14px;
+        margin-bottom: 12px;
+    }
+    
+    .text-box {
+        padding: 10px;
+    }
+    
+    .text-controls {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .text-controls select,
+    .text-controls input {
+        width: 100%;
+    }
+    
+    .login-footer-links {
+        flex-direction: column;
+        gap: 8px;
+        align-items: center;
+    }
+    
+    .footer-link-separator {
+        display: none;
+    }
+    
+    .main-footer {
+        padding: 20px 16px;
+    }
+    
+    .footer-links {
+        flex-direction: column;
+        gap: 8px;
+        align-items: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .mac-titlebar.is-minimal {
+        padding: 6px 4px;
+        min-height: 48px;
+        gap: 4px;
+    }
+    
+    .brand-logo {
+        font-size: 14px;
+        padding: 4px 6px;
+    }
+    
+    .mac-nav {
+        gap: 3px;
+        padding: 0 2px;
+    }
+    
+    .mac-nav .nav-link {
+        font-size: 10px;
+        padding: 5px 8px;
+        min-width: auto;
+        min-height: 32px;
+    }
+    
+    .mac-nav .nav-link i {
+        font-size: 13px;
+    }
+    
+    .mac-nav .nav-link span {
+        font-size: 9px;
+    }
+    
+    .top-actions {
+        gap: 3px;
+        flex-wrap: nowrap;
+        flex-shrink: 0;
+        max-width: 50%;
+    }
+    
+    .btn-theme-toggle {
+        width: 32px;
+        height: 32px;
+        min-width: 32px;
+        min-height: 32px;
+        flex-shrink: 0;
+    }
+    
+    .btn-theme-toggle svg {
+        width: 16px;
+        height: 16px;
+    }
+    
+    .btn-logout,
+    .btn-portal {
+        min-width: auto;
+        min-height: 32px;
+        padding: 5px 6px;
+        font-size: 8px;
+        gap: 2px;
+        max-width: 60px;
+    }
+    
+    .btn-logout .logout-text,
+    .btn-portal .portal-text {
+        display: inline;
+        font-size: 8px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 40px;
+    }
+    
+    .btn-logout i,
+    .btn-portal i {
+        font-size: 11px;
+        flex-shrink: 0;
+    }
+    
+    .hero-carousel {
+        height: clamp(250px, 40vh, 400px);
+    }
+    
+    .hero-title {
+        font-size: clamp(20px, 6vw, 28px) !important;
+    }
+    
+    .hero-subtitle {
+        font-size: clamp(12px, 3.5vw, 16px) !important;
+    }
+    
+    .mac-card {
+        padding: 20px 16px;
+    }
+    
+    .mac-card i {
+        font-size: 2.2rem;
+    }
+    
+    .mac-card h3 {
+        font-size: 1.1rem;
+    }
+    
+    .mac-card p {
+        font-size: 0.85rem;
+    }
+    
+    .modal-dialog {
+        margin: 0.25rem;
+        max-width: calc(100% - 0.5rem);
+    }
+    
+    .carousel-container {
+        height: 200px;
+    }
+    
+    .carousel-container-placeholder {
+        height: 200px;
+    }
+    
+    .theme-color-option {
+        width: 32px;
+        height: 32px;
+    }
+    
+    .btn {
+        font-size: 13px;
+        padding: 7px 14px;
+    }
+    
+    .btn-sm {
+        font-size: 11px;
+        padding: 5px 10px;
+    }
+    
+    .form-control,
+    .form-select {
+        font-size: 13px;
+        padding: 7px 10px;
+    }
+    
+    .content-section:not(.content-main) {
+        padding: 12px 8px;
+    }
+    
+    .mac-window-content {
+        padding: 12px;
+    }
+    
+    .mac-window h2 {
+        font-size: 16px;
+        padding: 12px;
+    }
+    
+    .mac-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+    
+    #myPageSection .mac-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .modal-dialog.modal-xl .modal-body img {
+        max-height: 60vh;
+    }
+    
+    .experience-modal-no-image {
+        padding: 1.5rem;
+    }
+    
+    .experience-modal-no-image-icon {
+        font-size: 2rem;
+    }
+    
+    .experience-modal-no-image-text {
+        font-size: 0.9rem;
+    }
+    
+    .drive-view-badge,
+    .drive-path-badge {
+        font-size: 10px;
+        padding: 3px 6px;
+        word-break: break-all;
+    }
+    
+    .drive-path-badge {
+        display: block;
+        margin-bottom: 4px;
+    }
+    
+    .d-flex.justify-content-between {
+        flex-direction: column;
+        gap: 10px;
+        align-items: flex-start;
+    }
+    
+    .d-flex.justify-content-between > h2,
+    .d-flex.justify-content-between > h3,
+    .d-flex.justify-content-between > h4 {
+        width: 100%;
+        margin-bottom: 0;
+        text-align: left;
+        font-size: 16px;
+    }
+    
+    .d-flex.justify-content-between > div {
+        width: 100%;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        justify-content: flex-start;
+    }
+    
+    .d-flex.justify-content-end {
+        flex-direction: row;
+        gap: 6px;
+        justify-content: flex-end;
+        flex-wrap: wrap;
+    }
+    
+    .d-flex.justify-content-end > * {
+        flex: 0 0 auto;
+        min-width: auto;
+    }
+    
+    #pptMakerSection .d-flex.justify-content-between > div > button {
+        flex: 1 1 calc(50% - 3px);
+        min-width: 0;
+        font-size: 11px;
+        padding: 5px 8px;
+    }
+    
+    #historyPageSection .d-flex.justify-content-end > button {
+        flex: 1 1 calc(50% - 3px);
+        min-width: 0;
+        font-size: 11px;
+        padding: 5px 8px;
+    }
+    
+    #myPageSection .d-flex.justify-content-between > div {
+        gap: 6px;
+    }
+    
+    #myPageSection .d-flex.justify-content-between > div > .d-flex.align-items-center {
+        width: 100% !important;
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        gap: 8px !important;
+        justify-content: flex-start !important;
+        align-items: center !important;
+        overflow: visible !important;
+    }
+    
+    #myPageSection .d-flex.justify-content-between > div > .d-flex.align-items-center.gap-2 {
+        gap: 8px !important;
+    }
+    
+    #myPageSection .d-flex.justify-content-between .sort-controls {
+        display: inline-flex !important;
+        flex-wrap: nowrap !important;
+        gap: 6px !important;
+        align-items: center !important;
+        flex-shrink: 0 !important;
+        margin: 0 !important;
+        margin-right: 8px !important;
+        padding: 0 !important;
+        position: relative !important;
+        z-index: 1 !important;
+        width: auto !important;
+        min-width: auto !important;
+        max-width: none !important;
+    }
+    
+    #myPageSection .d-flex.justify-content-between .sort-controls .sort-select {
+        flex-shrink: 0 !important;
+        margin: 0 !important;
+        margin-right: 6px !important;
+        padding: 6px 30px 6px 12px !important;
+        min-width: 100px !important;
+        max-width: 150px !important;
+        width: auto !important;
+        font-size: 11px !important;
+        box-sizing: border-box !important;
+    }
+    
+    #myPageSection .d-flex.justify-content-between .sort-controls .sort-order-btn {
+        flex-shrink: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        min-width: 36px !important;
+        max-width: 36px !important;
+        width: 36px !important;
+        height: 36px !important;
+        font-size: 13px !important;
+        box-sizing: border-box !important;
+    }
+    
+    #myPageSection .d-flex.justify-content-between .sort-select {
+        flex-shrink: 0 !important;
+        margin: 0 !important;
+        margin-right: 6px !important;
+        padding: 6px 30px 6px 12px !important;
+        min-width: 100px !important;
+        max-width: 150px !important;
+        width: auto !important;
+        font-size: 11px !important;
+        box-sizing: border-box !important;
+    }
+    
+    #myPageSection .d-flex.justify-content-between .sort-order-btn {
+        flex-shrink: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        min-width: 36px !important;
+        max-width: 36px !important;
+        width: 36px !important;
+        height: 36px !important;
+        font-size: 13px !important;
+        box-sizing: border-box !important;
+    }
+    
+    #myPageSection .d-flex.justify-content-between .refresh-btn {
+        flex-shrink: 0 !important;
+        margin: 0 !important;
+        margin-left: 0 !important;
+        padding: 0 !important;
+        min-width: 36px !important;
+        max-width: 36px !important;
+        width: 36px !important;
+        height: 36px !important;
+        font-size: 13px !important;
+        box-sizing: border-box !important;
+        position: relative !important;
+        z-index: 1 !important;
+    }
+    
+    #myPageSection .file-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+        padding: 10px;
+    }
+    
+    #myPageSection .file-item > .me-3 {
+        align-self: flex-start;
+    }
+    
+    #myPageSection .file-item > .flex-grow-1 {
+        width: 100%;
+        order: 1;
+    }
+    
+    #myPageSection .file-item > .d-flex.align-items-center {
+        width: 100%;
+        justify-content: flex-end;
+        order: 2;
+        margin-top: 4px;
+        gap: 6px;
+    }
+    
+    #myPageSection .file-item .download-btn,
+    #myPageSection .file-item .delete-btn {
+        min-width: 36px;
+        height: 36px;
+        font-size: 13px;
+    }
+    
+    #pptMakerSection .mac-window-content .d-flex.justify-content-end {
+        justify-content: flex-start;
+        width: 100%;
+    }
+    
+    #pptMakerSection .mac-window-content .sort-controls {
+        width: 100%;
+        justify-content: flex-start;
+        gap: 6px;
+    }
+    
+    #pptMakerSection .mac-window-content .sort-select {
+        min-width: 100px;
+        font-size: 11px !important;
+    }
+    
+    #pptMakerSection .mac-window-content .sort-order-btn,
+    #pptMakerSection .mac-window-content .refresh-btn {
+        min-width: 36px;
+        height: 36px;
+        font-size: 13px;
+        padding: 0;
+    }
+    
+    #pptMakerSection .experience-list-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+        padding: 10px;
+    }
+    
+    #pptMakerSection .experience-list-item > .d-flex.align-items-center {
+        width: 100%;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+    
+    #pptMakerSection .experience-list-item .form-check {
+        width: 100%;
+        justify-content: flex-end;
+        margin-top: 8px;
+        order: 3;
+    }
+    
+    #pptMakerSection .experience-list-item .experience-image-container {
+        order: 1;
+    }
+    
+    #pptMakerSection .experience-list-item .flex-grow-1 {
+        order: 2;
+        width: 100%;
+    }
+    
+    #driveSection .file-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+        padding: 10px;
+    }
+    
+    #driveSection .file-item > .me-3 {
+        align-self: flex-start;
+    }
+    
+    #driveSection .file-item > .flex-grow-1 {
+        width: 100%;
+        order: 1;
+    }
+    
+    #driveSection .file-item > .d-flex.align-items-center {
+        width: 100%;
+        justify-content: flex-end;
+        order: 2;
+        margin-top: 4px;
+        gap: 6px;
+    }
+    
+    #driveSection .file-item .download-btn,
+    #driveSection .file-item .delete-btn {
+        min-width: 36px;
+        height: 36px;
+        font-size: 13px;
+    }
+    
+    #driveSection .d-flex.justify-content-between {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    
+    #driveSection .d-flex.justify-content-between > div:first-child {
+        width: 100%;
+    }
+    
+    #driveSection .d-flex.justify-content-between > div:last-child {
+        width: 100%;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        justify-content: flex-start;
+    }
+    
+    #templateSelection h2 {
+        font-size: 16px;
+        text-align: left;
+        margin-bottom: 12px;
+    }
+    
+    .file-item .d-flex.align-items-center {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    
+    .file-item .flex-grow-1 {
+        min-width: 0;
+        flex: 1 1 100%;
+    }
+    
+    .folder-item .d-flex.align-items-center {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    
+    .folder-item .flex-grow-1 {
+        min-width: 0;
+        flex: 1 1 100%;
+    }
+    
+    .glass-card .d-flex.justify-content-between {
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    .glass-card .d-flex.justify-content-between > div {
+        width: 100%;
+    }
+    
+    .view-mode-selector .d-flex.justify-content-between {
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    .view-mode-selector .d-flex.justify-content-between > h4 {
+        margin-bottom: 0;
+    }
+    
+    .view-mode-selector .d-flex.justify-content-between > .btn-group {
+        width: 100%;
+    }
+    
+    #pptMakerSection .d-flex.justify-content-between {
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    #pptMakerSection .d-flex.justify-content-between > h2 {
+        margin-bottom: 0;
+    }
+    
+    #pptMakerSection .d-flex.justify-content-between > div {
+        width: 100%;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    
+    #pptMakerSection .d-flex.justify-content-between > div > button {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+    
+    #templateSelection .mac-content {
+        padding: 16px 12px;
+    }
+    
+    #templateSelection h2 {
+        font-size: 18px;
+        margin-bottom: 16px;
+    }
+    
+    .editor-slide .slide-body {
+        padding: 12px;
+    }
+    
+    .text-box {
+        margin-bottom: 12px;
+    }
+    
+    .text-controls {
+        margin-top: 8px;
     }
 }
 

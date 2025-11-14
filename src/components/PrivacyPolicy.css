@@ -149,25 +149,149 @@
 }
 
 @media (max-width: 768px) {
+  .policy-page {
+    padding: 20px 12px;
+  }
+  
   .policy-container {
     padding: 24px 20px;
+    border-radius: 16px;
+  }
+  
+  .policy-header {
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+  }
+  
+  .policy-back-btn {
+    font-size: 13px;
+    padding: 8px 14px;
+    margin-bottom: 16px;
   }
   
   .policy-header h1 {
     font-size: 24px;
   }
   
+  .policy-updated {
+    font-size: 13px;
+  }
+  
+  .policy-content {
+    line-height: 1.7;
+  }
+  
+  .policy-content section {
+    margin-bottom: 32px;
+  }
+  
   .policy-content h2 {
     font-size: 20px;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
   }
   
   .policy-content h3 {
     font-size: 16px;
+    margin: 16px 0 10px 0;
   }
   
-  .policy-content p,
+  .policy-content p {
+    font-size: 14px;
+    margin-bottom: 12px;
+  }
+  
   .policy-content ul {
     font-size: 14px;
+    padding-left: 20px;
+    margin: 12px 0;
+  }
+  
+  .policy-content li {
+    margin-bottom: 6px;
+  }
+  
+  .contact-info {
+    padding: 16px;
+    margin-top: 12px;
+  }
+  
+  .contact-info p {
+    font-size: 14px;
+  }
+  
+  .policy-footer {
+    margin-top: 32px;
+    padding-top: 24px;
+  }
+}
+
+@media (max-width: 480px) {
+  .policy-page {
+    padding: 16px 8px;
+  }
+  
+  .policy-container {
+    padding: 20px 16px;
+    border-radius: 12px;
+  }
+  
+  .policy-header {
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+  }
+  
+  .policy-back-btn {
+    font-size: 12px;
+    padding: 7px 12px;
+    margin-bottom: 12px;
+  }
+  
+  .policy-header h1 {
+    font-size: 20px;
+  }
+  
+  .policy-updated {
+    font-size: 12px;
+  }
+  
+  .policy-content section {
+    margin-bottom: 24px;
+  }
+  
+  .policy-content h2 {
+    font-size: 18px;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+  }
+  
+  .policy-content h3 {
+    font-size: 15px;
+    margin: 12px 0 8px 0;
+  }
+  
+  .policy-content p {
+    font-size: 13px;
+    margin-bottom: 10px;
+  }
+  
+  .policy-content ul {
+    font-size: 13px;
+    padding-left: 18px;
+    margin: 10px 0;
+  }
+  
+  .contact-info {
+    padding: 12px;
+  }
+  
+  .contact-info p {
+    font-size: 13px;
+  }
+  
+  .policy-footer {
+    margin-top: 24px;
+    padding-top: 20px;
   }
 }
 
