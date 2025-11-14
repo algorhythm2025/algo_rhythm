@@ -166,6 +166,11 @@ export default function PrivacyPolicy({ onBack }) {
             </p>
           </section>
         </div>
+        <footer className="policy-footer">
+          <div className="footer-content">
+            <p className="footer-copyright">© 2025 Portra. All rights reserved.</p>
+          </div>
+        </footer>
       </div>
     </div>
   );

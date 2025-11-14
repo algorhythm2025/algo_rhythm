@@ -95,7 +95,9 @@ function useAppLogic()
     const [selectedExperience, setSelectedExperience] = useState(null); // 선택된 이력
     const [showTemplateModal, setShowTemplateModal] = useState(false); // 템플릿 모달 표시 상태
     const [selectedTemplateForModal, setSelectedTemplateForModal] = useState(null); // 모달에서 선택된 템플릿
-    const [selectedThemeColor, setSelectedThemeColor] = useState('light'); // 선택된 테마 색상 (light/dark)
+    const [selectedThemeColor, setSelectedThemeColor] = useState('light');
+    const [customBackgroundColor, setCustomBackgroundColor] = useState(null);
+    const [customTextColor, setCustomTextColor] = useState(null);
     const [showExperienceModal, setShowExperienceModal] = useState(false); // 이력 상세 모달 표시 여부
     const [accessToken, setAccessToken] = useState('');
     const [slides, setSlides] = useState([]);
@@ -121,6 +123,10 @@ function useAppLogic()
     const [showTermsOfService, setShowTermsOfService] = useState(() => {
       return window.location.pathname === '/terms-of-service.html';
     }); // 사용자 약관 표시 여부
+    const [isDarkMode, setIsDarkMode] = useState(() => {
+      const saved = localStorage.getItem('themeMode');
+      return saved ? saved === 'dark' : true;
+    });
     const [pptHistoryCurrentPage, setPptHistoryCurrentPage] = useState(1);
     const [experienceCurrentPage, setExperienceCurrentPage] = useState(1);
     const [pptMakerExperienceCurrentPage, setPptMakerExperienceCurrentPage] = useState(1);
@@ -480,7 +486,9 @@ function useAppLogic()
         setAccessToken,
         accessToken,
         selectedThemeColor,
-        selectedBgImage
+        selectedBgImage,
+        customBackgroundColor,
+        customTextColor
       });
     }
 
@@ -515,9 +523,18 @@ function useAppLogic()
       setSelectedBgImage(null);
     }
 
-    // 테마 색상 선택 함수
     function handleThemeColorSelect(themeColor) {
       setSelectedThemeColor(themeColor);
+      if (themeColor !== 'custom') {
+        setCustomBackgroundColor(null);
+        setCustomTextColor(null);
+      }
+    }
+
+    function handleCustomColorSelect(backgroundColor, textColor) {
+      setSelectedThemeColor('custom');
+      setCustomBackgroundColor(backgroundColor);
+      setCustomTextColor(textColor);
     }
 
     // 배경 이미지 핸들러
@@ -871,6 +888,19 @@ function useAppLogic()
       return () => window.removeEventListener('popstate', handlePopState);
     }, [setShowPrivacyPolicy, setShowTermsOfService]);
 
+    // 테마 모드 토글 함수
+    function toggleTheme() {
+      const newMode = !isDarkMode;
+      setIsDarkMode(newMode);
+      localStorage.setItem('themeMode', newMode ? 'dark' : 'light');
+      document.body.setAttribute('data-theme', newMode ? 'dark' : 'light');
+    }
+
+    // 테마 모드에 따라 body 클래스 적용
+    useEffect(() => {
+      document.body.setAttribute('data-theme', isDarkMode ? 'dark' : 'light');
+    }, [isDarkMode]);
+
     // 모든 상태와 함수들을 반환
     return {
       // 상태들
@@ -948,6 +978,9 @@ function useAppLogic()
       handleTemplateCancel: () => uiLogic.handleTemplateCancel(setShowTemplateModal, setSelectedTemplateForModal),
       handleTemplateUse,
       handleThemeColorSelect,
+      handleCustomColorSelect,
+      customBackgroundColor,
+      customTextColor,
       closeModal: () => {
         uiLogic.closeModal(setShowModal, setForm, setSelectedImages, setImagePreviews, setEditingIndex, setOriginalPeriod);
         setExistingImageUrls([]);
@@ -994,6 +1027,8 @@ function useAppLogic()
       showTermsOfService,
       setShowPrivacyPolicy,
       setShowTermsOfService,
+      isDarkMode,
+      toggleTheme,
       // 페이지네이션 함수들
       getPaginatedItems: (items, currentPage, itemsPerPage) => uiLogic.getPaginatedItems(items, currentPage, itemsPerPage),
       getTotalPages: (items, itemsPerPage) => uiLogic.getTotalPages(items, itemsPerPage),

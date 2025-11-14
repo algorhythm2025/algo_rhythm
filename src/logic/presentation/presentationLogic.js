@@ -119,10 +119,9 @@ export function usePresentationLogic() {
     }
 
     // 첫 슬라이드에 제목/부제목 설정 (레이아웃 변경 없이)
-    async function makeTitleAndBody(presId, slideId, token, title, subtitle, selectedThemeColor = 'light') {
+    async function makeTitleAndBody(presId, slideId, token, title, subtitle, selectedThemeColor = 'light', customBackgroundColor = null, customTextColor = null) {
         try {
-            // 테마 색상 스타일 가져오기
-            const themeStyles = getThemeStyles(selectedThemeColor);
+            const themeStyles = getThemeStyles(selectedThemeColor, customBackgroundColor, customTextColor);
             
             // 슬라이드 배경색 설정
             await setSlideBackground(presId, slideId, themeStyles.backgroundColor, token);
@@ -619,7 +618,25 @@ export function usePresentationLogic() {
     }
 
     // 테마 색상에 따른 스타일 반환 함수
-    function getThemeStyles(selectedThemeColor) {
+    function getThemeStyles(selectedThemeColor, customBackgroundColor = null, customTextColor = null) {
+        if (selectedThemeColor === 'custom' && customBackgroundColor && customTextColor) {
+            const hexToRgb = (hex) => {
+                const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+                return result ? {
+                    red: parseInt(result[1], 16) / 255,
+                    green: parseInt(result[2], 16) / 255,
+                    blue: parseInt(result[3], 16) / 255
+                } : null;
+            };
+            const bgRgb = hexToRgb(customBackgroundColor);
+            const textRgb = hexToRgb(customTextColor);
+            if (bgRgb && textRgb) {
+                return {
+                    backgroundColor: { rgbColor: bgRgb },
+                    textColor: { opaqueColor: { rgbColor: textRgb } }
+                };
+            }
+        }
         if (selectedThemeColor === 'navy-white') {
             return {
                 backgroundColor: { rgbColor: { red: 0.098, green: 0.125, blue: 0.165 } }, // 네이비
@@ -852,8 +869,8 @@ export function usePresentationLogic() {
         await addExperienceTextToSlideBatch(presId, slideId, exp, currentToken, themeStyles);
     }
 
-    async function createBasicTemplateSlides(presId, currentToken, slidesArr, selectedExperiences, updatePptProgress, calculateSlideProgress, selectedThemeColor = 'light') {
-        const themeStyles = getThemeStyles(selectedThemeColor);
+    async function createBasicTemplateSlides(presId, currentToken, slidesArr, selectedExperiences, updatePptProgress, calculateSlideProgress, selectedThemeColor = 'light', customBackgroundColor = null, customTextColor = null) {
+        const themeStyles = getThemeStyles(selectedThemeColor, customBackgroundColor, customTextColor);
         
         let idx = 1;
         const allRequests = [];
@@ -1065,8 +1082,8 @@ export function usePresentationLogic() {
         ];
     }
 
-    async function createTimelineTemplateSlides(presId, currentToken, slidesArr, selectedExperiences, updatePptProgress, calculateSlideProgress, selectedThemeColor = 'light') {
-        const themeStyles = getThemeStyles(selectedThemeColor);
+    async function createTimelineTemplateSlides(presId, currentToken, slidesArr, selectedExperiences, updatePptProgress, calculateSlideProgress, selectedThemeColor = 'light', customBackgroundColor = null, customTextColor = null) {
+        const themeStyles = getThemeStyles(selectedThemeColor, customBackgroundColor, customTextColor);
         const sortedExperiences = [...selectedExperiences].sort((a, b) => {
             const dateA = new Date(a.period.split(' - ')[0] || a.period.split('~')[0] || a.period);
             const dateB = new Date(b.period.split(' - ')[0] || b.period.split('~')[0] || b.period);
@@ -1277,8 +1294,8 @@ export function usePresentationLogic() {
         updatePptProgress(80, '타임라인 템플릿 슬라이드 생성 완료');
     }
 
-    async function createPhotoTemplateSlides(presId, currentToken, slidesArr, selectedExperiences, updatePptProgress, calculateSlideProgress, selectedThemeColor = 'light') {
-        const themeStyles = getThemeStyles(selectedThemeColor);
+    async function createPhotoTemplateSlides(presId, currentToken, slidesArr, selectedExperiences, updatePptProgress, calculateSlideProgress, selectedThemeColor = 'light', customBackgroundColor = null, customTextColor = null) {
+        const themeStyles = getThemeStyles(selectedThemeColor, customBackgroundColor, customTextColor);
         const experiencesWithImages = selectedExperiences.filter(exp => exp.imageUrls && exp.imageUrls.length > 0);
         
         let idx = 1;
@@ -1596,7 +1613,9 @@ export function usePresentationLogic() {
         setAccessToken,
         accessToken,
         selectedThemeColor = 'light',
-        selectedBgImage = null
+        selectedBgImage = null,
+        customBackgroundColor = null,
+        customTextColor = null
     }) {
         const title = prompt('슬라이드 제목을 입력하세요:', '나의 포트폴리오');
         if (!title) {
@@ -1710,7 +1729,7 @@ export function usePresentationLogic() {
                     console.warn('사용자 이름 가져오기 실패, 기본값 사용:', error);
                 }
                 
-                await makeTitleAndBody(presId, data.slides[0].objectId, currentToken, cleanTitle, userName, selectedThemeColor);
+                await makeTitleAndBody(presId, data.slides[0].objectId, currentToken, cleanTitle, userName, selectedThemeColor, customBackgroundColor, customTextColor);
             }
 
             // 3) 템플릿별 슬라이드 추가 (batchUpdate로 한 번에 생성)
@@ -1768,11 +1787,11 @@ export function usePresentationLogic() {
 
             // 5) 템플릿별 슬라이드 내용 추가
             if (templateName === 'basic') {
-                await createBasicTemplateSlides(presId, currentToken, slidesArr, selectedExperiences, updatePptProgress, calculateSlideProgress, selectedThemeColor);
+                await createBasicTemplateSlides(presId, currentToken, slidesArr, selectedExperiences, updatePptProgress, calculateSlideProgress, selectedThemeColor, customBackgroundColor, customTextColor);
             } else if (templateName === 'timeline') {
-                await createTimelineTemplateSlides(presId, currentToken, slidesArr, selectedExperiences, updatePptProgress, calculateSlideProgress, selectedThemeColor);
+                await createTimelineTemplateSlides(presId, currentToken, slidesArr, selectedExperiences, updatePptProgress, calculateSlideProgress, selectedThemeColor, customBackgroundColor, customTextColor);
             } else if (templateName === 'photo') {
-                await createPhotoTemplateSlides(presId, currentToken, slidesArr, selectedExperiences, updatePptProgress, calculateSlideProgress, selectedThemeColor);
+                await createPhotoTemplateSlides(presId, currentToken, slidesArr, selectedExperiences, updatePptProgress, calculateSlideProgress, selectedThemeColor, customBackgroundColor, customTextColor);
             }
 
             // 5-1) 배경 이미지가 있으면 드라이브에 업로드하고 모든 슬라이드에 적용
