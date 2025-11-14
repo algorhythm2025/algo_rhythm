@@ -154,6 +154,11 @@ export default function TermsOfService({ onBack }) {
             </ol>
           </section>
         </div>
+        <footer className="terms-footer">
+          <div className="footer-content">
+            <p className="footer-copyright">© 2025 Portra. All rights reserved.</p>
+          </div>
+        </footer>
       </div>
     </div>
   );

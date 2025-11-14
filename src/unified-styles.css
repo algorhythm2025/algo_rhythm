@@ -1,13 +1,50 @@
+:root {
+    --bg-primary: linear-gradient(180deg, rgba(8,10,14,1), rgba(8,10,14,0.95));
+    --bg-secondary: rgba(20, 20, 20, 0.95);
+    --bg-card: rgba(30, 30, 30, 0.95);
+    --bg-card-hover: rgba(40, 40, 40, 0.95);
+    --bg-input: rgba(255, 255, 255, 0.05);
+    --bg-input-focus: rgba(255, 255, 255, 0.1);
+    --bg-button: rgba(255, 255, 255, 0.1);
+    --bg-button-hover: rgba(255, 255, 255, 0.2);
+    --text-primary: #fff;
+    --text-secondary: rgba(255, 255, 255, 0.7);
+    --text-muted: rgba(255, 255, 255, 0.4);
+    --border-color: rgba(255, 255, 255, 0.1);
+    --border-color-hover: rgba(255, 255, 255, 0.2);
+    --border-color-strong: rgba(255, 255, 255, 0.3);
+    --ink-panel: rgba(20, 20, 20, 0.95);
+    --ink-panel-2: rgba(30, 30, 30, 0.95);
+    --ink-text: #fff;
+    --ink-muted: rgba(255, 255, 255, 0.7);
+    --ink-line: rgba(255, 255, 255, 0.1);
+    --ink-line-strong: rgba(255, 255, 255, 0.3);
+    --ink-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    --ink-ring: rgba(124, 146, 255, 1);
+    --ink-hint: rgba(255, 255, 255, 0.5);
+    --hero-bg: #0f1113;
+    --hero-text-primary: #fff;
+    --hero-text-secondary: #B8C0CC;
+    --hero-text-eyebrow: #9099A6;
+    --hero-border: rgba(255,255,255,.1);
+    --hero-bg-overlay: rgba(255,255,255,.06);
+    --hero-bg-overlay-hover: rgba(255,255,255,.12);
+    --hero-progress-bg: rgba(255,255,255,.06);
+    --hero-progress-fill: #fff;
+    --hero-dot: rgba(255,255,255,.35);
+    --hero-dot-active: #ffffff;
+    --hero-title-color: #fff;
+}
 
 html, body, #root {
-    background: linear-gradient(180deg, rgba(8,10,14,1), rgba(8,10,14,0.95));
+    background: var(--bg-primary);
     min-height: 100vh;
     overscroll-behavior: none;
     -webkit-overflow-scrolling: touch;
 }
 
 html {
-    background: linear-gradient(180deg, rgba(8,10,14,1), rgba(8,10,14,0.95));
+    background: var(--bg-primary);
     overflow-x: hidden;
 }
 
@@ -15,9 +52,9 @@ body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
     margin: 0;
     padding: 0;
-    color: #fff;
+    color: var(--text-primary);
     letter-spacing: 0.3px;
-    background: linear-gradient(180deg, rgba(8,10,14,1), rgba(8,10,14,0.95));
+    background: var(--bg-primary);
     overscroll-behavior: none;
     -webkit-overflow-scrolling: touch;
 }
@@ -53,7 +90,7 @@ body {
 }
 
 .drive-help small {
-    color: rgba(255, 255, 255, 0.7);
+    color: var(--text-secondary);
 }
 
 .card {
@@ -69,7 +106,7 @@ body {
 .btn {
     border-radius: 10px;
     padding: 8px 16px;
-    color: #fff;
+    color: var(--text-primary);
 }
 
 .btn-sm { 
@@ -85,35 +122,63 @@ body {
 
 .form-control {
     border-radius: 10px;
-    background-color: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: #fff;
+    background-color: var(--bg-input) !important;
+    border: 1px solid var(--border-color-hover) !important;
+    color: var(--text-primary) !important;
 }
 
 .form-control:focus {
-    background-color: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.3);
-    color: #fff;
-    box-shadow: none;
+    background-color: var(--bg-input-focus) !important;
+    border-color: var(--border-color-strong) !important;
+    color: var(--text-primary) !important;
+    box-shadow: 0 0 0 3px rgba(88, 86, 214, 0.1);
 }
 
 .form-control::placeholder {
-    color: rgba(255, 255, 255, 0.7);
+    color: var(--text-secondary) !important;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+textarea {
+    background-color: var(--bg-input) !important;
+    border: 1px solid var(--border-color-hover) !important;
+    color: var(--text-primary) !important;
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="number"]:focus,
+textarea:focus {
+    background-color: var(--bg-input-focus) !important;
+    border-color: var(--border-color-strong) !important;
+    color: var(--text-primary) !important;
+}
+
+input[type="text"]::placeholder,
+input[type="email"]::placeholder,
+input[type="password"]::placeholder,
+input[type="number"]::placeholder,
+textarea::placeholder {
+    color: var(--text-secondary) !important;
 }
 
 /* 날짜 선택기 스타일 */
 input[type="date"] {
-    background-color: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: #fff;
+    background-color: var(--bg-input) !important;
+    border: 1px solid var(--border-color-hover) !important;
+    color: var(--text-primary) !important;
     border-radius: 10px;
     padding: 8px 12px;
 }
 
 input[type="date"]:focus {
-    background-color: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.3);
-    color: #fff;
+    background-color: var(--bg-input-focus) !important;
+    border-color: var(--border-color-strong) !important;
+    color: var(--text-primary);
     box-shadow: none;
 }
 
@@ -123,17 +188,17 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 }
 
 input[type="date"]::-webkit-datetime-edit {
-    color: #fff;
+    color: var(--text-primary);
 }
 
 input[type="date"]::-webkit-datetime-edit-fields-wrapper {
-    color: #fff;
+    color: var(--text-primary);
 }
 
 /* 기간 선택 컨테이너 */
 .period-container {
-    background-color: rgba(255, 255, 255, 0.02);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background-color: var(--bg-input);
+    border: 1px solid var(--border-color);
     border-radius: 8px;
     padding: 15px;
     margin-bottom: 15px;
@@ -160,7 +225,7 @@ input[type="date"]::-webkit-datetime-edit-fields-wrapper {
 }
 
 .section-title {
-    color: #333;
+    color: var(--text-primary);
     margin-bottom: 1.5rem;
 }
 
@@ -168,6 +233,7 @@ input[type="date"]::-webkit-datetime-edit-fields-wrapper {
     border: none;
     margin-bottom: 0.5rem;
     border-radius: 5px !important;
+    color: var(--text-primary);
 }
 
 .template-card {
@@ -422,16 +488,44 @@ a.btn-google:hover {
     }
 }
 
+.btn-theme-toggle {
+    color: var(--text-primary);
+    background-color: var(--bg-button);
+    border: 1px solid var(--border-color-hover);
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-right: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    height: 36px;
+}
+
+.btn-theme-toggle svg {
+    width: 16px;
+    height: 16px;
+    stroke: currentColor;
+    fill: none;
+}
+
+.btn-theme-toggle:hover {
+    background-color: var(--bg-button-hover);
+    border-color: var(--border-color-strong);
+}
+
 .mac-container {
     display: flex;
     height: calc(100vh - 38px);
-    background: linear-gradient(180deg, rgba(8,10,14,1), rgba(8,10,14,0.95));
+    background: var(--bg-primary);
 }
 
 .mac-sidebar {
     width: 200px;
-    background-color: rgba(20, 20, 20, 0.95);
-    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    background-color: var(--bg-secondary);
+    border-right: 1px solid var(--border-color);
     padding: 16px 0;
     display: flex;
     flex-direction: column;
@@ -441,7 +535,7 @@ a.btn-google:hover {
 
 .sidebar-item {
     padding: 12px 16px;
-    color: #fff;
+    color: var(--text-primary);
     display: flex;
     align-items: center;
     gap: 12px;
@@ -451,17 +545,17 @@ a.btn-google:hover {
 }
 
 .sidebar-item:hover {
-    background-color: rgba(255, 255, 255, 0.05);
-    border-left-color: rgba(255, 255, 255, 0.3);
+    background-color: var(--bg-input);
+    border-left-color: var(--border-color-strong);
 }
 
 .sidebar-item.active {
-    background-color: rgba(255, 255, 255, 0.1);
-    border-left-color: #fff;
+    background-color: var(--bg-input-focus);
+    border-left-color: var(--text-primary);
 }
 
 .sidebar-item i {
-    color: #fff;
+    color: var(--text-primary);
     width: 20px;
     text-align: center;
 }
@@ -470,7 +564,7 @@ a.btn-google:hover {
     flex: 1;
     padding: 24px;
     overflow-y: auto;
-    background: linear-gradient(180deg, rgba(8,10,14,1), rgba(8,10,14,0.95));
+    background: var(--bg-primary);
     overscroll-behavior: none;
     -webkit-overflow-scrolling: touch;
 }
@@ -482,27 +576,27 @@ a.btn-google:hover {
 }
 
 .mac-card {
-    background: rgba(30, 30, 30, 0.95);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
     border-radius: 12px;
     padding: 32px;
     text-align: center;
     cursor: pointer;
     transition: all 0.3s ease;
-    color: #fff;
+    color: var(--text-primary);
     backdrop-filter: blur(10px);
 }
 
 .mac-card:hover {
     transform: translateY(-4px);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-    background: rgba(40, 40, 40, 0.95);
-    border-color: rgba(255, 255, 255, 0.2);
+    background: var(--bg-card-hover);
+    border-color: var(--border-color-hover);
 }
 
 .mac-card i {
     font-size: 2.8rem;
-    color: #fff;
+    color: var(--text-primary);
     margin-bottom: 20px;
     transition: transform 0.3s ease;
 }
@@ -512,22 +606,22 @@ a.btn-google:hover {
 }
 
 .mac-card h3 {
-    color: #fff;
+    color: var(--text-primary);
     font-size: 1.4rem;
     margin-bottom: 12px;
     font-weight: 500;
 }
 
 .mac-card p {
-    color: #fff;
+    color: var(--text-primary);
     font-size: 1rem;
     line-height: 1.5;
     margin: 0;
 }
 
 .mac-window {
-    background: rgba(30, 30, 30, 0.95);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
     border-radius: 12px;
     margin-bottom: 24px;
     overflow: hidden;
@@ -535,7 +629,7 @@ a.btn-google:hover {
 }
 
 .mac-window h2 {
-    color: #fff;
+    color: var(--text-primary);
     padding: 20px;
     margin: 0;
     font-size: 1.3rem;
@@ -557,17 +651,18 @@ a.btn-google:hover {
 
 .mac-tab.active {
     background: white;
-    border-bottom: 2px solid #0061ff;
+    border-bottom: 2px solid;
+    border-image: linear-gradient(90deg, #007AFF 0%, #5856D6 50%, #FF2D55 100%) 1;
 }
 
 .mac-window-content {
     padding: 24px;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    border-top: 1px solid var(--border-color);
 }
 
 /* PPT 제작 페이지 전용 스타일 - 원래 짧은 선 복원 */
 #pptMakerSection .mac-window h2 {
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid var(--ink-line);
 }
 
 #pptMakerSection .mac-window-content {
@@ -581,35 +676,56 @@ a.btn-google:hover {
 
 .mac-list {
     border-radius: 8px;
-    overflow: hidden;
+    overflow: visible;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
 
 .mac-list .list-group-item {
-    background: rgba(40, 40, 40, 0.95);
-    border: none;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--bg-card-hover);
+    border: 1px solid var(--ink-line) !important;
+    border-radius: 12px !important;
     padding: 16px 20px;
-    color: #fff;
-    transition: background-color 0.3s ease;
+    color: var(--text-primary);
+    transition: all 0.3s ease;
+    margin-bottom: 0 !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .mac-list .list-group-item:hover {
-    background: rgba(50, 50, 50, 0.95);
+    background: var(--bg-card);
+    border-color: var(--ink-line-strong) !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .mac-list .list-group-item h6 {
-    color: #fff;
+    color: var(--text-primary) !important;
     font-size: 1.1rem;
     margin-bottom: 8px;
 }
 
 .mac-list .list-group-item p {
-    color: #fff;
+    color: var(--text-primary) !important;
     margin-bottom: 4px;
 }
 
 .mac-list .list-group-item small {
-    color: #fff;
+    color: var(--text-secondary) !important;
+}
+
+.mac-list-item,
+.mac-list-item * {
+    color: var(--text-primary) !important;
+}
+
+.mac-list-item h6 {
+    color: var(--text-primary) !important;
+}
+
+.mac-list-item small {
+    color: var(--text-secondary) !important;
 }
 
 /* 모달 스타일 - Apple-like */
@@ -685,11 +801,11 @@ a.btn-google:hover {
 .empty-state {
     text-align: center;
     padding: 48px 20px;
-    color: #fff;
+    color: var(--text-primary);
 }
 
 .empty-state i {
-    color: #fff;
+    color: var(--text-primary);
     margin-bottom: 16px;
     font-size: 2.5rem;
     opacity: 0.7;
@@ -698,14 +814,14 @@ a.btn-google:hover {
 .empty-state p {
     margin: 0;
     font-size: 1.1rem;
-    color: #fff;
+    color: var(--text-primary);
 }
 
 /* 버튼 스타일 */
 .btn.btn-outline-dark,
 .btn-outline-dark {
-    color: #fff;
-    border-color: rgba(255, 255, 255, 0.3);
+    color: var(--text-primary);
+    border-color: var(--border-color-strong);
     padding: 8px 16px;
     border-radius: 12px !important;
     transition: all 0.2s ease;
@@ -713,9 +829,9 @@ a.btn-google:hover {
 }
 
 .btn-outline-dark:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.06);
-    border-color: rgba(255, 255, 255, 0.4);
-    color: #fff;
+    background: var(--bg-input);
+    border-color: var(--border-color-hover);
+    color: var(--text-primary);
     transform: translateY(-1px);
 }
 
@@ -727,9 +843,9 @@ a.btn-google:hover {
 }
 
 .btn.btn-dark {
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: #fff;
+    background: var(--bg-button);
+    border: 1px solid var(--border-color-hover);
+    color: var(--text-primary);
     padding: 10px 20px;
     border-radius: 12px !important;
     font-weight: 600;
@@ -738,9 +854,9 @@ a.btn-google:hover {
 }
 
 .btn.btn-dark:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.15);
-    border-color: rgba(255, 255, 255, 0.3);
-    color: #fff;
+    background: var(--bg-button-hover);
+    border-color: var(--border-color-strong);
+    color: var(--text-primary);
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(0,0,0,.3);
 }
@@ -755,8 +871,8 @@ a.btn-google:hover {
 
 /* 체크박스 스타일 */
 .form-check-input {
-    background-color: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.2);
+    background-color: var(--bg-input);
+    border-color: var(--border-color-hover);
     width: 1.5rem;
     height: 1.5rem;
     cursor: pointer;
@@ -765,12 +881,12 @@ a.btn-google:hover {
 }
 
 .form-check-input:checked {
-    background-color: #fff;
-    border-color: #fff;
+    background-color: var(--text-primary);
+    border-color: var(--text-primary);
 }
 
 .form-check-input:hover {
-    border-color: rgba(255, 255, 255, 0.4);
+    border-color: var(--border-color-strong);
     transform: scale(1.05);
 }
 
@@ -818,15 +934,15 @@ a.btn-google:hover {
 }
 
 .slide-item {
-    background: rgba(40, 40, 40, 0.95);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--bg-card-hover);
+    border: 1px solid var(--border-color);
     border-radius: 8px;
     padding: 20px;
     margin-bottom: 16px;
 }
 
 .slide-item h4 {
-    color: #fff;
+    color: var(--text-primary);
     margin-bottom: 16px;
     font-size: 1.2rem;
     font-weight: 500;
@@ -839,8 +955,8 @@ a.btn-google:hover {
 }
 
 .text-box {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
     border-radius: 6px;
     padding: 12px;
 }
@@ -849,14 +965,14 @@ a.btn-google:hover {
     width: 100%;
     background: transparent;
     border: none;
-    color: #fff;
+    color: var(--text-primary);
     font-size: 1rem;
     padding: 8px 0;
     outline: none;
 }
 
 .text-box input:focus {
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--bg-input);
     border-radius: 10px;
     padding: 8px 12px;
 }
@@ -864,33 +980,33 @@ a.btn-google:hover {
 /* 전체 선택/해제 버튼 스타일 */
 .select-all-btn,
 .deselect-all-btn {
-    color: #fff !important;
-    background-color: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: var(--text-primary) !important;
+    background-color: var(--bg-button) !important;
+    border: 1px solid var(--border-color-hover) !important;
     transition: all 0.3s ease;
 }
 
 .select-all-btn:hover,
 .deselect-all-btn:hover {
-    color: #fff !important;
-    background-color: rgba(255, 255, 255, 0.2);
-    border-color: rgba(255, 255, 255, 0.3);
+    color: var(--text-primary) !important;
+    background-color: var(--bg-button-hover) !important;
+    border-color: var(--border-color-strong) !important;
 }
 
 /* 이동 버튼 스타일 */
 .portal-btn,
 .drive-btn {
-    color: #fff;
-    background-color: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: var(--text-primary);
+    background-color: var(--bg-button);
+    border: 1px solid var(--border-color-hover);
     transition: all 0.3s ease;
 }
 
 .portal-btn:hover,
 .drive-btn:hover {
-    color: #fff;
-    background-color: rgba(255, 255, 255, 0.2);
-    border-color: rgba(255, 255, 255, 0.3);
+    color: var(--text-primary);
+    background-color: var(--bg-button-hover);
+    border-color: var(--border-color-strong);
 }
 
 /* 모든 일반 버튼 스타일 */
@@ -900,9 +1016,9 @@ a.btn-google:hover {
 .drive-btn,
 .select-all-btn,
 .deselect-all-btn {
-    color: #fff;
-    background-color: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: var(--text-primary);
+    background-color: var(--bg-button);
+    border: 1px solid var(--border-color-hover);
     transition: all 0.3s ease;
 }
 
@@ -912,9 +1028,9 @@ a.btn-google:hover {
 .drive-btn:hover,
 .select-all-btn:hover,
 .deselect-all-btn:hover {
-    color: #fff;
-    background-color: rgba(255, 255, 255, 0.2);
-    border-color: rgba(255, 255, 255, 0.3);
+    color: var(--text-primary);
+    background-color: var(--bg-button-hover);
+    border-color: var(--border-color-strong);
 }
 
 /* 나머지 모든 텍스트 요소들 흰색으로 통일 */
@@ -935,17 +1051,17 @@ a.btn-google:hover {
 .empty-state p,
 .feature-item,
 .feature-item i {
-    color: #fff;
+    color: var(--text-primary);
     text-shadow: none;
 }
 
 /* 폼 컨트롤 텍스트 색상 */
 .form-control {
-    color: #fff;
+    color: var(--text-primary);
 }
 
 .form-control::placeholder {
-    color: rgba(255, 255, 255, 0.7);
+    color: var(--text-secondary);
 }
 
 /* 메인 페이지 - 구글 드라이브 섹션 */
@@ -957,7 +1073,7 @@ a.btn-google:hover {
 .drive-btn,
 button.drive-btn,
 a.drive-btn {
-    color: #fff !important;
+    color: var(--text-primary) !important;
 }
 
 /* 메인 페이지 - 학교 포털 섹션 */
@@ -969,7 +1085,7 @@ a.drive-btn {
 .portal-btn,
 button.portal-btn,
 a.portal-btn {
-    color: #fff !important;
+    color: var(--text-primary) !important;
 }
 
 /* PPT 제작 페이지 - 전체 선택/해제 버튼 */
@@ -979,9 +1095,9 @@ button.select-all-btn,
 button.deselect-all-btn,
 a.select-all-btn,
 a.deselect-all-btn {
-    color: #fff !important;
-    background-color: rgba(255, 255, 255, 0.1) !important;
-    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    color: var(--text-primary) !important;
+    background-color: var(--bg-button) !important;
+    border: 1px solid var(--border-color-hover) !important;
 }
 
 .select-all-btn:hover,
@@ -990,32 +1106,30 @@ button.select-all-btn:hover,
 button.deselect-all-btn:hover,
 a.select-all-btn:hover,
 a.deselect-all-btn:hover {
-    color: #fff !important;
-    background-color: rgba(255, 255, 255, 0.2) !important;
+    color: var(--text-primary) !important;
+    background-color: var(--bg-button-hover) !important;
 }
 
 /* 모든 버튼과 링크의 기본 텍스트 색상 */
 .btn,
 button,
 a.btn,
-.nav-link,
 .card-title,
 .card-text,
 .description,
 h1, h2, h3, h4, h5, h6,
 p {
-    color: #fff !important;
+    color: var(--text-primary) !important;
 }
 
 /* 호버 상태에서도 텍스트 색상 유지 */
 .btn:hover,
 button:hover,
 a.btn:hover,
-.nav-link:hover,
 .card:hover .card-title,
 .card:hover .card-text,
 .card:hover .description {
-    color: #fff !important;
+    color: var(--text-primary) !important;
 }
 
 /* 특정 텍스트 강제 적용 */
@@ -1023,7 +1137,7 @@ a.btn:hover,
 [class*="portal-"] *,
 [class*="select-all"] *,
 [class*="deselect-all"] * {
-    color: #fff !important;
+    color: var(--text-primary) !important;
 }
 
 /* ========================================
@@ -1038,6 +1152,11 @@ a.btn:hover,
 /* 이력 목록 아이템 커서 */
 .experience-list-item {
     cursor: pointer;
+    color: var(--text-primary);
+}
+
+.experience-list-item * {
+    color: var(--text-primary);
 }
 
 /* 이미지 컨테이너 */
@@ -1118,7 +1237,7 @@ a.btn:hover,
 
 /* 텍스트 색상 */
 .white-text {
-    color: white;
+    color: var(--text-primary);
 }
 
 /* 구분선 */
@@ -1167,8 +1286,19 @@ a.btn:hover,
 .simple-divider {
     border: none;
     height: 1px;
-    background: #e9ecef;
+    background: var(--ink-line);
     margin: 15px 0;
+}
+
+hr {
+    border: none;
+    height: 1px;
+    background: var(--ink-line);
+    margin: 8px 0;
+}
+
+hr[style*="gradient"] {
+    background: linear-gradient(to right, transparent, var(--ink-line), transparent) !important;
 }
 
 /* 파일 업로드 버튼 */
@@ -1191,7 +1321,7 @@ a.btn:hover,
 }
 
 .file-name {
-    color: #0d6efd !important;
+    color: var(--text-primary) !important;
 }
 
 .folder-icon {
@@ -1218,6 +1348,40 @@ a.btn:hover,
 /* PPT 히스토리 아이템 */
 .ppt-history-item {
     cursor: pointer;
+    color: var(--text-primary);
+}
+
+.ppt-history-item * {
+    color: var(--text-primary);
+}
+
+.text-white,
+.text-white * {
+    color: var(--text-primary) !important;
+}
+
+.text-white-50,
+.text-white-50 * {
+    color: var(--text-secondary) !important;
+}
+
+.btn-outline-secondary,
+.btn-outline-secondary * {
+    color: var(--text-primary) !important;
+    border-color: var(--border-color-hover) !important;
+}
+
+.btn-outline-secondary:hover:not(:disabled),
+.btn-outline-secondary:hover:not(:disabled) * {
+    color: var(--text-primary) !important;
+    background-color: var(--bg-input) !important;
+    border-color: var(--border-color-strong) !important;
+}
+
+.btn-outline-secondary:disabled,
+.btn-outline-secondary:disabled * {
+    color: var(--text-muted) !important;
+    border-color: var(--border-color) !important;
 }
 
 /* 모달 표시 */
@@ -1235,45 +1399,45 @@ a.btn:hover,
 }
 
 .form-label-white {
-    color: white !important;
+    color: var(--text-primary) !important;
 }
 
 /* 이미지 업로드 영역 스타일 */
 .image-upload-container {
-    border: 2px dashed rgba(255, 255, 255, 0.3);
+    border: 2px dashed var(--border-color-hover) !important;
     border-radius: 8px;
     padding: 20px;
     text-align: center;
     margin-bottom: 20px;
-    background-color: rgba(255, 255, 255, 0.05);
+    background-color: var(--bg-input) !important;
     transition: all 0.3s ease;
     cursor: pointer;
 }
 
 .image-upload-container:hover {
-    border-color: rgba(255, 255, 255, 0.5);
-    background-color: rgba(255, 255, 255, 0.1);
+    border-color: var(--border-color-strong) !important;
+    background-color: var(--bg-input-focus) !important;
 }
 
 .image-upload-container.dragover {
-    border-color: #fff;
-    background-color: rgba(255, 255, 255, 0.15);
+    border-color: var(--border-color-strong) !important;
+    background-color: var(--bg-input-focus) !important;
     transform: scale(1.02);
 }
 
 .image-upload-icon {
     font-size: 2.5rem;
-    color: rgba(255, 255, 255, 0.7);
+    color: var(--text-secondary) !important;
     margin-bottom: 10px;
 }
 
 .image-upload-text {
-    color: #fff;
+    color: var(--text-primary) !important;
     margin-bottom: 10px;
 }
 
 .image-upload-subtext {
-    color: rgba(255, 255, 255, 0.7);
+    color: var(--text-secondary) !important;
     font-size: 0.9rem;
 }
 
@@ -1344,19 +1508,19 @@ a.btn:hover,
 
 /* 이미지 크기 제한 안내 */
 .image-size-info {
-    color: rgba(255, 255, 255, 0.7);
+    color: var(--text-secondary) !important;
     font-size: 0.8rem;
     margin-top: 5px;
 }
 
 /* 드래그 앤 드롭 가이드 */
 .drag-guide {
-    border: 2px dashed rgba(255, 255, 255, 0.5);
+    border: 2px dashed var(--border-color-strong) !important;
     border-radius: 8px;
     padding: 15px;
     margin-top: 10px;
     text-align: center;
-    color: rgba(255, 255, 255, 0.7);
+    color: var(--text-secondary) !important;
     font-size: 0.9rem;
     display: none;
 }
@@ -1367,35 +1531,35 @@ a.btn:hover,
 
 /* 모달 내 이미지 업로드 영역 */
 .modal .image-upload-container {
-    border: 2px dashed rgba(255, 255, 255, 0.3);
+    border: 2px dashed var(--border-color-hover) !important;
     border-radius: 8px;
     padding: 15px;
     text-align: center;
     margin: 15px 0;
-    background-color: rgba(255, 255, 255, 0.05);
+    background-color: var(--bg-input) !important;
     transition: all 0.3s ease;
     cursor: pointer;
 }
 
 .modal .image-upload-container:hover {
-    border-color: rgba(255, 255, 255, 0.5);
-    background-color: rgba(255, 255, 255, 0.1);
+    border-color: var(--border-color-strong) !important;
+    background-color: var(--bg-input-focus) !important;
 }
 
 .modal .image-upload-icon {
     font-size: 2rem;
-    color: rgba(255, 255, 255, 0.7);
+    color: var(--text-secondary) !important;
     margin-bottom: 8px;
 }
 
 .modal .image-upload-text {
-    color: #fff;
+    color: var(--text-primary) !important;
     font-size: 0.95rem;
     margin-bottom: 5px;
 }
 
 .modal .image-upload-subtext {
-    color: rgba(255, 255, 255, 0.7);
+    color: var(--text-secondary) !important;
     font-size: 0.85rem;
 }
 
@@ -1451,7 +1615,7 @@ a.btn:hover,
 
 /* 이미지 크기 제한 안내 */
 .modal .image-size-info {
-    color: rgba(255, 255, 255, 0.7);
+    color: var(--text-secondary) !important;
     font-size: 0.75rem;
     margin-top: 4px;
 }
@@ -1627,24 +1791,24 @@ a.btn:hover,
 
 /* 모달 내 폼 컨트롤 스타일 */
 .mac-modal .form-control {
-    background: rgba(255,255,255,.02);
-    border: 1px solid var(--ink-line);
+    background-color: var(--bg-input) !important;
+    border: 1px solid var(--ink-line) !important;
     border-radius: 12px;
-    color: var(--ink-text);
+    color: var(--ink-text) !important;
     padding: 12px 16px;
     font-size: 14px;
     transition: all .2s ease;
 }
 
 .mac-modal .form-control:focus {
-    background: rgba(255,255,255,.04);
-    border-color: var(--ink-ring);
-    color: var(--ink-text);
-    box-shadow: 0 0 0 3px rgba(124,146,255,.1);
+    background-color: var(--bg-input-focus) !important;
+    border-color: var(--ink-ring) !important;
+    color: var(--ink-text) !important;
+    box-shadow: 0 0 0 3px rgba(88, 86, 214, 0.1);
 }
 
 .mac-modal .form-control::placeholder {
-    color: var(--ink-hint);
+    color: var(--ink-hint) !important;
 }
 
 /* 모달 내 텍스트 영역 */
@@ -1655,8 +1819,8 @@ a.btn:hover,
 
 /* 모달 내 체크박스와 라디오 */
 .mac-modal .form-check-input {
-    background-color: rgba(255,255,255,.02);
-    border: 1px solid var(--ink-line);
+    background-color: var(--bg-input) !important;
+    border: 1px solid var(--ink-line) !important;
     border-radius: 6px;
 }
 
@@ -1692,7 +1856,7 @@ a.btn:hover,
 /* 추가 이미지 카운터 */
 .additional-count {
     font-size: 0.8rem;
-    color: white;
+    color: var(--text-primary);
 }
 
 /* 반응형 디자인 */
@@ -1828,7 +1992,7 @@ a.btn:hover,
 .experience-image-count {
     text-align: center;
     font-size: 0.8rem;
-    color: white;
+    color: var(--text-primary);
 }
 
 .experience-no-image {
@@ -1953,16 +2117,35 @@ a.btn:hover,
     border: 1px solid rgba(255,255,255,.08);
     backdrop-filter: blur(16px) saturate(160%);
     border-radius: 16px;
-    box-shadow: 0 10px 34px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.06);
+    box-shadow: 0 10px 34px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.06), 0 0 20px rgba(88,86,214,.15);
     padding: 22px 24px;
     max-width: 420px;
     color: #EDEEF1;
-    transition: transform .25s ease;
+    transition: transform .25s ease, box-shadow .25s ease;
     text-align: center;
 }
 
+.theme-apple .login-card::after {
+    content: "";
+    position: absolute;
+    top: -1px;
+    left: -1px;
+    right: -1px;
+    bottom: -1px;
+    border-radius: 16px;
+    padding: 1px;
+    background: linear-gradient(135deg, rgba(0,122,255,.3) 0%, rgba(88,86,214,.3) 50%, rgba(255,45,85,.3) 100%);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask-composite: exclude;
+    pointer-events: none;
+    z-index: -1;
+}
+
 .theme-apple .login-card:hover { 
-    transform: translateY(-3px); 
+    transform: translateY(-3px);
+    box-shadow: 0 10px 34px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.06), 0 0 30px rgba(88,86,214,.25);
 }
 
 .theme-apple .login-card::before {
@@ -1974,7 +2157,11 @@ a.btn:hover,
     transform: translate(-50%, -50%);
     width: 640px; 
     height: 420px;
-    background: radial-gradient(closest-side, rgba(255,255,255,.06), transparent 70%);
+    background: radial-gradient(closest-side, 
+        rgba(0,122,255,.08) 0%, 
+        rgba(88,86,214,.06) 30%, 
+        rgba(255,45,85,.04) 50%, 
+        transparent 70%);
     filter: blur(42px);
 }
 
@@ -1992,6 +2179,37 @@ a.btn:hover,
     display: flex;
     justify-content: center;
     margin: 8px 0 10px;
+}
+
+#gisLoginBtn,
+.gsi-anchor button {
+    background: #4285f4 !important;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+#gisLoginBtn::before,
+.gsi-anchor button::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(0,122,255,.15) 0%, rgba(88,86,214,.1) 50%, rgba(255,45,85,.08) 100%);
+    pointer-events: none;
+}
+
+#gisLoginBtn:hover,
+.gsi-anchor button:hover {
+    box-shadow: 0 2px 8px rgba(88, 86, 214, 0.2);
+    transform: translateY(-1px);
+}
+
+#gisLoginBtn:hover::before,
+.gsi-anchor button:hover::before {
+    background: linear-gradient(135deg, rgba(0,122,255,.2) 0%, rgba(88,86,214,.15) 50%, rgba(255,45,85,.1) 100%);
 }
 
 .theme-apple .hero-right { 
@@ -2189,7 +2407,7 @@ a.btn:hover,
 
 /* 메인 페이지 푸터 */
 .main-footer {
-    background: linear-gradient(180deg, rgba(8,10,14,.95), rgba(8,10,14,1));
+    background: var(--bg-primary);
     border-top: 1px solid var(--ink-line);
     padding: 32px 24px;
     margin-top: 48px;
@@ -2222,7 +2440,7 @@ a.btn:hover,
 
 .footer-links .footer-link-btn:hover {
     color: var(--ink-text);
-    background: rgba(255,255,255,.04);
+    background: var(--bg-input);
 }
 
 .footer-links .footer-link-separator {
@@ -2259,7 +2477,7 @@ a.btn:hover,
     height: clamp(380px, 58vh, 640px);
     border-radius: 20px;
     overflow: hidden;
-    background: #0f1113;
+    background: var(--hero-bg);
     box-shadow: 0 20px 60px rgba(0,0,0,.45);
     margin-bottom: 24px;
 }
@@ -2285,10 +2503,11 @@ a.btn:hover,
 .hero-slide .hero-content {
     position: relative;
     z-index: 2;
+    background: none;
 }
 
 .hero-slide .hero-eyebrow {
-    color: #9099A6;
+    color: var(--hero-text-eyebrow);
     font-size: 14px;
     letter-spacing: .18em;
     text-transform: uppercase;
@@ -2301,10 +2520,11 @@ a.btn:hover,
     line-height: 1.15;
     font-weight: 800;
     letter-spacing: -0.02em;
+    color: var(--hero-title-color);
 }
 
 .hero-slide .hero-subtitle {
-    color: #B8C0CC; 
+    color: var(--hero-text-secondary); 
     margin-top: 12px; 
     font-size: clamp(14px, 1.8vw, 16px);
 }
@@ -2317,8 +2537,8 @@ a.btn:hover,
     bottom: 24px;
     width: min(42%, 560px);
     border-radius: 18px;
-    background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
-    border: 1px solid rgba(255,255,255,.08);
+    background: linear-gradient(180deg, var(--hero-bg-overlay), rgba(255,255,255,.02));
+    border: 1px solid var(--hero-border);
     backdrop-filter: blur(6px);
     -webkit-backdrop-filter: blur(6px);
     display: flex;
@@ -2365,9 +2585,9 @@ a.btn:hover,
     width: 44px;
     height: 44px;
     border-radius: 12px;
-    border: 1px solid rgba(255,255,255,.1);
-    background: rgba(255,255,255,.06);
-    color: #fff;
+    border: 1px solid var(--hero-border);
+    background: var(--hero-bg-overlay);
+    color: var(--hero-text-primary);
     font-size: 28px;
     line-height: 40px;
     cursor: pointer;
@@ -2376,7 +2596,7 @@ a.btn:hover,
 }
 
 .hero-carousel .hero-arrow:hover {
-    background: rgba(255,255,255,.12);
+    background: var(--hero-bg-overlay-hover);
     transform: translateY(-50%) translateY(-1px);
 }
 
@@ -2403,14 +2623,14 @@ a.btn:hover,
     height: 8px;
     border-radius: 999px;
     border: 0;
-    background: rgba(255,255,255,.35);
+    background: var(--hero-dot);
     cursor: pointer;
     transition: all .25s ease;
 }
 
 .hero-dots .dot.active {
     width: 18px;
-    background: #ffffff;
+    background: linear-gradient(90deg, #007AFF 0%, #5856D6 50%, #FF2D55 100%);
 }
 
 /* 진행 바 */
@@ -2420,14 +2640,14 @@ a.btn:hover,
     left: 0;
     right: 0;
     height: 2px;
-    background: rgba(255,255,255,.06);
+    background: var(--hero-progress-bg);
 }
 
 .hero-progress span {
     display: block;
     height: 100%;
     transform-origin: 0 0;
-    background: #fff;
+    background: linear-gradient(90deg, #007AFF 0%, #5856D6 50%, #FF2D55 100%);
     transition: transform .4s ease;
 }
 
@@ -2533,7 +2753,7 @@ a.btn:hover,
 }
 
 .content-section:not(.content-main) .mac-window .d-flex h2 {
-    border-bottom: 1px solid var(--ink-line);
+    border-bottom: 1px solid var(--ink-line) !important;
     padding-bottom: 12px;
     margin-bottom: 0;
 }
@@ -2542,10 +2762,10 @@ a.btn:hover,
     display: inline-flex;
     align-items: center;
     padding: 8px 16px;
-    background: rgba(255, 255, 255, 0.12);
-    border: 1.5px solid rgba(255, 255, 255, 0.25);
+    background: var(--bg-button);
+    border: 1.5px solid var(--border-color-strong);
     border-radius: 12px;
-    color: #fff;
+    color: var(--text-primary);
     font-size: 14px;
     font-weight: 600;
     letter-spacing: 0.3px;
@@ -2554,8 +2774,8 @@ a.btn:hover,
 }
 
 .drive-view-badge:hover {
-    background: rgba(255, 255, 255, 0.16);
-    border-color: rgba(255, 255, 255, 0.35);
+    background: var(--bg-button-hover);
+    border-color: var(--border-color-strong);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.15);
     transform: translateY(-1px);
 }
@@ -2564,10 +2784,10 @@ a.btn:hover,
     display: inline-flex;
     align-items: center;
     padding: 6px 14px;
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: var(--bg-input);
+    border: 1px solid var(--border-color-hover);
     border-radius: 10px;
-    color: rgba(255, 255, 255, 0.9);
+    color: var(--text-primary);
     font-size: 13px;
     font-weight: 500;
     letter-spacing: 0.2px;
@@ -2576,9 +2796,9 @@ a.btn:hover,
 }
 
 .drive-path-badge:hover {
-    background: rgba(255, 255, 255, 0.12);
-    border-color: rgba(255, 255, 255, 0.3);
-    color: #fff;
+    background: var(--bg-input-focus);
+    border-color: var(--border-color-strong);
+    color: var(--text-primary);
 }
 
 #driveSection .mac-window > h2 {
@@ -2676,7 +2896,7 @@ a.btn:hover,
 
 .loading-progress-fill {
     height: 100%;
-    background: linear-gradient(90deg, #007bff, #0056b3);
+    background: linear-gradient(90deg, #007AFF 0%, #5856D6 50%, #FF2D55 100%);
     border-radius: 4px;
     transition: width 0.3s ease;
 }
@@ -2685,6 +2905,7 @@ a.btn:hover,
     text-align: center;
     font-weight: 600;
     font-size: 14px;
+    color: var(--text-primary);
 }
 
 .loading-log {
@@ -2701,7 +2922,7 @@ a.btn:hover,
     justify-content: center;
     padding: 4px 0;
     font-size: 14px;
-    color: #e9eef6;
+    color: var(--text-primary);
     animation: slideInFade 0.5s ease-out;
     opacity: 1;
     transform: translateY(0);
@@ -2711,7 +2932,10 @@ a.btn:hover,
     font-size: 8px;
     width: 12px;
     text-align: center;
-    color: #007bff;
+    background: linear-gradient(135deg, #007AFF 0%, #5856D6 50%, #FF2D55 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
     margin-right: 8px;
     animation: pulse 1.5s ease-in-out infinite;
 }
@@ -2832,7 +3056,7 @@ a.btn:hover,
 }
 
 .file-name:hover {
-    color: #0d6efd !important;
+    color: var(--ink-ring) !important;
     text-decoration: underline;
 }
 
@@ -2846,7 +3070,7 @@ a.btn:hover,
 }
 
 .file-size small {
-    color: rgba(255, 255, 255, 0.7);
+    color: var(--text-secondary);
     font-size: 0.75rem;
 }
 
@@ -2860,7 +3084,7 @@ a.btn:hover,
 }
 
 .file-modification-date small {
-    color: rgba(255, 255, 255, 0.7);
+    color: var(--text-secondary);
     font-size: 0.75rem;
     white-space: nowrap;
     display: block;
@@ -3002,6 +3226,163 @@ a.btn:hover,
     font-weight: bold;
 }
 
+.theme-color-option.custom::before {
+    content: "";
+}
+
+.theme-color-option.custom:not(.selected) {
+    background: linear-gradient(135deg, #007AFF 0%, #5856D6 50%, #FF2D55 100%);
+    color: #fff;
+}
+
+.theme-color-option.custom:not(.selected) i {
+    font-size: 16px;
+    color: #fff;
+}
+
+.theme-color-option.custom.selected::before {
+    content: "A";
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.custom-color-picker {
+    margin-top: 16px;
+    padding: 20px;
+    background: var(--bg-input);
+    border: 1px solid var(--ink-line);
+    border-radius: 8px;
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+}
+
+.color-picker-section {
+    flex: 1;
+    min-width: 280px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.color-section-label {
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.color-preview {
+    width: 100%;
+    height: 60px;
+    border-radius: 8px;
+    border: 2px solid var(--ink-line);
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.rgb-sliders {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.rgb-slider-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.rgb-slider-group label {
+    color: var(--text-primary);
+    font-size: 13px;
+    font-weight: 600;
+    min-width: 20px;
+    text-align: center;
+}
+
+.rgb-slider {
+    flex: 1;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--ink-line);
+    outline: none;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.rgb-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--slider-color, var(--ink-line-strong));
+    border: 2px solid var(--bg-card);
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    transition: transform 0.1s ease;
+}
+
+.rgb-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.1);
+}
+
+.rgb-slider::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--slider-color, var(--ink-line-strong));
+    border: 2px solid var(--bg-card);
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    transition: transform 0.1s ease;
+}
+
+.rgb-slider::-moz-range-thumb:hover {
+    transform: scale(1.1);
+}
+
+.rgb-input {
+    width: 60px;
+    padding: 6px 8px;
+    background: var(--bg-input);
+    border: 1px solid var(--ink-line);
+    border-radius: 6px;
+    color: var(--text-primary);
+    font-size: 13px;
+    text-align: center;
+    font-family: monospace;
+}
+
+.rgb-input:focus {
+    outline: none;
+    border-color: var(--ink-line-strong);
+    box-shadow: 0 0 0 3px rgba(88, 86, 214, 0.1);
+}
+
+.hex-display {
+    margin-top: 4px;
+}
+
+.hex-input {
+    width: 100%;
+    padding: 8px 12px;
+    background: var(--bg-input);
+    border: 1px solid var(--ink-line);
+    border-radius: 6px;
+    color: var(--text-primary);
+    font-size: 14px;
+    font-family: monospace;
+    text-align: center;
+    text-transform: uppercase;
+}
+
+.hex-input:focus {
+    outline: none;
+    border-color: var(--ink-line-strong);
+    box-shadow: 0 0 0 3px rgba(88, 86, 214, 0.1);
+}
+
 /* 템플릿 모달 캐러셀 컨테이너 */
 .carousel-container {
     width: 100%;
@@ -3070,7 +3451,7 @@ a.btn:hover,
     top: 50%;
     transform: translateY(-50%);
     background-color: rgba(0, 0, 0, 0.4);
-    color: white;
+    color: var(--text-primary);
     border: none;
     padding: 0;
     width: 36px;
@@ -3146,7 +3527,7 @@ a.btn:hover,
     padding: 10px 16px;
     background-color: transparent;
     border: none;
-    color: #fff;
+    color: var(--text-primary);
     text-align: left;
     cursor: pointer;
     transition: background-color 0.2s ease;
@@ -3199,7 +3580,7 @@ a.btn:hover,
 }
 
 .indicator-dot.active {
-    background-color: white;
+    background: linear-gradient(90deg, #007AFF 0%, #5856D6 50%, #FF2D55 100%);
     width: 20px;
     border-radius: 4px;
 }
@@ -3214,10 +3595,9 @@ a.btn:hover,
 .sort-select.form-select,
 .sort-select.form-select-sm {
     min-width: 100px;
-    background: transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23ffffff' d='M6 9L1 4h10z'/%3E%3C/svg%3E") no-repeat right 8px center !important;
     background-color: transparent !important;
-    border: 1px solid rgba(255, 255, 255, 0.2) !important;
-    color: #fff !important;
+    border: 1px solid var(--border-color-hover) !important;
+    color: var(--text-primary) !important;
     padding: 6px 30px 6px 12px !important;
     font-size: 14px !important;
     border-radius: 10px !important;
@@ -3228,25 +3608,32 @@ a.btn:hover,
     -moz-appearance: none !important;
     outline: none !important;
     box-shadow: none !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23ffffff' d='M6 9L1 4h10z'/%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 8px center !important;
 }
 
 .sort-select:hover,
 .sort-select.form-select:hover,
 .sort-select.form-select-sm:hover {
-    background: rgba(255, 255, 255, 0.1) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23ffffff' d='M6 9L1 4h10z'/%3E%3C/svg%3E") no-repeat right 8px center !important;
-    background-color: rgba(255, 255, 255, 0.1) !important;
-    border-color: rgba(255, 255, 255, 0.3) !important;
+    background-color: var(--bg-input) !important;
+    border-color: var(--border-color-strong) !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23ffffff' d='M6 9L1 4h10z'/%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 8px center !important;
 }
 
 .sort-select:focus,
 .sort-select.form-select:focus,
 .sort-select.form-select-sm:focus {
-    background: transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23ffffff' d='M6 9L1 4h10z'/%3E%3C/svg%3E") no-repeat right 8px center !important;
     background-color: transparent !important;
-    border-color: rgba(255, 255, 255, 0.2) !important;
-    color: #fff !important;
+    border-color: var(--border-color-hover) !important;
+    color: var(--text-primary) !important;
     box-shadow: none !important;
     outline: none !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23ffffff' d='M6 9L1 4h10z'/%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 8px center !important;
 }
 
 .sort-select:disabled {
@@ -3255,8 +3642,8 @@ a.btn:hover,
 }
 
 .sort-select option {
-    background-color: #1a1a1a;
-    color: #fff;
+    background-color: var(--bg-card);
+    color: var(--text-primary);
     padding: 8px;
 }
 
@@ -3269,9 +3656,9 @@ a.btn:hover,
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid var(--border-color-hover);
     background-color: transparent;
-    color: #fff;
+    color: var(--text-primary);
     font-size: 16px;
     font-weight: normal;
     line-height: 1;
@@ -3282,9 +3669,9 @@ a.btn:hover,
 }
 
 .sort-order-btn:hover:not(:disabled) {
-    background-color: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.3);
-    color: #fff;
+    background-color: var(--bg-input);
+    border-color: var(--border-color-strong);
+    color: var(--text-primary);
     transform: translateY(-1px);
 }
 
@@ -3292,8 +3679,8 @@ a.btn:hover,
     opacity: 0.5;
     cursor: not-allowed;
     background-color: transparent;
-    border-color: rgba(255, 255, 255, 0.1);
-    color: rgba(255, 255, 255, 0.4);
+    border-color: var(--border-color);
+    color: var(--text-muted);
 }
 
 .refresh-btn {
@@ -3305,9 +3692,9 @@ a.btn:hover,
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid var(--border-color-hover);
     background-color: transparent;
-    color: #fff;
+    color: var(--text-primary);
     border-radius: 10px;
     transition: all 0.3s ease;
     text-align: center;
@@ -3315,9 +3702,9 @@ a.btn:hover,
 }
 
 .refresh-btn:hover:not(:disabled) {
-    background-color: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.3);
-    color: #fff;
+    background-color: var(--bg-input);
+    border-color: var(--border-color-strong);
+    color: var(--text-primary);
     transform: translateY(-1px);
 }
 
@@ -3325,8 +3712,8 @@ a.btn:hover,
     opacity: 0.5;
     cursor: not-allowed;
     background-color: transparent;
-    border-color: rgba(255, 255, 255, 0.1);
-    color: rgba(255, 255, 255, 0.4);
+    border-color: var(--border-color);
+    color: var(--text-muted);
 }
 
 .refresh-btn .spinner-border-sm {
@@ -3334,6 +3721,9 @@ a.btn:hover,
     height: 14px;
     border-width: 2px;
     margin: 0;
+    border-right-color: #007AFF;
+    border-top-color: #5856D6;
+    border-bottom-color: #FF2D55;
 }
 
 .refresh-icon {
@@ -3357,9 +3747,9 @@ a.btn:hover,
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid var(--border-color-hover);
     background-color: transparent;
-    color: #fff;
+    color: var(--text-primary);
     border-radius: 10px;
     transition: all 0.3s ease;
     cursor: pointer;
@@ -3367,9 +3757,9 @@ a.btn:hover,
 }
 
 .upload-btn:hover:not(.disabled) {
-    background-color: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.3);
-    color: #fff;
+    background-color: var(--bg-input);
+    border-color: var(--border-color-strong);
+    color: var(--text-primary);
     transform: translateY(-1px);
 }
 
@@ -3377,14 +3767,17 @@ a.btn:hover,
     opacity: 0.5;
     cursor: not-allowed;
     background-color: transparent;
-    border-color: rgba(255, 255, 255, 0.1);
-    color: rgba(255, 255, 255, 0.4);
+    border-color: var(--border-color);
+    color: var(--text-muted);
 }
 
 .upload-btn .spinner-border-sm {
     width: 14px;
     height: 14px;
     border-width: 2px;
+    border-right-color: #007AFF;
+    border-top-color: #5856D6;
+    border-bottom-color: #FF2D55;
 }
 
 .upload-icon {
@@ -3416,7 +3809,7 @@ a.btn:hover,
     justify-content: center;
     border: 1px solid rgba(13, 110, 253, 0.7) !important;
     background-color: transparent !important;
-    color: #fff !important;
+    color: var(--text-primary) !important;
     border-radius: 10px !important;
     transition: all 0.3s ease;
 }
@@ -3429,7 +3822,7 @@ a.btn:hover,
 .experience-actions .download-btn.btn-outline-secondary:hover:not(:disabled) {
     background-color: transparent !important;
     border-color: rgba(13, 110, 253, 0.9) !important;
-    color: #fff !important;
+    color: var(--text-primary) !important;
     transform: translateY(-1px);
 }
 
@@ -3443,7 +3836,7 @@ a.btn:hover,
     cursor: not-allowed;
     background-color: transparent !important;
     border-color: rgba(13, 110, 253, 0.3) !important;
-    color: rgba(255, 255, 255, 0.4) !important;
+    color: var(--text-muted) !important;
 }
 
 .download-icon {
@@ -3451,11 +3844,11 @@ a.btn:hover,
     font-weight: normal;
     line-height: 1;
     display: inline-block;
-    color: #fff !important;
+    color: var(--text-primary) !important;
 }
 
 .download-btn:disabled .download-icon {
-    color: rgba(255, 255, 255, 0.4) !important;
+    color: var(--text-muted) !important;
 }
 
 .delete-btn,
@@ -3486,7 +3879,7 @@ a.btn:hover,
     justify-content: center;
     border: 1px solid rgba(220, 53, 69, 0.7) !important;
     background-color: transparent !important;
-    color: #fff !important;
+    color: var(--text-primary) !important;
     border-radius: 10px !important;
     transition: all 0.3s ease;
 }
@@ -3502,7 +3895,7 @@ a.btn:hover,
 .experience-actions .delete-btn.btn-outline-danger:hover:not(:disabled) {
     background-color: transparent !important;
     border-color: rgba(220, 53, 69, 0.9) !important;
-    color: #fff !important;
+    color: var(--text-primary) !important;
     transform: translateY(-1px);
 }
 
@@ -3519,13 +3912,16 @@ a.btn:hover,
     cursor: not-allowed;
     background-color: transparent !important;
     border-color: rgba(220, 53, 69, 0.3) !important;
-    color: rgba(255, 255, 255, 0.4) !important;
+    color: var(--text-muted) !important;
 }
 
 .delete-btn .spinner-border-sm {
     width: 14px;
     height: 14px;
     border-width: 2px;
+    border-right-color: #007AFF;
+    border-top-color: #5856D6;
+    border-bottom-color: #FF2D55;
 }
 
 .delete-icon {
@@ -3533,13 +3929,54 @@ a.btn:hover,
     font-weight: normal;
     line-height: 1;
     display: inline-block;
-    color: #fff !important;
+    color: var(--text-primary) !important;
 }
 
 .delete-btn:disabled .delete-icon {
-    color: rgba(255, 255, 255, 0.4) !important;
+    color: var(--text-muted) !important;
 }
 
 .pagination-info {
     text-align: center;
+    color: var(--text-primary) !important;
+}
+
+.pagination-info *,
+.pagination-info small,
+.pagination-info small.text-white-50 {
+    color: var(--text-secondary) !important;
+}
+
+.pagination-container,
+.pagination-container * {
+    color: var(--text-primary) !important;
+}
+
+.pagination-controls,
+.pagination-controls *,
+.pagination-controls button,
+.pagination-controls button * {
+    color: var(--text-primary) !important;
+}
+
+.pagination-pages,
+.pagination-pages *,
+.pagination-pages button,
+.pagination-pages button * {
+    color: var(--text-primary) !important;
+}
+
+.pagination-controls button:disabled,
+.pagination-controls button:disabled * {
+    color: var(--text-muted) !important;
+}
+
+.btn-primary,
+.btn-primary * {
+    color: #fff !important;
+}
+
+body[data-theme="light"] .btn-primary,
+body[data-theme="light"] .btn-primary * {
+    color: #fff !important;
 }

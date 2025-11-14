@@ -4,6 +4,7 @@ import TopNav from './TopNav';
 import PrivacyPolicy from './components/PrivacyPolicy';
 import TermsOfService from './components/TermsOfService';
 import './unified-styles.css';
+import './light-mode.css';
 
 /* 상단 네비게이션 아이템 */
 export const NAV_ITEMS = [
@@ -15,7 +16,7 @@ export const NAV_ITEMS = [
 ];
 
 /** Apple TV+ 스타일 캐러셀 (이미지 지원 + 경로 자동 처리) */
-function HeroCarousel({ onSelect }) {
+function HeroCarousel({ onSelect, isDarkMode = true }) {
     const driveToDirect = (url) => {
         const m = url?.match(/\/d\/([^/]+)/) || url?.match(/[?&]id=([^&]+)/);
         return m ? `https://drive.google.com/uc?export=view&id=${m[1]}` : url;
@@ -47,7 +48,7 @@ function HeroCarousel({ onSelect }) {
       </svg>
     `);
 
-    const slides = [
+    const slides = isDarkMode ? [
         {
             key: "pptMaker",
             eyebrow: "Make",
@@ -82,6 +83,43 @@ function HeroCarousel({ onSelect }) {
             subtitle: "내 기록과 제작 이력 한눈에",
             bg: "linear-gradient(135deg,#0F1115 0%, #171B22 55%, #0E0F13 100%)",
             accent: "linear-gradient(90deg,#e2e2e2, #f5f5f5)",
+            img: "assets/hero/mypage-preview.jpg",
+        },
+    ] : [
+        {
+            key: "pptMaker",
+            eyebrow: "Make",
+            title: "포트폴리오 PPT 제작",
+            subtitle: "템플릿으로 빠르게, 더 세련되게",
+            bg: "linear-gradient(135deg,#f5f5f7 0%, #ffffff 50%, #f0f0f2 100%)",
+            accent: "linear-gradient(90deg,#1d1d1f, #3a3a3c)",
+            img: "assets/hero/ppt-preview.jpg",
+        },
+        {
+            key: "drive",
+            eyebrow: "Sync",
+            title: "구글 드라이브 연동",
+            subtitle: "파일 업로드부터 공유까지 한 번에",
+            bg: "linear-gradient(135deg,#f5f5f7 0%, #ffffff 55%, #f0f0f2 100%)",
+            accent: "linear-gradient(90deg,#0066cc, #004499)",
+            img: "assets/hero/drive-preview.jpg",
+        },
+        {
+            key: "portal",
+            eyebrow: "Campus",
+            title: "학교 포털 바로가기",
+            subtitle: "학사 일정과 공지 확인",
+            bg: "linear-gradient(135deg,#f5f5f7 0%, #ffffff 50%, #f0f0f2 100%)",
+            accent: "linear-gradient(90deg,#1d1d1f, #3a3a3c)",
+            img: "assets/hero/portal-preview.png",
+        },
+        {
+            key: "myPage",
+            eyebrow: "Profile",
+            title: "마이페이지",
+            subtitle: "내 기록과 제작 이력 한눈에",
+            bg: "linear-gradient(135deg,#f5f5f7 0%, #ffffff 55%, #f0f0f2 100%)",
+            accent: "linear-gradient(90deg,#1d1d1f, #3a3a3c)",
             img: "assets/hero/mypage-preview.jpg",
         },
     ];
@@ -131,14 +169,7 @@ function HeroCarousel({ onSelect }) {
                         <div className="hero-eyebrow">
                             {slideData.eyebrow}
                         </div>
-                        <h2
-                            className="hero-title"
-                            style={{
-                                background: slideData.accent,
-                                WebkitBackgroundClip: "text",
-                                WebkitTextFillColor: "transparent",
-                            }}
-                        >
+                        <h2 className="hero-title">
                             {slideData.title}
                         </h2>
                         <p className="hero-subtitle">
@@ -325,6 +356,9 @@ function App() {
     handleTemplateCancel,
     handleTemplateUse,
     handleThemeColorSelect,
+    handleCustomColorSelect,
+    customBackgroundColor,
+    customTextColor,
     bgImagePreview,
     handleBgImageSelect,
     handleBgImageDrop,
@@ -369,6 +403,8 @@ function App() {
     showTermsOfService,
     setShowPrivacyPolicy,
     setShowTermsOfService,
+    isDarkMode,
+    toggleTheme,
     pptHistoryCurrentPage,
     experienceCurrentPage,
     pptMakerExperienceCurrentPage,
@@ -503,7 +539,7 @@ function App() {
         )}
 
         {/* 메인 페이지 */}
-        {isLoggedIn && (
+        {isLoggedIn && !showPrivacyPolicy && !showTermsOfService && (
             <div id="mainPage" className="theme-ink">
               {/* 상단 네비게이션 */}
               <TopNav 
@@ -511,6 +547,8 @@ function App() {
                 active={activeSection} 
                 onSelect={showSection} 
                 onLogout={logout}
+                isDarkMode={isDarkMode}
+                onToggleTheme={toggleTheme}
               />
 
               <div className="mac-container">
@@ -519,7 +557,7 @@ function App() {
                   {activeSection === 'main' && (
                       <div className="content-section content-main">
                         <div className="container-xl">
-                          <HeroCarousel onSelect={showSection} />
+                          <HeroCarousel onSelect={showSection} isDarkMode={isDarkMode} />
                           <div className="mac-grid mac-grid-2">
                             <div className="mac-card" onClick={() => showSection('History')}>
                               <i className="fas fa-plus-circle"></i>
@@ -2022,8 +2060,212 @@ function App() {
                            onClick={() => handleThemeColorSelect('lavenderpurple-black')}
                            title="라벤더퍼플-블랙 테마"
                          ></div>
+                         <div
+                           className={`theme-color-option custom ${selectedThemeColor === 'custom' ? 'selected' : ''}`}
+                           onClick={() => {
+                             if (selectedThemeColor !== 'custom') {
+                               handleCustomColorSelect('#ffffff', '#000000');
+                             }
+                           }}
+                           title="커스텀 색상 선택"
+                           style={selectedThemeColor === 'custom' ? {
+                             backgroundColor: customBackgroundColor || '#ffffff',
+                             color: customTextColor || '#000000'
+                           } : {}}
+                         >
+                           {selectedThemeColor !== 'custom' && (
+                             <i className="fas fa-palette"></i>
+                           )}
+                         </div>
                        </div>
                      </div>
+                     
+                     {selectedThemeColor === 'custom' && (() => {
+                       const hexToRgb = (hex) => {
+                         const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex || '#ffffff');
+                         return result ? {
+                           r: parseInt(result[1], 16),
+                           g: parseInt(result[2], 16),
+                           b: parseInt(result[3], 16)
+                         } : { r: 255, g: 255, b: 255 };
+                       };
+                       
+                       const rgbToHex = (r, g, b) => {
+                         return "#" + [r, g, b].map(x => {
+                           const hex = Math.max(0, Math.min(255, x)).toString(16);
+                           return hex.length === 1 ? "0" + hex : hex;
+                         }).join("");
+                       };
+                       
+                       const bgRgb = hexToRgb(customBackgroundColor || '#ffffff');
+                       const textRgb = hexToRgb(customTextColor || '#000000');
+                       
+                       const handleBgRgbChange = (component, value) => {
+                         const newRgb = { ...bgRgb, [component]: parseInt(value) || 0 };
+                         handleCustomColorSelect(rgbToHex(newRgb.r, newRgb.g, newRgb.b), customTextColor || '#000000');
+                       };
+                       
+                       const handleTextRgbChange = (component, value) => {
+                         const newRgb = { ...textRgb, [component]: parseInt(value) || 0 };
+                         handleCustomColorSelect(customBackgroundColor || '#ffffff', rgbToHex(newRgb.r, newRgb.g, newRgb.b));
+                       };
+                       
+                       return (
+                         <div className="custom-color-picker">
+                           <div className="color-picker-section">
+                             <label className="color-section-label">배경색</label>
+                             <div className="color-preview" style={{ backgroundColor: customBackgroundColor || '#ffffff' }}></div>
+                             <div className="rgb-sliders">
+                               <div className="rgb-slider-group">
+                                 <label>R</label>
+                                 <input
+                                   type="range"
+                                   min="0"
+                                   max="255"
+                                   value={bgRgb.r}
+                                   onChange={(e) => handleBgRgbChange('r', e.target.value)}
+                                   className="rgb-slider"
+                                   style={{ '--slider-color': `rgb(${bgRgb.r}, 0, 0)` }}
+                                 />
+                                 <input
+                                   type="number"
+                                   min="0"
+                                   max="255"
+                                   value={bgRgb.r}
+                                   onChange={(e) => handleBgRgbChange('r', e.target.value)}
+                                   className="rgb-input"
+                                 />
+                               </div>
+                               <div className="rgb-slider-group">
+                                 <label>G</label>
+                                 <input
+                                   type="range"
+                                   min="0"
+                                   max="255"
+                                   value={bgRgb.g}
+                                   onChange={(e) => handleBgRgbChange('g', e.target.value)}
+                                   className="rgb-slider"
+                                   style={{ '--slider-color': `rgb(0, ${bgRgb.g}, 0)` }}
+                                 />
+                                 <input
+                                   type="number"
+                                   min="0"
+                                   max="255"
+                                   value={bgRgb.g}
+                                   onChange={(e) => handleBgRgbChange('g', e.target.value)}
+                                   className="rgb-input"
+                                 />
+                               </div>
+                               <div className="rgb-slider-group">
+                                 <label>B</label>
+                                 <input
+                                   type="range"
+                                   min="0"
+                                   max="255"
+                                   value={bgRgb.b}
+                                   onChange={(e) => handleBgRgbChange('b', e.target.value)}
+                                   className="rgb-slider"
+                                   style={{ '--slider-color': `rgb(0, 0, ${bgRgb.b})` }}
+                                 />
+                                 <input
+                                   type="number"
+                                   min="0"
+                                   max="255"
+                                   value={bgRgb.b}
+                                   onChange={(e) => handleBgRgbChange('b', e.target.value)}
+                                   className="rgb-input"
+                                 />
+                               </div>
+                             </div>
+                             <div className="hex-display">
+                               <input
+                                 type="text"
+                                 value={customBackgroundColor || '#ffffff'}
+                                 onChange={(e) => handleCustomColorSelect(e.target.value, customTextColor || '#000000')}
+                                 className="hex-input"
+                                 placeholder="#ffffff"
+                               />
+                             </div>
+                           </div>
+                           
+                           <div className="color-picker-section">
+                             <label className="color-section-label">글씨색</label>
+                             <div className="color-preview" style={{ backgroundColor: customTextColor || '#000000' }}></div>
+                             <div className="rgb-sliders">
+                               <div className="rgb-slider-group">
+                                 <label>R</label>
+                                 <input
+                                   type="range"
+                                   min="0"
+                                   max="255"
+                                   value={textRgb.r}
+                                   onChange={(e) => handleTextRgbChange('r', e.target.value)}
+                                   className="rgb-slider"
+                                   style={{ '--slider-color': `rgb(${textRgb.r}, 0, 0)` }}
+                                 />
+                                 <input
+                                   type="number"
+                                   min="0"
+                                   max="255"
+                                   value={textRgb.r}
+                                   onChange={(e) => handleTextRgbChange('r', e.target.value)}
+                                   className="rgb-input"
+                                 />
+                               </div>
+                               <div className="rgb-slider-group">
+                                 <label>G</label>
+                                 <input
+                                   type="range"
+                                   min="0"
+                                   max="255"
+                                   value={textRgb.g}
+                                   onChange={(e) => handleTextRgbChange('g', e.target.value)}
+                                   className="rgb-slider"
+                                   style={{ '--slider-color': `rgb(0, ${textRgb.g}, 0)` }}
+                                 />
+                                 <input
+                                   type="number"
+                                   min="0"
+                                   max="255"
+                                   value={textRgb.g}
+                                   onChange={(e) => handleTextRgbChange('g', e.target.value)}
+                                   className="rgb-input"
+                                 />
+                               </div>
+                               <div className="rgb-slider-group">
+                                 <label>B</label>
+                                 <input
+                                   type="range"
+                                   min="0"
+                                   max="255"
+                                   value={textRgb.b}
+                                   onChange={(e) => handleTextRgbChange('b', e.target.value)}
+                                   className="rgb-slider"
+                                   style={{ '--slider-color': `rgb(0, 0, ${textRgb.b})` }}
+                                 />
+                                 <input
+                                   type="number"
+                                   min="0"
+                                   max="255"
+                                   value={textRgb.b}
+                                   onChange={(e) => handleTextRgbChange('b', e.target.value)}
+                                   className="rgb-input"
+                                 />
+                               </div>
+                             </div>
+                             <div className="hex-display">
+                               <input
+                                 type="text"
+                                 value={customTextColor || '#000000'}
+                                 onChange={(e) => handleCustomColorSelect(customBackgroundColor || '#ffffff', e.target.value)}
+                                 className="hex-input"
+                                 placeholder="#000000"
+                               />
+                             </div>
+                           </div>
+                         </div>
+                       );
+                     })()}
                       
                         <hr style={{ borderTop: '1px solid var(--ink-line)', margin: '20px 0' }} />
                         <h6 className="mb-3">배경 이미지 업로드 (선택)</h6>
