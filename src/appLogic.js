@@ -706,6 +706,50 @@ function useAppLogic()
       }
     }, [activeSection, isDriveInitialized, isSheetsInitialized]);
 
+    // 마이페이지 블록 높이 동기화
+    useEffect(() => {
+      if (activeSection === 'myPage') {
+        const syncHeights = () => {
+          const grid = document.querySelector('#myPageSection .mac-grid');
+          if (!grid) return;
+          
+          const windows = grid.querySelectorAll('.mac-window');
+          if (windows.length !== 2) return;
+          
+          let maxHeight = 0;
+          windows.forEach(window => {
+            const height = window.offsetHeight;
+            if (height > maxHeight) {
+              maxHeight = height;
+            }
+          });
+          
+          windows.forEach(window => {
+            window.style.height = `${maxHeight}px`;
+          });
+        };
+        
+        setTimeout(syncHeights, 100);
+        
+        const observer = new MutationObserver(syncHeights);
+        const grid = document.querySelector('#myPageSection .mac-grid');
+        if (grid) {
+          observer.observe(grid, { childList: true, subtree: true, attributes: true });
+        }
+        
+        window.addEventListener('resize', syncHeights);
+        
+        return () => {
+          observer.disconnect();
+          window.removeEventListener('resize', syncHeights);
+          const windows = document.querySelectorAll('#myPageSection .mac-window');
+          windows.forEach(window => {
+            window.style.height = '';
+          });
+        };
+      }
+    }, [activeSection, pptHistory, experiences, pptHistoryCurrentPage, experienceCurrentPage]);
+
     // 페이지 로드 시 로그인 상태 복원 및 초기화
     useEffect(() => {
       const initializeApp = async () => {

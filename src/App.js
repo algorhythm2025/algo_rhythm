@@ -929,16 +929,21 @@ function App() {
                               <i className="fab fa-google-drive" style={{ opacity: 0.9 }}></i>
                               <h2 className="mb-0">구글 드라이브</h2>
                             </div>
-                            <div className="d-flex align-items-center flex-wrap gap-2">
-                              <span className="drive-view-badge">
-                                {driveViewMode === 'all' ? '전체 파일' : '포트폴리오 폴더'}
-                              </span>
-                              {currentPath.map((node, i) => (
-                                <span key={node.id} className="drive-path-badge">
-                                  {node.name}
-                                </span>
-                              ))}
-                            </div>
+                            <a
+                              href={driveViewMode === 'all' 
+                                ? 'https://drive.google.com' 
+                                : portfolioFolderId 
+                                  ? `https://drive.google.com/drive/folders/${portfolioFolderId}` 
+                                  : 'https://drive.google.com'}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="btn btn-outline-primary btn-sm drive-link-btn"
+                              title={driveViewMode === 'all' ? '구글 드라이브 전체 파일 열기' : '포트폴리오 폴더 열기'}
+                            >
+                              <i className="fab fa-google-drive me-2"></i>
+                              {driveViewMode === 'all' ? '전체 파일' : '포트폴리오 폴더'}
+                              <i className="fas fa-external-link-alt ms-2"></i>
+                            </a>
                           </div>
                           <div className="mac-window-content">
                             {/* 드라이브 연동 상태 - 로그인된 상태에서는 초기화 중이거나 연동 실패 시에만 표시 */}
@@ -1451,8 +1456,8 @@ function App() {
                                     onChange={(e) => setPptSortBy(e.target.value)}
                                     disabled={isLoading}
                                   >
-                                    <option value="createdTime">등록순</option>
-                                    <option value="modifiedTime">날짜순</option>
+                                    <option value="createdTime">생성순</option>
+                                    <option value="name">이름순</option>
                                   </select>
                                   <button 
                                     className={`btn btn-outline-secondary btn-sm sort-order-btn sort-${pptSortOrder}`}

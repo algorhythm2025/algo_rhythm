@@ -1,28 +1,58 @@
 // PPT 생성 관련 로직
 export function usePresentationLogic() {
-    async function getImageDimensions(url) {
+    async function getImageDimensions(url, driveService = null) {
+        // Google Drive URL인지 확인하고 파일 ID 추출
+        const isGoogleDriveUrl = url.includes('drive.google.com') || url.includes('googleusercontent.com');
+        let imageUrl = url;
+        let blobUrl = null;
+
+        // Google Drive URL이고 driveService가 제공된 경우, API를 통해 Blob URL 생성
+        if (isGoogleDriveUrl && driveService?.current) {
+            try {
+                // 파일 ID 추출
+                const fileIdMatch = url.match(/[-\w]{25,}/);
+                if (fileIdMatch) {
+                    const fileId = fileIdMatch[0];
+                    blobUrl = await driveService.current.getImageAsBlobUrl(fileId);
+                    imageUrl = blobUrl;
+                }
+            } catch (error) {
+                console.warn('Google Drive API를 통한 이미지 로드 실패, 직접 URL 사용:', error);
+                // 실패 시 원본 URL 사용 (fallback)
+            }
+        }
+
         return new Promise((resolve, reject) => {
             const img = new Image();
             img.onload = () => {
+                // Blob URL 정리
+                if (blobUrl) {
+                    URL.revokeObjectURL(blobUrl);
+                }
                 resolve({
                     width: img.naturalWidth,
                     height: img.naturalHeight
                 });
             };
             img.onerror = (err) => {
+                // Blob URL 정리
+                if (blobUrl) {
+                    URL.revokeObjectURL(blobUrl);
+                }
                 console.error('이미지 크기 로드 실패:', url, err);
                 resolve({ width: 1920, height: 1080 });
             };
 
-            try {
-                if (url.startsWith('http')) {
+            // Google Drive 직접 URL이 아닌 경우에만 crossOrigin 설정
+            if (!isGoogleDriveUrl && url.startsWith('http')) {
+                try {
                     img.crossOrigin = 'anonymous';
+                } catch(e) {
+                    console.warn('crossOrigin 설정 실패', e);
                 }
-            } catch(e) {
-                console.warn('crossOrigin 설정 실패', e);
             }
 
-            img.src = url;
+            img.src = imageUrl;
         });
     }
 
@@ -1294,7 +1324,7 @@ export function usePresentationLogic() {
         updatePptProgress(80, '타임라인 템플릿 슬라이드 생성 완료');
     }
 
-    async function createPhotoTemplateSlides(presId, currentToken, slidesArr, selectedExperiences, updatePptProgress, calculateSlideProgress, selectedThemeColor = 'light', customBackgroundColor = null, customTextColor = null) {
+    async function createPhotoTemplateSlides(presId, currentToken, slidesArr, selectedExperiences, updatePptProgress, calculateSlideProgress, selectedThemeColor = 'light', customBackgroundColor = null, customTextColor = null, driveService = null) {
         const themeStyles = getThemeStyles(selectedThemeColor, customBackgroundColor, customTextColor);
         const experiencesWithImages = selectedExperiences.filter(exp => exp.imageUrls && exp.imageUrls.length > 0);
         
@@ -1314,7 +1344,7 @@ export function usePresentationLogic() {
                 
                 slideIdsToSetBackground.push(s.objectId);
                 const imageUrl = exp.imageUrls[j];
-                imageDimensionsPromises.push(getImageDimensions(imageUrl).catch(() => ({ width: 1920, height: 1080 })));
+                imageDimensionsPromises.push(getImageDimensions(imageUrl, driveService).catch(() => ({ width: 1920, height: 1080 })));
                 
                 idx++;
             }
@@ -1791,7 +1821,7 @@ export function usePresentationLogic() {
             } else if (templateName === 'timeline') {
                 await createTimelineTemplateSlides(presId, currentToken, slidesArr, selectedExperiences, updatePptProgress, calculateSlideProgress, selectedThemeColor, customBackgroundColor, customTextColor);
             } else if (templateName === 'photo') {
-                await createPhotoTemplateSlides(presId, currentToken, slidesArr, selectedExperiences, updatePptProgress, calculateSlideProgress, selectedThemeColor, customBackgroundColor, customTextColor);
+                await createPhotoTemplateSlides(presId, currentToken, slidesArr, selectedExperiences, updatePptProgress, calculateSlideProgress, selectedThemeColor, customBackgroundColor, customTextColor, driveService);
             }
 
             // 5-1) 배경 이미지가 있으면 드라이브에 업로드하고 모든 슬라이드에 적용

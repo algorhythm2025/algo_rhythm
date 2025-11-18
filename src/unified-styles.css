@@ -573,6 +573,7 @@ a.btn-google:hover {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 24px;
+    align-items: stretch;
 }
 
 .mac-card {
@@ -626,6 +627,10 @@ a.btn-google:hover {
     margin-bottom: 24px;
     overflow: hidden;
     backdrop-filter: blur(10px);
+}
+
+#myPageSection .mac-window {
+    overflow: visible;
 }
 
 .mac-window h2 {
@@ -2907,6 +2912,31 @@ hr[style*="gradient"] {
     color: var(--text-primary);
 }
 
+.drive-link-btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 16px;
+    background: var(--bg-button);
+    border: 1.5px solid var(--border-color-strong);
+    border-radius: 12px;
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    transition: all 0.2s ease;
+    text-decoration: none;
+}
+
+.drive-link-btn:hover {
+    background: var(--bg-button-hover);
+    border-color: var(--border-color-strong);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    transform: translateY(-1px);
+    color: var(--text-primary);
+    text-decoration: none;
+}
+
 #driveSection .mac-window > h2 {
     border-bottom: none;
 }
@@ -4273,7 +4303,34 @@ hr[style*="gradient"] {
     }
     
     #myPageSection .mac-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr 1fr;
+        align-items: stretch;
+    }
+    
+    #myPageSection .mac-window {
+        display: flex;
+        flex-direction: column;
+        padding: 20px;
+        margin-bottom: 0;
+    }
+    
+    #myPageSection .mac-window > .d-flex.justify-content-between {
+        flex-shrink: 0;
+        padding: 0;
+        margin-bottom: 1rem;
+    }
+    
+    #myPageSection .mac-window h2 {
+        padding: 0;
+        margin: 0;
+    }
+    
+    #myPageSection .mac-window .mac-list {
+        flex: 1 1 auto;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        padding: 0;
     }
     
     .modal-dialog.modal-xl .modal-body img {
@@ -4302,6 +4359,15 @@ hr[style*="gradient"] {
     .drive-path-badge {
         display: block;
         margin-bottom: 4px;
+    }
+    
+    .drive-link-btn {
+        font-size: 12px;
+        padding: 6px 12px;
+    }
+    
+    .drive-link-btn i {
+        font-size: 12px;
     }
     
     .d-flex.justify-content-between {
