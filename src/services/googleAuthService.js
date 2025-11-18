@@ -687,6 +687,35 @@ class GoogleAuthService {
       return '사용자';
     }
   }
+
+  async getGoogleAccountInfo() {
+    try {
+      const gapiClient = this.getAuthenticatedGapiClient();
+      
+      const response = await gapiClient.people.people.get({
+        resourceName: 'people/me',
+        personFields: 'names,emailAddresses,photos'
+      });
+      
+      const person = response.result;
+      const name = person.names && person.names[0] ? person.names[0].displayName || person.names[0].givenName || '사용자' : '사용자';
+      const email = person.emailAddresses && person.emailAddresses[0] ? person.emailAddresses[0].value : '';
+      const photoUrl = person.photos && person.photos[0] ? person.photos[0].url : null;
+      
+      return {
+        name,
+        email,
+        photoUrl
+      };
+    } catch (error) {
+      console.error('구글 계정 정보 가져오기 실패:', error);
+      return {
+        name: '사용자',
+        email: '',
+        photoUrl: null
+      };
+    }
+  }
 }
 
 export default GoogleAuthService;

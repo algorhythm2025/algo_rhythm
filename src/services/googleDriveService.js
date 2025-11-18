@@ -932,12 +932,10 @@ class GoogleDriveService {
     return extensionMap[originalMimeType] || '';
   }
 
-  // 드라이브 파일 목록 로드 (driveLogic에서 통합)
   async loadDriveFiles(driveViewMode, portfolioFolderId, spreadsheetId, sheetsService, setDriveFiles, setIsDriveLoading, setSpreadsheetId, parentId = null) {
     try {
       setIsDriveLoading(true);
 
-      // 시트가 있다면 실제로 존재하는지 확인
       if (spreadsheetId && sheetsService.current) {
         try {
           const exists = await sheetsService.current.checkSpreadsheetExists(spreadsheetId);
@@ -953,17 +951,16 @@ class GoogleDriveService {
 
       let files;
       if (parentId) {
-        // 특정 폴더 내 파일만 로드
         files = await this.listFiles(50, parentId);
       } else if (driveViewMode === 'portfolio' && portfolioFolderId) {
-        // 포트폴리오 폴더 내 파일만 로드
         files = await this.listFiles(50, portfolioFolderId);
       } else {
-        // 전체 파일 로드
         files = await this.listFiles(20);
       }
 
-      setDriveFiles(files);
+      if (typeof setDriveFiles === 'function') {
+        setDriveFiles(files);
+      }
     } catch (error) {
       console.error('드라이브 파일 로드 오류:', error);
     } finally {
@@ -1047,7 +1044,7 @@ class GoogleDriveService {
 
   // 파일 삭제 핸들러 - driveLogic에서 통합
   async handleDriveFileDelete(fileId, isFromPptHistory, currentPath, loadDriveFiles, loadPptHistory, setDeletingFileIds) {
-    if (!window.confirm('정말로 이 파일을 삭제하시겠습니까?')) return;
+    if (!isFromPptHistory && !window.confirm('정말로 이 파일을 삭제하시겠습니까?')) return;
 
     try {
       // 해당 파일 ID를 삭제 중 상태에 추가

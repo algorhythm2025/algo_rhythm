@@ -305,6 +305,7 @@ function App() {
     selected,
     spreadsheetId,
     isDriveInitialized,
+    isSheetsInitialized,
     isInitializing,
     driveFiles,
     isLoading,
@@ -316,6 +317,7 @@ function App() {
     isDeleteLoading,
     editingIndex,
     deletingFileIds,
+    downloadingFileIds,
     isViewModeLoading,
     isPptCreating,
     currentPath,
@@ -428,9 +430,12 @@ function App() {
     setExpSortOrder,
     pptSortBy,
     setPptSortBy,
-    pptSortOrder,
-    setPptSortOrder
-  } = useAppLogic();
+      pptSortOrder,
+      setPptSortOrder,
+      userInfo,
+      isUserInfoExpanded,
+      setIsUserInfoExpanded
+    } = useAppLogic();
 
   /* 스크롤 시 상단바 스타일 토글 */
   useEffect(() => {
@@ -633,7 +638,14 @@ function App() {
                               </div>
                             </div>
                             <div id="experienceList" className="mac-list">
-                              {experiences.length === 0 ? (
+                              {!isSheetsInitialized || isExperienceLoading ? (
+                                  <div className="text-center p-4">
+                                    <div className="spinner-border text-primary" role="status">
+                                      <span className="visually-hidden">로딩중...</span>
+                                    </div>
+                                    <p className="mt-2">이력 목록을 불러오는 중...</p>
+                                  </div>
+                              ) : experiences.length === 0 ? (
                                   <div className="empty-state">
                                     <i className="fas fa-clipboard-list fa-3x mb-3"></i>
                                     <p>등록된 이력이 없습니다.</p>
@@ -929,16 +941,21 @@ function App() {
                               <i className="fab fa-google-drive" style={{ opacity: 0.9 }}></i>
                               <h2 className="mb-0">구글 드라이브</h2>
                             </div>
-                            <div className="d-flex align-items-center flex-wrap gap-2">
-                              <span className="drive-view-badge">
-                                {driveViewMode === 'all' ? '전체 파일' : '포트폴리오 폴더'}
-                              </span>
-                              {currentPath.map((node, i) => (
-                                <span key={node.id} className="drive-path-badge">
-                                  {node.name}
-                                </span>
-                              ))}
-                            </div>
+                            <a
+                              href={driveViewMode === 'all' 
+                                ? 'https://drive.google.com' 
+                                : portfolioFolderId 
+                                  ? `https://drive.google.com/drive/folders/${portfolioFolderId}` 
+                                  : 'https://drive.google.com'}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="btn btn-outline-primary btn-sm drive-link-btn"
+                              title={driveViewMode === 'all' ? '구글 드라이브 전체 파일 열기' : '포트폴리오 폴더 열기'}
+                            >
+                              <i className="fab fa-google-drive me-2"></i>
+                              {driveViewMode === 'all' ? '전체 파일' : '포트폴리오 폴더'}
+                              <i className="fas fa-external-link-alt ms-2"></i>
+                            </a>
                           </div>
                           <div className="mac-window-content">
                             {/* 드라이브 연동 상태 - 로그인된 상태에서는 초기화 중이거나 연동 실패 시에만 표시 */}
@@ -1113,7 +1130,7 @@ function App() {
                                     </div>
                                   </div>
                                   <div className="file-list">
-                                    {isDriveLoading ? (
+                                    {!isDriveInitialized || isDriveLoading ? (
                                         <div className="text-center p-4">
                                           <div className="spinner-border text-primary" role="status">
                                             <span className="visually-hidden">로딩중...</span>
@@ -1233,9 +1250,14 @@ function App() {
                                                           <button
                                                               className="btn btn-outline-secondary btn-sm download-btn"
                                                               onClick={() => downloadFile(file)}
+                                                              disabled={downloadingFileIds.has(file.id)}
                                                               title="파일 다운로드"
                                                           >
-                                                            <span className="download-icon">⤓</span>
+                                                            {downloadingFileIds.has(file.id) ? (
+                                                                <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                                            ) : (
+                                                                <span className="download-icon">⤓</span>
+                                                            )}
                                                           </button>
                                                           {driveViewMode !== 'portfolio' && (
                                                             <button
@@ -1298,17 +1320,21 @@ function App() {
                                                               className="form-control"
                                                               required
                                                               value={form.startDate}
+                                                              min={form.endDate ? undefined : undefined}
+                                                              max={form.endDate || undefined}
                                                               onChange={e => {
                                                                   const newStartDate = e.target.value;
                                                                   if (!newStartDate || newStartDate.length < 10) {
                                                                       setForm({ ...form, startDate: newStartDate });
                                                                       return;
                                                                   }
-                                                                  setForm({ ...form, startDate: newStartDate });
-                                                                  if (newStartDate && form.endDate && newStartDate > form.endDate) {
+                                                                  
+                                                                  if (form.endDate && newStartDate > form.endDate) {
                                                                       alert('시작일은 종료일보다 이전이어야 합니다.');
-                                                                      setForm(prev => ({ ...prev, endDate: '' }));
+                                                                      return;
                                                                   }
+                                                                  
+                                                                  setForm({ ...form, startDate: newStartDate });
                                                               }}
                                                           />
                                                       </div>
@@ -1319,17 +1345,20 @@ function App() {
                                                               className="form-control"
                                                               required
                                                               value={form.endDate}
+                                                              min={form.startDate || undefined}
                                                               onChange={e => {
                                                                   const newEndDate = e.target.value;
                                                                   if (!newEndDate || newEndDate.length < 10) {
                                                                       setForm({ ...form, endDate: newEndDate });
                                                                       return;
                                                                   }
-                                                                  setForm({ ...form, endDate: newEndDate });
-                                                                  if (newEndDate && form.startDate && newEndDate < form.startDate) {
+                                                                  
+                                                                  if (form.startDate && newEndDate < form.startDate) {
                                                                       alert('종료일은 시작일보다 이후여야 합니다.');
-                                                                      setForm(prev => ({ ...prev, endDate: '' }));
+                                                                      return;
                                                                   }
+                                                                  
+                                                                  setForm({ ...form, endDate: newEndDate });
                                                               }}
                                                           />
                                                       </div>
@@ -1439,6 +1468,59 @@ function App() {
                   {/* 마이페이지 섹션 */}
                   {activeSection === 'myPage' && (
                       <div id="myPageSection" className="content-section">
+                        <div className={`mac-window glass-card mb-4 user-info-card ${isUserInfoExpanded ? 'expanded' : 'collapsed'}`}>
+                          <div className="d-flex justify-content-between align-items-center">
+                            <div className="d-flex align-items-center gap-2 flex-grow-1 min-w-0">
+                              {isUserInfoExpanded && (
+                                <>
+                                  {userInfo.photoUrl ? (
+                                    <img 
+                                      src={userInfo.photoUrl} 
+                                      alt={userInfo.name}
+                                      className="user-profile-image"
+                                    />
+                                  ) : (
+                                    <div className="user-profile-placeholder">
+                                      <i className="fas fa-user"></i>
+                                    </div>
+                                  )}
+                                </>
+                              )}
+                              {isUserInfoExpanded ? (
+                                <>
+                                  <h2 className="mb-0">{userInfo.name || '사용자'}</h2>
+                                </>
+                              ) : (
+                                <>
+                                  <span className="user-name-collapsed">{userInfo.name || '사용자'}</span>
+                                </>
+                              )}
+                            </div>
+                            <button
+                              className="btn btn-outline-secondary btn-sm user-info-toggle-btn"
+                              onClick={() => setIsUserInfoExpanded(!isUserInfoExpanded)}
+                              title={isUserInfoExpanded ? '접기' : '펼치기'}
+                            >
+                              <span className="toggle-icon">{isUserInfoExpanded ? '−' : '+'}</span>
+                            </button>
+                          </div>
+                          {isUserInfoExpanded && (
+                            <div className="mac-window-content mt-3">
+                              <p className="user-email mb-0">{userInfo.email || ''}</p>
+                              {userInfo.joinedDate && (
+                                <p className="user-joined-date mb-0 mt-2">
+                                  {(() => {
+                                    const date = new Date(userInfo.joinedDate);
+                                    const year = date.getFullYear();
+                                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                                    const day = String(date.getDate()).padStart(2, '0');
+                                    return `${year}.${month}.${day}에 Portra 사용시작`;
+                                  })()}
+                                </p>
+                              )}
+                            </div>
+                          )}
+                        </div>
                         <div className="mac-grid">
                           <div className="mac-window">
                             <div className="d-flex justify-content-between align-items-center mb-3">
@@ -1451,8 +1533,8 @@ function App() {
                                     onChange={(e) => setPptSortBy(e.target.value)}
                                     disabled={isLoading}
                                   >
-                                    <option value="createdTime">등록순</option>
-                                    <option value="modifiedTime">날짜순</option>
+                                    <option value="createdTime">생성순</option>
+                                    <option value="name">이름순</option>
                                   </select>
                                   <button 
                                     className={`btn btn-outline-secondary btn-sm sort-order-btn sort-${pptSortOrder}`}
@@ -1465,7 +1547,7 @@ function App() {
                                 </div>
                                 <button 
                                   className="btn btn-outline-secondary btn-sm refresh-btn" 
-                                  onClick={loadPptHistory}
+                                  onClick={() => loadPptHistory(true)}
                                   disabled={isLoading}
                                   title="새로고침"
                                 >
@@ -1478,7 +1560,7 @@ function App() {
                               </div>
                             </div>
                             <div id="pptHistory" className="mac-list">
-                              {isLoading ? (
+                              {!isDriveInitialized || isLoading ? (
                                 <div className="text-center p-4">
                                   <div className="spinner-border text-primary" role="status">
                                     <span className="visually-hidden">로딩중...</span>
@@ -1514,9 +1596,14 @@ function App() {
                                                 e.stopPropagation();
                                                 downloadFile(ppt);
                                               }}
+                                              disabled={downloadingFileIds.has(ppt.id)}
                                               title="다운로드"
                                           >
-                                            <span className="download-icon">⤓</span>
+                                            {downloadingFileIds.has(ppt.id) ? (
+                                                <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                            ) : (
+                                                <span className="download-icon">⤓</span>
+                                            )}
                                           </button>
                                           <button
                                               className="btn btn-outline-secondary btn-sm delete-btn"
@@ -1528,7 +1615,7 @@ function App() {
                                               }}
                                               title="삭제"
                                           >
-                                            <span className="delete-icon">✕</span>
+                                              <span className="delete-icon">✕</span>
                                           </button>
                                         </div>
                                       </div>
@@ -1611,7 +1698,7 @@ function App() {
                               </div>
                             </div>
                             <div id="experienceManagement" className="mac-list">
-                              {isExperienceLoading ? (
+                              {!isSheetsInitialized || isExperienceLoading ? (
                                 <div className="text-center p-4">
                                   <div className="spinner-border text-primary" role="status">
                                     <span className="visually-hidden">로딩중...</span>

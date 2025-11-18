@@ -5,6 +5,7 @@ import GoogleAuthService from './services/googleAuthService';
 import { useExperienceLogic } from './logic/experience/experienceLogic';
 import { usePresentationLogic } from './logic/presentation/presentationLogic';
 import { useUILogic } from './logic/ui/uiLogic';
+import { getCachedData, setCachedData, clearCache } from './utils/cache';
 
 export const SECTION_LIST = ['main', 'drive', 'History', 'pptMaker', 'myPage'];
 
@@ -48,7 +49,8 @@ function useAppLogic()
     const [isRefreshLoading, setIsRefreshLoading] = useState(false);
     const [isDeleteLoading, setIsDeleteLoading] = useState(false);
     const [editingIndex, setEditingIndex] = useState(null);
-    const [deletingFileIds, setDeletingFileIds] = useState(new Set()); // 삭제 중인 파일 ID들
+    const [deletingFileIds, setDeletingFileIds] = useState(new Set());
+    const [downloadingFileIds, setDownloadingFileIds] = useState(new Set());
     const [isViewModeLoading, setIsViewModeLoading] = useState(false);
     const [isPptCreating, setIsPptCreating] = useState(false);
 
@@ -60,16 +62,17 @@ function useAppLogic()
     const [pptCurrentImage, setPptCurrentImage] = useState(0);
     const [pptTotalImages, setPptTotalImages] = useState(0);
     
-    // PPT 진행 상황 업데이트 함수
     const updatePptProgress = (progress, message, slide = 0, totalSlides = 0, image = 0, totalImages = 0) =>
       {
-        setPptProgress(progress);
+        setPptProgress(prevProgress => {
+            const newProgress = Math.max(prevProgress, Math.min(progress, 100));
+            return newProgress;
+        });
         setPptCurrentSlide(slide);
         setPptTotalSlides(totalSlides);
         setPptCurrentImage(image);
         setPptTotalImages(totalImages);
         
-        // 메시지를 배열에 추가 (최대 7개 유지)
         setPptMessages(prev =>
           {
             const newMessage =
@@ -133,6 +136,10 @@ function useAppLogic()
     const pptHistoryItemsPerPage = 8;
     const experienceItemsPerPage = 6;
     const pptMakerExperienceItemsPerPage = 6;
+    const [userInfo, setUserInfo] = useState({ name: '', email: '', photoUrl: null, joinedDate: null });
+    const [isUserInfoExpanded, setIsUserInfoExpanded] = useState(false);
+    const prevDriveInitializedRef = useRef(false);
+    const prevSheetsInitializedRef = useRef(false);
     const formRef = useRef();
   
     // 통합 인증 서비스 인스턴스
@@ -353,7 +360,18 @@ function useAppLogic()
       if (!driveService.current) {
         return;
       }
-      await driveService.current.loadDriveFiles(driveViewMode, portfolioFolderId, spreadsheetId, sheetsService, setDriveFiles, setIsDriveLoading, setSpreadsheetId, parentId);
+      
+      const cacheKey = `cache_driveFiles_${driveViewMode}_${portfolioFolderId || 'all'}_${parentId || 'root'}`;
+      const cachedData = getCachedData(cacheKey);
+      
+      if (cachedData) {
+        setDriveFiles(cachedData);
+      }
+      
+      await driveService.current.loadDriveFiles(driveViewMode, portfolioFolderId, spreadsheetId, sheetsService, (files) => {
+        setDriveFiles(files);
+        setCachedData(cacheKey, files);
+      }, setIsDriveLoading, setSpreadsheetId, parentId);
     }
 
     // 파일 다운로드 (Access Token 사용) (통합된 driveService 사용)
@@ -361,13 +379,24 @@ function useAppLogic()
       await driveService.current.handleDriveFileDownload(file, authService.current, setIsLoading);
     }
 
-    // 파일 업로드 핸들러 (통합된 driveService 사용)
     async function handleDriveFileUpload(event) {
-      await driveService.current.handleDriveFileUpload(event, currentPath, loadDriveFiles, setIsUploadLoading);
+      const currentParentId = currentPath.length > 0 ? currentPath[currentPath.length - 1].id : null;
+      const cacheKey = `cache_driveFiles_${driveViewMode}_${portfolioFolderId || 'all'}_${currentParentId || 'root'}`;
+      clearCache(cacheKey);
+      
+      await driveService.current.handleDriveFileUpload(event, currentPath, loadDriveFiles, setIsUploadLoading, driveViewMode, portfolioFolderId);
     }
 
-    // 파일 삭제 핸들러 (통합된 driveService 사용)
     async function handleDriveFileDelete(fileId, isFromPptHistory = false) {
+      if (isFromPptHistory) {
+        const cacheKey = `cache_pptHistory_${portfolioFolderId || 'default'}`;
+        clearCache(cacheKey);
+      } else {
+        const currentParentId = currentPath.length > 0 ? currentPath[currentPath.length - 1].id : null;
+        const cacheKey = `cache_driveFiles_${driveViewMode}_${portfolioFolderId || 'all'}_${currentParentId || 'root'}`;
+        clearCache(cacheKey);
+      }
+      
       await driveService.current.handleDriveFileDelete(fileId, isFromPptHistory, currentPath, loadDriveFiles, loadPptHistory, setDeletingFileIds);
     }
 
@@ -376,8 +405,11 @@ function useAppLogic()
       await driveService.current.switchViewMode(mode, setDriveViewMode, setCurrentPath, loadDriveFiles, setIsViewModeLoading);
     }
 
-    // 드라이브 새로고침 (통합된 driveService 사용)
     async function handleDriveRefresh() {
+      const currentParentId = currentPath.length > 0 ? currentPath[currentPath.length - 1].id : null;
+      const cacheKey = `cache_driveFiles_${driveViewMode}_${portfolioFolderId || 'all'}_${currentParentId || 'root'}`;
+      clearCache(cacheKey);
+      
       await driveService.current.handleDriveRefresh(currentPath, loadDriveFiles, setIsRefreshLoading);
     }
 
@@ -391,9 +423,19 @@ function useAppLogic()
       await driveService.current.goBack(currentPath, setCurrentPath, loadDriveFiles, setIsViewModeLoading, driveViewMode, portfolioFolderId);
     }
 
-    // 파일 다운로드 (통합된 driveService 사용)
     async function downloadFile(file) {
-      await driveService.current.downloadFile(file, authService.current);
+      setDownloadingFileIds(prev => new Set(prev).add(file.id));
+      try {
+        await driveService.current.downloadFile(file, authService.current);
+      } catch (error) {
+        console.error('파일 다운로드 오류:', error);
+      } finally {
+        setDownloadingFileIds(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(file.id);
+          return newSet;
+        });
+      }
     }
 
     // 파일을 새 탭에서 열기 (통합된 driveService 사용)
@@ -427,19 +469,38 @@ function useAppLogic()
     }
 
 
-    // 시트에서 이력 데이터 로드 (통합된 sheetsService 사용)
     async function loadExperiencesFromSheets(spreadsheetIdToUse = null) {
       if (!sheetsService.current) {
         return;
       }
-      await sheetsService.current.loadExperiencesFromSheets(spreadsheetIdToUse || spreadsheetId, setExperiences, null, false);
+      
+      const targetSpreadsheetId = spreadsheetIdToUse || spreadsheetId;
+      if (!targetSpreadsheetId) return;
+      
+      const cacheKey = `cache_experiences_${targetSpreadsheetId}`;
+      const cachedData = getCachedData(cacheKey);
+      
+      if (cachedData) {
+        setExperiences(cachedData);
+      }
+      
+      await sheetsService.current.loadExperiencesFromSheets(targetSpreadsheetId, (experiences) => {
+        setExperiences(experiences);
+        setCachedData(cacheKey, experiences);
+      }, null, false);
     }
 
-    // 구글 시트 데이터 새로고침 (통합된 sheetsService 사용)
     async function refreshSheetsData() {
       if (!sheetsService.current) {
         return;
       }
+      
+      const targetSpreadsheetId = spreadsheetId;
+      if (targetSpreadsheetId) {
+        const cacheKey = `cache_experiences_${targetSpreadsheetId}`;
+        clearCache(cacheKey);
+      }
+      
       await sheetsService.current.refreshSheetsData(loadExperiencesFromSheets, setIsExperienceLoading);
     }
 
@@ -460,8 +521,22 @@ function useAppLogic()
     }
 
     // PPT 기록 조회
-    async function loadPptHistory() {
-      await presentationLogic.loadPptHistory(driveService, setPptHistory, setIsLoading, portfolioFolderId);
+    async function loadPptHistory(forceRefresh = false) {
+      const cacheKey = `cache_pptHistory_${portfolioFolderId || 'default'}`;
+      
+      if (!forceRefresh) {
+        const cachedData = getCachedData(cacheKey);
+        if (cachedData) {
+          setPptHistory(cachedData);
+        }
+      } else {
+        clearCache(cacheKey);
+      }
+      
+      await presentationLogic.loadPptHistory(driveService, (history) => {
+        setPptHistory(history);
+        setCachedData(cacheKey, history);
+      }, setIsLoading, portfolioFolderId);
     }
 
     // PPT 수정을 위한 슬라이드 데이터 로드
@@ -610,6 +685,30 @@ function useAppLogic()
       }
     }, [driveViewMode, portfolioFolderId]);
 
+    // 초기화 완료 후 현재 활성화된 섹션의 데이터 로드 (새로고침 시 자동 로드)
+    useEffect(() => {
+      if (!isLoggedIn) return;
+
+      const driveJustInitialized = !prevDriveInitializedRef.current && isDriveInitialized;
+      const sheetsJustInitialized = !prevSheetsInitializedRef.current && isSheetsInitialized;
+
+      prevDriveInitializedRef.current = isDriveInitialized;
+      prevSheetsInitializedRef.current = isSheetsInitialized;
+
+      if (driveJustInitialized || sheetsJustInitialized) {
+        if (activeSection === 'drive' && isDriveInitialized) {
+          loadDriveFiles();
+        } else if (activeSection === 'myPage' && isDriveInitialized) {
+          loadPptHistory();
+          if (isSheetsInitialized) {
+            refreshSheetsData();
+          }
+        } else if (activeSection === 'pptMaker' && isSheetsInitialized) {
+          refreshSheetsData();
+        }
+      }
+    }, [isDriveInitialized, isSheetsInitialized, activeSection, isLoggedIn]);
+
     // 포트폴리오 폴더 ID가 변경될 때 localStorage 업데이트
     useEffect(() => {
       if (portfolioFolderId) {
@@ -705,6 +804,106 @@ function useAppLogic()
         }
       }
     }, [activeSection, isDriveInitialized, isSheetsInitialized]);
+
+    // 인증 완료 시 사용자 정보 로드
+    useEffect(() => {
+      if (isLoggedIn && isDriveInitialized && isSheetsInitialized && authService.current && authService.current.isAuthenticated()) {
+        const loadUserInfo = async () => {
+          try {
+            const info = await authService.current.getGoogleAccountInfo();
+            if (info && (info.name || info.email || info.photoUrl)) {
+              let joinedDate = null;
+              if (spreadsheetId && sheetsService.current) {
+                try {
+                  const createdTime = await sheetsService.current.getSpreadsheetCreatedTime(spreadsheetId);
+                  if (createdTime) {
+                    joinedDate = createdTime;
+                  }
+                } catch (error) {
+                  console.error('스프레드시트 생성일 가져오기 실패:', error);
+                }
+              }
+              setUserInfo({ ...info, joinedDate });
+            }
+          } catch (error) {
+            console.error('사용자 정보 로드 실패:', error);
+          }
+        };
+        loadUserInfo();
+      }
+    }, [isLoggedIn, isDriveInitialized, isSheetsInitialized, spreadsheetId]);
+
+    // 마이페이지 섹션이 활성화될 때 사용자 정보 다시 로드
+    useEffect(() => {
+      if (activeSection === 'myPage' && isLoggedIn && isDriveInitialized && isSheetsInitialized && authService.current && authService.current.isAuthenticated()) {
+        const loadUserInfo = async () => {
+          try {
+            const info = await authService.current.getGoogleAccountInfo();
+            if (info && (info.name || info.email || info.photoUrl)) {
+              let joinedDate = null;
+              if (spreadsheetId && sheetsService.current) {
+                try {
+                  const createdTime = await sheetsService.current.getSpreadsheetCreatedTime(spreadsheetId);
+                  if (createdTime) {
+                    joinedDate = createdTime;
+                  }
+                } catch (error) {
+                  console.error('스프레드시트 생성일 가져오기 실패:', error);
+                }
+              }
+              setUserInfo({ ...info, joinedDate });
+            }
+          } catch (error) {
+            console.error('사용자 정보 로드 실패:', error);
+          }
+        };
+        loadUserInfo();
+      }
+    }, [activeSection, isLoggedIn, isDriveInitialized, isSheetsInitialized, spreadsheetId]);
+
+    // 마이페이지 블록 높이 동기화
+    useEffect(() => {
+      if (activeSection === 'myPage') {
+        const syncHeights = () => {
+          const grid = document.querySelector('#myPageSection .mac-grid');
+          if (!grid) return;
+          
+          const windows = grid.querySelectorAll('.mac-window');
+          if (windows.length !== 2) return;
+          
+          let maxHeight = 0;
+          windows.forEach(window => {
+            const height = window.offsetHeight;
+            if (height > maxHeight) {
+              maxHeight = height;
+            }
+          });
+          
+          windows.forEach(window => {
+            window.style.height = `${maxHeight}px`;
+          });
+        };
+        
+        setTimeout(syncHeights, 100);
+        
+        const observer = new MutationObserver(syncHeights);
+        const grid = document.querySelector('#myPageSection .mac-grid');
+        if (grid) {
+          observer.observe(grid, { childList: true, subtree: true, attributes: true });
+        }
+        
+        window.addEventListener('resize', syncHeights);
+        
+        return () => {
+          observer.disconnect();
+          window.removeEventListener('resize', syncHeights);
+          const windows = document.querySelectorAll('#myPageSection .mac-window');
+          windows.forEach(window => {
+            window.style.height = '';
+          });
+        };
+      }
+    }, [activeSection, pptHistory, experiences, pptHistoryCurrentPage, experienceCurrentPage]);
 
     // 페이지 로드 시 로그인 상태 복원 및 초기화
     useEffect(() => {
@@ -923,6 +1122,7 @@ function useAppLogic()
       isDeleteLoading,
       editingIndex,
       deletingFileIds,
+      downloadingFileIds,
       isViewModeLoading,
       isPptCreating,
       // PPT 진행 상황 상태들
@@ -960,6 +1160,7 @@ function useAppLogic()
       pptHistoryItemsPerPage,
       experienceItemsPerPage,
       pptMakerExperienceItemsPerPage,
+      userInfo,
       // 함수들
       showSection: (section) => uiLogic.showSection(section, setActiveSection),
       logout,
@@ -1053,6 +1254,9 @@ function useAppLogic()
       setPptSortBy,
       pptSortOrder,
       setPptSortOrder,
+      userInfo,
+      isUserInfoExpanded,
+      setIsUserInfoExpanded,
       expSortBy,
       setExpSortBy,
       expSortOrder,

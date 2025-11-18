@@ -277,22 +277,12 @@ class GoogleSheetsService {
       const sheetData = await this.readData(spreadsheetId, 'A:E');
       const experiences = this.formatSheetToExperience(sheetData);
       
-      // 이미지 URL은 원본 그대로 유지 (표시할 때 적절한 함수 사용)
-      // experiences.forEach(exp => {
-      //   if (exp.imageUrls && exp.imageUrls.length > 0) {
-      //     exp.imageUrls = exp.imageUrls.map(url => this.convertImageUrlToThumbnail(url));
-      //   }
-      // });
-      
-      setExperiences(experiences);
-      
-      // 이미지 프리로딩 제거 - 필요할 때 로딩하는 것이 더 효율적
-      // 프리로딩은 권한 설정 전에 실패할 가능성이 높고 불필요한 로그를 생성함
+      if (typeof setExperiences === 'function') {
+        setExperiences(experiences);
+      }
     } catch (error) {
       console.error('이력 데이터 로드 오류:', error);
-      // 시트가 존재하지 않는 경우 로그만 출력하고 새로 생성하지 않음
       if (error.message.includes('찾을 수 없습니다') || error.status === 404) {
-        // 사용자에게 알림
         alert('포트폴리오 시트가 삭제되었습니다. 로그아웃 후 다시 로그인해주세요.');
       }
     }
@@ -385,6 +375,25 @@ class GoogleSheetsService {
       alert('시트 삭제에 실패했습니다: ' + (error?.message || error));
     } finally {
       setIsSheetLoading(false);
+    }
+  }
+
+  // 스프레드시트 생성일 가져오기
+  async getSpreadsheetCreatedTime(spreadsheetId) {
+    try {
+      await this.ensureAuthenticated();
+
+      const gapiClient = this.authService.getAuthenticatedGapiClient();
+
+      const response = await gapiClient.drive.files.get({
+        fileId: spreadsheetId,
+        fields: 'createdTime',
+      });
+
+      return response.result.createdTime;
+    } catch (error) {
+      console.error('스프레드시트 생성일 가져오기 오류:', error);
+      return null;
     }
   }
 
