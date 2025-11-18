@@ -48,7 +48,8 @@ function useAppLogic()
     const [isRefreshLoading, setIsRefreshLoading] = useState(false);
     const [isDeleteLoading, setIsDeleteLoading] = useState(false);
     const [editingIndex, setEditingIndex] = useState(null);
-    const [deletingFileIds, setDeletingFileIds] = useState(new Set()); // 삭제 중인 파일 ID들
+    const [deletingFileIds, setDeletingFileIds] = useState(new Set());
+    const [downloadingFileIds, setDownloadingFileIds] = useState(new Set());
     const [isViewModeLoading, setIsViewModeLoading] = useState(false);
     const [isPptCreating, setIsPptCreating] = useState(false);
 
@@ -60,16 +61,17 @@ function useAppLogic()
     const [pptCurrentImage, setPptCurrentImage] = useState(0);
     const [pptTotalImages, setPptTotalImages] = useState(0);
     
-    // PPT 진행 상황 업데이트 함수
     const updatePptProgress = (progress, message, slide = 0, totalSlides = 0, image = 0, totalImages = 0) =>
       {
-        setPptProgress(progress);
+        setPptProgress(prevProgress => {
+            const newProgress = Math.max(prevProgress, Math.min(progress, 100));
+            return newProgress;
+        });
         setPptCurrentSlide(slide);
         setPptTotalSlides(totalSlides);
         setPptCurrentImage(image);
         setPptTotalImages(totalImages);
         
-        // 메시지를 배열에 추가 (최대 7개 유지)
         setPptMessages(prev =>
           {
             const newMessage =
@@ -134,6 +136,8 @@ function useAppLogic()
     const experienceItemsPerPage = 6;
     const pptMakerExperienceItemsPerPage = 6;
     const [userInfo, setUserInfo] = useState({ name: '', email: '', photoUrl: null });
+    const prevDriveInitializedRef = useRef(false);
+    const prevSheetsInitializedRef = useRef(false);
     const formRef = useRef();
   
     // 통합 인증 서비스 인스턴스
@@ -392,9 +396,19 @@ function useAppLogic()
       await driveService.current.goBack(currentPath, setCurrentPath, loadDriveFiles, setIsViewModeLoading, driveViewMode, portfolioFolderId);
     }
 
-    // 파일 다운로드 (통합된 driveService 사용)
     async function downloadFile(file) {
-      await driveService.current.downloadFile(file, authService.current);
+      setDownloadingFileIds(prev => new Set(prev).add(file.id));
+      try {
+        await driveService.current.downloadFile(file, authService.current);
+      } catch (error) {
+        console.error('파일 다운로드 오류:', error);
+      } finally {
+        setDownloadingFileIds(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(file.id);
+          return newSet;
+        });
+      }
     }
 
     // 파일을 새 탭에서 열기 (통합된 driveService 사용)
@@ -610,6 +624,30 @@ function useAppLogic()
         loadDriveFiles();
       }
     }, [driveViewMode, portfolioFolderId]);
+
+    // 초기화 완료 후 현재 활성화된 섹션의 데이터 로드 (새로고침 시 자동 로드)
+    useEffect(() => {
+      if (!isLoggedIn) return;
+
+      const driveJustInitialized = !prevDriveInitializedRef.current && isDriveInitialized;
+      const sheetsJustInitialized = !prevSheetsInitializedRef.current && isSheetsInitialized;
+
+      prevDriveInitializedRef.current = isDriveInitialized;
+      prevSheetsInitializedRef.current = isSheetsInitialized;
+
+      if (driveJustInitialized || sheetsJustInitialized) {
+        if (activeSection === 'drive' && isDriveInitialized) {
+          loadDriveFiles();
+        } else if (activeSection === 'myPage' && isDriveInitialized) {
+          loadPptHistory();
+          if (isSheetsInitialized) {
+            refreshSheetsData();
+          }
+        } else if (activeSection === 'pptMaker' && isSheetsInitialized) {
+          refreshSheetsData();
+        }
+      }
+    }, [isDriveInitialized, isSheetsInitialized, activeSection, isLoggedIn]);
 
     // 포트폴리오 폴더 ID가 변경될 때 localStorage 업데이트
     useEffect(() => {
@@ -1002,6 +1040,7 @@ function useAppLogic()
       isDeleteLoading,
       editingIndex,
       deletingFileIds,
+      downloadingFileIds,
       isViewModeLoading,
       isPptCreating,
       // PPT 진행 상황 상태들

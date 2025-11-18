@@ -5997,6 +5997,17 @@ hr[style*="gradient"] {
     color: var(--text-muted) !important;
 }
 
+.download-btn .spinner-border-sm {
+    width: 14px;
+    height: 14px;
+    border-width: 2.5px;
+    border-color: rgba(13, 110, 253, 0.2);
+    border-right-color: #007AFF;
+    border-top-color: #5AC8FA;
+    border-bottom-color: #007AFF;
+    animation: spinner-border 0.75s linear infinite;
+}
+
 .delete-btn,
 .delete-btn.btn-sm,
 .delete-btn.btn-outline-secondary,
@@ -6064,10 +6075,12 @@ hr[style*="gradient"] {
 .delete-btn .spinner-border-sm {
     width: 14px;
     height: 14px;
-    border-width: 2px;
-    border-right-color: #007AFF;
-    border-top-color: #5856D6;
+    border-width: 2.5px;
+    border-color: rgba(220, 53, 69, 0.2);
+    border-right-color: #FF2D55;
+    border-top-color: #FF9DB5;
     border-bottom-color: #FF2D55;
+    animation: spinner-border 0.75s linear infinite;
 }
 
 .delete-icon {

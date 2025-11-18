@@ -629,22 +629,16 @@ export function usePresentationLogic() {
         window.open(`https://docs.google.com/presentation/d/${pptId}/edit`, '_blank');
     }
 
-    // 슬라이드별 진행 상황 계산 함수
     function calculateSlideProgress(currentSlide, totalSlides, hasImages = false) {
-        const baseProgress = 20; // PPT 파일 생성 + 표지 슬라이드 생성 완료 후 시작
-        const slideProgress = 60; // 슬라이드 생성에 할당된 진행률
-        const imageProgress = 20; // 이미지 처리에 할당된 진행률
+        const baseProgress = 25;
+        const slideProgressRange = 55;
         
         if (totalSlides === 0) return baseProgress;
         
-        const slideRatio = currentSlide / totalSlides;
-        const slideContribution = slideProgress * slideRatio;
+        const slideRatio = Math.min(currentSlide / totalSlides, 1);
+        const calculatedProgress = baseProgress + (slideProgressRange * slideRatio);
         
-        if (hasImages) {
-            return baseProgress + slideContribution + imageProgress;
-        }
-        
-        return baseProgress + slideContribution;
+        return Math.min(Math.max(calculatedProgress, baseProgress), 80);
     }
 
     // 테마 색상에 따른 스타일 반환 함수
@@ -911,7 +905,8 @@ export function usePresentationLogic() {
             if (!slidesArr[idx]) break;
             const s = slidesArr[idx];
             
-            updatePptProgress(calculateSlideProgress(i, selectedExperiences.length), `슬라이드 ${i + 1} 생성중`, i + 1, selectedExperiences.length);
+            const progress = calculateSlideProgress(i + 1, selectedExperiences.length);
+            updatePptProgress(progress, `슬라이드 ${i + 1} 생성중`, i + 1, selectedExperiences.length);
             
             slideIdsToSetBackground.push(s.objectId);
             
@@ -1126,7 +1121,7 @@ export function usePresentationLogic() {
 
         if (slidesArr[idx]) {
             const overviewSlide = slidesArr[idx];
-            updatePptProgress(10, '타임라인 개요 슬라이드 생성중');
+            updatePptProgress(25, '타임라인 개요 슬라이드 생성중');
             
             slideIdsToSetBackground.push(overviewSlide.objectId);
             
@@ -1244,7 +1239,8 @@ export function usePresentationLogic() {
             if (!slidesArr[idx]) break;
             const s = slidesArr[idx];
             
-            updatePptProgress(calculateSlideProgress(i, sortedExperiences.length), `타임라인 슬라이드 ${i + 1} 생성중`, i + 1, sortedExperiences.length);
+            const progress = calculateSlideProgress(i + 1, sortedExperiences.length);
+            updatePptProgress(progress, `타임라인 슬라이드 ${i + 1} 생성중`, i + 1, sortedExperiences.length);
             
             slideIdsToSetBackground.push(s.objectId);
 
@@ -1647,9 +1643,13 @@ export function usePresentationLogic() {
         customBackgroundColor = null,
         customTextColor = null
     }) {
+        setIsPptCreating(true);
+        setPptMessages([]);
+        updatePptProgress(0, 'PPT 생성을 준비하고 있습니다...');
+        
         const title = prompt('슬라이드 제목을 입력하세요:', '나의 포트폴리오');
         if (!title) {
-            alert('제목이 없습니다.');
+            setIsPptCreating(false);
             return;
         }
 
@@ -1666,7 +1666,8 @@ export function usePresentationLogic() {
         // 기본 파일명 생성 (날짜 포함)
         const baseFileName = `${title} ${dateString}`;
         
-        // PPT 폴더에서 기존 PPT 파일들 조회하여 중복 확인
+        updatePptProgress(2, '파일명을 확인하고 있습니다...');
+        
         let finalFileName = baseFileName;
         try {
             const portfolioFolder = await driveService.current.ensurePortfolioFolder();
@@ -1675,49 +1676,45 @@ export function usePresentationLogic() {
             if (pptFolder) {
                 const existingFiles = await driveService.current.getFilesInFolder(pptFolder.id);
                 
-                // PPT 파일만 필터링 (Google Slides 파일)
                 const pptFiles = existingFiles.filter(file => 
                     file.mimeType === 'application/vnd.google-apps.presentation'
                 );
                 
-                // 순차적 번호가 포함된 파일명 생성
                 finalFileName = driveService.current.generateSequentialFileName(baseFileName, pptFiles);
-            } else {
             }
         } catch (error) {
             console.warn('PPT 파일명 중복 확인 실패, 기본 파일명 사용:', error);
         }
 
-        // 토큰 확보 보장
+        updatePptProgress(5, '인증 정보를 확인하고 있습니다...');
+        
         let currentToken = accessToken;
         if (!currentToken) {
             try {
-                // 인증 상태 확인
                 const isAuthenticated = await authService.current.isAuthenticated();
                 if (!isAuthenticated) {
                     alert('인증이 필요합니다. 다시 로그인해주세요.');
+                    setIsPptCreating(false);
                     return;
                 }
                 
                 currentToken = await authService.current.getAccessToken();
                 if (!currentToken) {
                     alert('액세스 토큰을 가져올 수 없습니다. 다시 로그인해주세요.');
+                    setIsPptCreating(false);
                     return;
                 }
                 setAccessToken(currentToken);
             } catch (error) {
                 console.error('토큰 가져오기 실패:', error);
                 alert('인증이 필요합니다. 다시 로그인해주세요.');
+                setIsPptCreating(false);
                 return;
             }
         }
 
         setSelectedTemplate(templateName);
-        setIsPptCreating(true); // PPT 생성 시작
-        
-        // 진행 상황 초기화
-        setPptMessages([]);
-        updatePptProgress(0, 'PPT 생성을 시작합니다...');
+        updatePptProgress(10, 'PPT 생성을 시작합니다...');
 
         try {
             // 1) 프레젠테이션 생성 (중복 확인된 최종 파일명으로)
@@ -1856,11 +1853,12 @@ export function usePresentationLogic() {
             updatePptProgress(100, 'PPT 생성 완료!');
             alert('PPT가 생성되었습니다.');
             window.open(`https://docs.google.com/presentation/d/${presId}/edit`, '_blank');
+            setActiveSection('pptMaker');
         } catch (error) {
             console.error('PPT 생성 오류:', error);
             alert('PPT 생성에 실패했습니다: ' + (error?.message || error));
         } finally {
-            setIsPptCreating(false); // PPT 생성 완료 (성공/실패 관계없이)
+            setIsPptCreating(false);
         }
     }
 

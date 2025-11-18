@@ -305,6 +305,7 @@ function App() {
     selected,
     spreadsheetId,
     isDriveInitialized,
+    isSheetsInitialized,
     isInitializing,
     driveFiles,
     isLoading,
@@ -316,6 +317,7 @@ function App() {
     isDeleteLoading,
     editingIndex,
     deletingFileIds,
+    downloadingFileIds,
     isViewModeLoading,
     isPptCreating,
     currentPath,
@@ -634,7 +636,14 @@ function App() {
                               </div>
                             </div>
                             <div id="experienceList" className="mac-list">
-                              {experiences.length === 0 ? (
+                              {!isSheetsInitialized || isExperienceLoading ? (
+                                  <div className="text-center p-4">
+                                    <div className="spinner-border text-primary" role="status">
+                                      <span className="visually-hidden">로딩중...</span>
+                                    </div>
+                                    <p className="mt-2">이력 목록을 불러오는 중...</p>
+                                  </div>
+                              ) : experiences.length === 0 ? (
                                   <div className="empty-state">
                                     <i className="fas fa-clipboard-list fa-3x mb-3"></i>
                                     <p>등록된 이력이 없습니다.</p>
@@ -1119,7 +1128,7 @@ function App() {
                                     </div>
                                   </div>
                                   <div className="file-list">
-                                    {isDriveLoading ? (
+                                    {!isDriveInitialized || isDriveLoading ? (
                                         <div className="text-center p-4">
                                           <div className="spinner-border text-primary" role="status">
                                             <span className="visually-hidden">로딩중...</span>
@@ -1239,9 +1248,14 @@ function App() {
                                                           <button
                                                               className="btn btn-outline-secondary btn-sm download-btn"
                                                               onClick={() => downloadFile(file)}
+                                                              disabled={downloadingFileIds.has(file.id)}
                                                               title="파일 다운로드"
                                                           >
-                                                            <span className="download-icon">⤓</span>
+                                                            {downloadingFileIds.has(file.id) ? (
+                                                                <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                                            ) : (
+                                                                <span className="download-icon">⤓</span>
+                                                            )}
                                                           </button>
                                                           {driveViewMode !== 'portfolio' && (
                                                             <button
@@ -1503,7 +1517,7 @@ function App() {
                               </div>
                             </div>
                             <div id="pptHistory" className="mac-list">
-                              {isLoading ? (
+                              {!isDriveInitialized || isLoading ? (
                                 <div className="text-center p-4">
                                   <div className="spinner-border text-primary" role="status">
                                     <span className="visually-hidden">로딩중...</span>
@@ -1539,9 +1553,14 @@ function App() {
                                                 e.stopPropagation();
                                                 downloadFile(ppt);
                                               }}
+                                              disabled={downloadingFileIds.has(ppt.id)}
                                               title="다운로드"
                                           >
-                                            <span className="download-icon">⤓</span>
+                                            {downloadingFileIds.has(ppt.id) ? (
+                                                <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                            ) : (
+                                                <span className="download-icon">⤓</span>
+                                            )}
                                           </button>
                                           <button
                                               className="btn btn-outline-secondary btn-sm delete-btn"
@@ -1636,7 +1655,7 @@ function App() {
                               </div>
                             </div>
                             <div id="experienceManagement" className="mac-list">
-                              {isExperienceLoading ? (
+                              {!isSheetsInitialized || isExperienceLoading ? (
                                 <div className="text-center p-4">
                                   <div className="spinner-border text-primary" role="status">
                                     <span className="visually-hidden">로딩중...</span>
