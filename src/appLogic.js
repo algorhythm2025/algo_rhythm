@@ -707,20 +707,39 @@ function useAppLogic()
       }
     }, [activeSection, isDriveInitialized, isSheetsInitialized]);
 
-    // 마이페이지 섹션이 활성화될 때 사용자 정보 로드
+    // 인증 완료 시 사용자 정보 로드
     useEffect(() => {
-      if (activeSection === 'myPage' && isLoggedIn && authService.current) {
+      if (isLoggedIn && isDriveInitialized && authService.current && authService.current.isAuthenticated()) {
         const loadUserInfo = async () => {
           try {
             const info = await authService.current.getGoogleAccountInfo();
-            setUserInfo(info);
+            if (info && (info.name || info.email || info.photoUrl)) {
+              setUserInfo(info);
+            }
           } catch (error) {
             console.error('사용자 정보 로드 실패:', error);
           }
         };
         loadUserInfo();
       }
-    }, [activeSection, isLoggedIn]);
+    }, [isLoggedIn, isDriveInitialized]);
+
+    // 마이페이지 섹션이 활성화될 때 사용자 정보 다시 로드
+    useEffect(() => {
+      if (activeSection === 'myPage' && isLoggedIn && isDriveInitialized && authService.current && authService.current.isAuthenticated()) {
+        const loadUserInfo = async () => {
+          try {
+            const info = await authService.current.getGoogleAccountInfo();
+            if (info && (info.name || info.email || info.photoUrl)) {
+              setUserInfo(info);
+            }
+          } catch (error) {
+            console.error('사용자 정보 로드 실패:', error);
+          }
+        };
+        loadUserInfo();
+      }
+    }, [activeSection, isLoggedIn, isDriveInitialized]);
 
     // 마이페이지 블록 높이 동기화
     useEffect(() => {
