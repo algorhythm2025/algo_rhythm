@@ -4303,30 +4303,50 @@ hr[style*="gradient"] {
     }
     
     #myPageSection .user-info-card {
-        background: var(--bg-card);
-        border: 1px solid var(--border-color);
-        border-radius: 12px;
-        padding: 24px;
-        margin-bottom: 24px;
+        transition: all 0.3s ease;
     }
 
-    #myPageSection .user-info-content {
+    #myPageSection .user-info-card.collapsed {
+        padding: 12px 28px !important;
+        min-height: 60px;
         display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    #myPageSection .user-info-card.collapsed > .d-flex.justify-content-between {
+        margin-bottom: 0 !important;
         align-items: center;
-        gap: 20px;
+    }
+
+    #myPageSection .user-info-card.collapsed .user-profile-image {
+        width: 40px;
+        height: 40px;
+        transform: scale(0.4);
+        border-width: 1px;
+    }
+
+    #myPageSection .user-info-card.collapsed .user-profile-placeholder {
+        width: 40px;
+        height: 40px;
+        transform: scale(0.4);
+        font-size: 8px;
+        border-width: 1px;
     }
 
     #myPageSection .user-profile-image {
-        width: 64px;
-        height: 64px;
+        width: 40px;
+        height: 40px;
         border-radius: 50%;
         object-fit: cover;
         border: 2px solid var(--border-color);
+        transition: transform 0.3s ease, border-width 0.3s ease;
+        flex-shrink: 0;
     }
 
     #myPageSection .user-profile-placeholder {
-        width: 64px;
-        height: 64px;
+        width: 40px;
+        height: 40px;
         border-radius: 50%;
         background: var(--bg-button);
         border: 2px solid var(--border-color);
@@ -4334,18 +4354,49 @@ hr[style*="gradient"] {
         align-items: center;
         justify-content: center;
         color: var(--text-secondary);
-        font-size: 24px;
-    }
-
-    #myPageSection .user-info-details {
-        flex: 1;
-    }
-
-    #myPageSection .user-name {
-        margin: 0 0 4px 0;
         font-size: 20px;
+        transition: transform 0.3s ease, font-size 0.3s ease, border-width 0.3s ease;
+        flex-shrink: 0;
+    }
+
+    #myPageSection .user-name-collapsed {
+        font-size: 16px;
         font-weight: 600;
         color: var(--text-primary);
+        margin-right: 8px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        flex-shrink: 0;
+    }
+
+    #myPageSection .user-email-collapsed {
+        font-size: 13px;
+        color: var(--text-secondary);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        flex: 1;
+        min-width: 0;
+    }
+
+    #myPageSection .user-info-toggle-btn {
+        min-width: 32px;
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    #myPageSection .user-info-toggle-btn .toggle-icon {
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--text-primary);
+        line-height: 1;
+        display: inline-block;
     }
 
     #myPageSection .user-email {
@@ -4354,28 +4405,53 @@ hr[style*="gradient"] {
         color: var(--text-secondary);
     }
 
-    @media (max-width: 768px) {
-        #myPageSection .user-info-card {
-            padding: 16px;
-            margin-bottom: 16px;
-        }
+    #myPageSection .user-joined-date {
+        margin: 0;
+        font-size: 13px;
+        color: var(--text-secondary);
+    }
 
-        #myPageSection .user-info-content {
-            gap: 16px;
+    @media (max-width: 768px) {
+        #myPageSection .user-info-card.collapsed {
+            padding: 10px 16px !important;
+            min-height: 52px;
         }
 
         #myPageSection .user-profile-image,
         #myPageSection .user-profile-placeholder {
-            width: 48px;
-            height: 48px;
+            width: 40px;
+            height: 40px;
+        }
+
+        #myPageSection .user-info-card.collapsed .user-profile-image {
+            transform: scale(0.35);
+        }
+
+        #myPageSection .user-info-card.collapsed .user-profile-placeholder {
+            transform: scale(0.35);
+            font-size: 7px;
         }
 
         #myPageSection .user-profile-placeholder {
-            font-size: 20px;
+            font-size: 16px;
         }
 
-        #myPageSection .user-name {
-            font-size: 18px;
+        #myPageSection .user-name-collapsed {
+            font-size: 14px;
+        }
+
+        #myPageSection .user-email-collapsed {
+            font-size: 11px;
+        }
+
+        #myPageSection .user-info-toggle-btn {
+            width: 28px;
+            height: 28px;
+            min-width: 28px;
+        }
+
+        #myPageSection .user-info-toggle-btn .toggle-icon {
+            font-size: 16px;
         }
 
         #myPageSection .user-email {

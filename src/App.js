@@ -430,10 +430,12 @@ function App() {
     setExpSortOrder,
     pptSortBy,
     setPptSortBy,
-    pptSortOrder,
-    setPptSortOrder,
-    userInfo
-  } = useAppLogic();
+      pptSortOrder,
+      setPptSortOrder,
+      userInfo,
+      isUserInfoExpanded,
+      setIsUserInfoExpanded
+    } = useAppLogic();
 
   /* 스크롤 시 상단바 스타일 토글 */
   useEffect(() => {
@@ -1466,24 +1468,58 @@ function App() {
                   {/* 마이페이지 섹션 */}
                   {activeSection === 'myPage' && (
                       <div id="myPageSection" className="content-section">
-                        <div className="user-info-card mb-4">
-                          <div className="user-info-content">
-                            {userInfo.photoUrl ? (
-                              <img 
-                                src={userInfo.photoUrl} 
-                                alt={userInfo.name}
-                                className="user-profile-image"
-                              />
-                            ) : (
-                              <div className="user-profile-placeholder">
-                                <i className="fas fa-user"></i>
-                              </div>
-                            )}
-                            <div className="user-info-details">
-                              <h3 className="user-name">{userInfo.name || '사용자'}</h3>
-                              <p className="user-email">{userInfo.email || ''}</p>
+                        <div className={`mac-window glass-card mb-4 user-info-card ${isUserInfoExpanded ? 'expanded' : 'collapsed'}`}>
+                          <div className="d-flex justify-content-between align-items-center">
+                            <div className="d-flex align-items-center gap-2 flex-grow-1 min-w-0">
+                              {isUserInfoExpanded && (
+                                <>
+                                  {userInfo.photoUrl ? (
+                                    <img 
+                                      src={userInfo.photoUrl} 
+                                      alt={userInfo.name}
+                                      className="user-profile-image"
+                                    />
+                                  ) : (
+                                    <div className="user-profile-placeholder">
+                                      <i className="fas fa-user"></i>
+                                    </div>
+                                  )}
+                                </>
+                              )}
+                              {isUserInfoExpanded ? (
+                                <>
+                                  <h2 className="mb-0">{userInfo.name || '사용자'}</h2>
+                                </>
+                              ) : (
+                                <>
+                                  <span className="user-name-collapsed">{userInfo.name || '사용자'}</span>
+                                </>
+                              )}
                             </div>
+                            <button
+                              className="btn btn-outline-secondary btn-sm user-info-toggle-btn"
+                              onClick={() => setIsUserInfoExpanded(!isUserInfoExpanded)}
+                              title={isUserInfoExpanded ? '접기' : '펼치기'}
+                            >
+                              <span className="toggle-icon">{isUserInfoExpanded ? '−' : '+'}</span>
+                            </button>
                           </div>
+                          {isUserInfoExpanded && (
+                            <div className="mac-window-content mt-3">
+                              <p className="user-email mb-0">{userInfo.email || ''}</p>
+                              {userInfo.joinedDate && (
+                                <p className="user-joined-date mb-0 mt-2">
+                                  {(() => {
+                                    const date = new Date(userInfo.joinedDate);
+                                    const year = date.getFullYear();
+                                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                                    const day = String(date.getDate()).padStart(2, '0');
+                                    return `${year}.${month}.${day}에 Portra 사용시작`;
+                                  })()}
+                                </p>
+                              )}
+                            </div>
+                          )}
                         </div>
                         <div className="mac-grid">
                           <div className="mac-window">

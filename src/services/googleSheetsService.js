@@ -378,6 +378,25 @@ class GoogleSheetsService {
     }
   }
 
+  // 스프레드시트 생성일 가져오기
+  async getSpreadsheetCreatedTime(spreadsheetId) {
+    try {
+      await this.ensureAuthenticated();
+
+      const gapiClient = this.authService.getAuthenticatedGapiClient();
+
+      const response = await gapiClient.drive.files.get({
+        fileId: spreadsheetId,
+        fields: 'createdTime',
+      });
+
+      return response.result.createdTime;
+    } catch (error) {
+      console.error('스프레드시트 생성일 가져오기 오류:', error);
+      return null;
+    }
+  }
+
   // 에러 메시지 포맷팅
   formatErrorMessage(error) {
     const errorMessage = error?.message || error?.toString() || '알 수 없는 오류';

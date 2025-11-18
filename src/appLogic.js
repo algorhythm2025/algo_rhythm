@@ -136,7 +136,8 @@ function useAppLogic()
     const pptHistoryItemsPerPage = 8;
     const experienceItemsPerPage = 6;
     const pptMakerExperienceItemsPerPage = 6;
-    const [userInfo, setUserInfo] = useState({ name: '', email: '', photoUrl: null });
+    const [userInfo, setUserInfo] = useState({ name: '', email: '', photoUrl: null, joinedDate: null });
+    const [isUserInfoExpanded, setIsUserInfoExpanded] = useState(false);
     const prevDriveInitializedRef = useRef(false);
     const prevSheetsInitializedRef = useRef(false);
     const formRef = useRef();
@@ -806,12 +807,23 @@ function useAppLogic()
 
     // 인증 완료 시 사용자 정보 로드
     useEffect(() => {
-      if (isLoggedIn && isDriveInitialized && authService.current && authService.current.isAuthenticated()) {
+      if (isLoggedIn && isDriveInitialized && isSheetsInitialized && authService.current && authService.current.isAuthenticated()) {
         const loadUserInfo = async () => {
           try {
             const info = await authService.current.getGoogleAccountInfo();
             if (info && (info.name || info.email || info.photoUrl)) {
-              setUserInfo(info);
+              let joinedDate = null;
+              if (spreadsheetId && sheetsService.current) {
+                try {
+                  const createdTime = await sheetsService.current.getSpreadsheetCreatedTime(spreadsheetId);
+                  if (createdTime) {
+                    joinedDate = createdTime;
+                  }
+                } catch (error) {
+                  console.error('스프레드시트 생성일 가져오기 실패:', error);
+                }
+              }
+              setUserInfo({ ...info, joinedDate });
             }
           } catch (error) {
             console.error('사용자 정보 로드 실패:', error);
@@ -819,16 +831,27 @@ function useAppLogic()
         };
         loadUserInfo();
       }
-    }, [isLoggedIn, isDriveInitialized]);
+    }, [isLoggedIn, isDriveInitialized, isSheetsInitialized, spreadsheetId]);
 
     // 마이페이지 섹션이 활성화될 때 사용자 정보 다시 로드
     useEffect(() => {
-      if (activeSection === 'myPage' && isLoggedIn && isDriveInitialized && authService.current && authService.current.isAuthenticated()) {
+      if (activeSection === 'myPage' && isLoggedIn && isDriveInitialized && isSheetsInitialized && authService.current && authService.current.isAuthenticated()) {
         const loadUserInfo = async () => {
           try {
             const info = await authService.current.getGoogleAccountInfo();
             if (info && (info.name || info.email || info.photoUrl)) {
-              setUserInfo(info);
+              let joinedDate = null;
+              if (spreadsheetId && sheetsService.current) {
+                try {
+                  const createdTime = await sheetsService.current.getSpreadsheetCreatedTime(spreadsheetId);
+                  if (createdTime) {
+                    joinedDate = createdTime;
+                  }
+                } catch (error) {
+                  console.error('스프레드시트 생성일 가져오기 실패:', error);
+                }
+              }
+              setUserInfo({ ...info, joinedDate });
             }
           } catch (error) {
             console.error('사용자 정보 로드 실패:', error);
@@ -836,7 +859,7 @@ function useAppLogic()
         };
         loadUserInfo();
       }
-    }, [activeSection, isLoggedIn, isDriveInitialized]);
+    }, [activeSection, isLoggedIn, isDriveInitialized, isSheetsInitialized, spreadsheetId]);
 
     // 마이페이지 블록 높이 동기화
     useEffect(() => {
@@ -1231,6 +1254,9 @@ function useAppLogic()
       setPptSortBy,
       pptSortOrder,
       setPptSortOrder,
+      userInfo,
+      isUserInfoExpanded,
+      setIsUserInfoExpanded,
       expSortBy,
       setExpSortBy,
       expSortOrder,
