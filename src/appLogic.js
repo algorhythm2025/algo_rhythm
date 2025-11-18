@@ -5,6 +5,7 @@ import GoogleAuthService from './services/googleAuthService';
 import { useExperienceLogic } from './logic/experience/experienceLogic';
 import { usePresentationLogic } from './logic/presentation/presentationLogic';
 import { useUILogic } from './logic/ui/uiLogic';
+import { getCachedData, setCachedData, clearCache } from './utils/cache';
 
 export const SECTION_LIST = ['main', 'drive', 'History', 'pptMaker', 'myPage'];
 
@@ -358,7 +359,18 @@ function useAppLogic()
       if (!driveService.current) {
         return;
       }
-      await driveService.current.loadDriveFiles(driveViewMode, portfolioFolderId, spreadsheetId, sheetsService, setDriveFiles, setIsDriveLoading, setSpreadsheetId, parentId);
+      
+      const cacheKey = `cache_driveFiles_${driveViewMode}_${portfolioFolderId || 'all'}_${parentId || 'root'}`;
+      const cachedData = getCachedData(cacheKey);
+      
+      if (cachedData) {
+        setDriveFiles(cachedData);
+      }
+      
+      await driveService.current.loadDriveFiles(driveViewMode, portfolioFolderId, spreadsheetId, sheetsService, (files) => {
+        setDriveFiles(files);
+        setCachedData(cacheKey, files);
+      }, setIsDriveLoading, setSpreadsheetId, parentId);
     }
 
     // 파일 다운로드 (Access Token 사용) (통합된 driveService 사용)
@@ -366,13 +378,24 @@ function useAppLogic()
       await driveService.current.handleDriveFileDownload(file, authService.current, setIsLoading);
     }
 
-    // 파일 업로드 핸들러 (통합된 driveService 사용)
     async function handleDriveFileUpload(event) {
-      await driveService.current.handleDriveFileUpload(event, currentPath, loadDriveFiles, setIsUploadLoading);
+      const currentParentId = currentPath.length > 0 ? currentPath[currentPath.length - 1].id : null;
+      const cacheKey = `cache_driveFiles_${driveViewMode}_${portfolioFolderId || 'all'}_${currentParentId || 'root'}`;
+      clearCache(cacheKey);
+      
+      await driveService.current.handleDriveFileUpload(event, currentPath, loadDriveFiles, setIsUploadLoading, driveViewMode, portfolioFolderId);
     }
 
-    // 파일 삭제 핸들러 (통합된 driveService 사용)
     async function handleDriveFileDelete(fileId, isFromPptHistory = false) {
+      if (isFromPptHistory) {
+        const cacheKey = `cache_pptHistory_${portfolioFolderId || 'default'}`;
+        clearCache(cacheKey);
+      } else {
+        const currentParentId = currentPath.length > 0 ? currentPath[currentPath.length - 1].id : null;
+        const cacheKey = `cache_driveFiles_${driveViewMode}_${portfolioFolderId || 'all'}_${currentParentId || 'root'}`;
+        clearCache(cacheKey);
+      }
+      
       await driveService.current.handleDriveFileDelete(fileId, isFromPptHistory, currentPath, loadDriveFiles, loadPptHistory, setDeletingFileIds);
     }
 
@@ -381,8 +404,11 @@ function useAppLogic()
       await driveService.current.switchViewMode(mode, setDriveViewMode, setCurrentPath, loadDriveFiles, setIsViewModeLoading);
     }
 
-    // 드라이브 새로고침 (통합된 driveService 사용)
     async function handleDriveRefresh() {
+      const currentParentId = currentPath.length > 0 ? currentPath[currentPath.length - 1].id : null;
+      const cacheKey = `cache_driveFiles_${driveViewMode}_${portfolioFolderId || 'all'}_${currentParentId || 'root'}`;
+      clearCache(cacheKey);
+      
       await driveService.current.handleDriveRefresh(currentPath, loadDriveFiles, setIsRefreshLoading);
     }
 
@@ -442,19 +468,38 @@ function useAppLogic()
     }
 
 
-    // 시트에서 이력 데이터 로드 (통합된 sheetsService 사용)
     async function loadExperiencesFromSheets(spreadsheetIdToUse = null) {
       if (!sheetsService.current) {
         return;
       }
-      await sheetsService.current.loadExperiencesFromSheets(spreadsheetIdToUse || spreadsheetId, setExperiences, null, false);
+      
+      const targetSpreadsheetId = spreadsheetIdToUse || spreadsheetId;
+      if (!targetSpreadsheetId) return;
+      
+      const cacheKey = `cache_experiences_${targetSpreadsheetId}`;
+      const cachedData = getCachedData(cacheKey);
+      
+      if (cachedData) {
+        setExperiences(cachedData);
+      }
+      
+      await sheetsService.current.loadExperiencesFromSheets(targetSpreadsheetId, (experiences) => {
+        setExperiences(experiences);
+        setCachedData(cacheKey, experiences);
+      }, null, false);
     }
 
-    // 구글 시트 데이터 새로고침 (통합된 sheetsService 사용)
     async function refreshSheetsData() {
       if (!sheetsService.current) {
         return;
       }
+      
+      const targetSpreadsheetId = spreadsheetId;
+      if (targetSpreadsheetId) {
+        const cacheKey = `cache_experiences_${targetSpreadsheetId}`;
+        clearCache(cacheKey);
+      }
+      
       await sheetsService.current.refreshSheetsData(loadExperiencesFromSheets, setIsExperienceLoading);
     }
 
@@ -475,8 +520,22 @@ function useAppLogic()
     }
 
     // PPT 기록 조회
-    async function loadPptHistory() {
-      await presentationLogic.loadPptHistory(driveService, setPptHistory, setIsLoading, portfolioFolderId);
+    async function loadPptHistory(forceRefresh = false) {
+      const cacheKey = `cache_pptHistory_${portfolioFolderId || 'default'}`;
+      
+      if (!forceRefresh) {
+        const cachedData = getCachedData(cacheKey);
+        if (cachedData) {
+          setPptHistory(cachedData);
+        }
+      } else {
+        clearCache(cacheKey);
+      }
+      
+      await presentationLogic.loadPptHistory(driveService, (history) => {
+        setPptHistory(history);
+        setCachedData(cacheKey, history);
+      }, setIsLoading, portfolioFolderId);
     }
 
     // PPT 수정을 위한 슬라이드 데이터 로드

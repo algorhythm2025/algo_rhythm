@@ -1318,17 +1318,21 @@ function App() {
                                                               className="form-control"
                                                               required
                                                               value={form.startDate}
+                                                              min={form.endDate ? undefined : undefined}
+                                                              max={form.endDate || undefined}
                                                               onChange={e => {
                                                                   const newStartDate = e.target.value;
                                                                   if (!newStartDate || newStartDate.length < 10) {
                                                                       setForm({ ...form, startDate: newStartDate });
                                                                       return;
                                                                   }
-                                                                  setForm({ ...form, startDate: newStartDate });
-                                                                  if (newStartDate && form.endDate && newStartDate > form.endDate) {
+                                                                  
+                                                                  if (form.endDate && newStartDate > form.endDate) {
                                                                       alert('시작일은 종료일보다 이전이어야 합니다.');
-                                                                      setForm(prev => ({ ...prev, endDate: '' }));
+                                                                      return;
                                                                   }
+                                                                  
+                                                                  setForm({ ...form, startDate: newStartDate });
                                                               }}
                                                           />
                                                       </div>
@@ -1339,17 +1343,20 @@ function App() {
                                                               className="form-control"
                                                               required
                                                               value={form.endDate}
+                                                              min={form.startDate || undefined}
                                                               onChange={e => {
                                                                   const newEndDate = e.target.value;
                                                                   if (!newEndDate || newEndDate.length < 10) {
                                                                       setForm({ ...form, endDate: newEndDate });
                                                                       return;
                                                                   }
-                                                                  setForm({ ...form, endDate: newEndDate });
-                                                                  if (newEndDate && form.startDate && newEndDate < form.startDate) {
+                                                                  
+                                                                  if (form.startDate && newEndDate < form.startDate) {
                                                                       alert('종료일은 시작일보다 이후여야 합니다.');
-                                                                      setForm(prev => ({ ...prev, endDate: '' }));
+                                                                      return;
                                                                   }
+                                                                  
+                                                                  setForm({ ...form, endDate: newEndDate });
                                                               }}
                                                           />
                                                       </div>
@@ -1504,7 +1511,7 @@ function App() {
                                 </div>
                                 <button 
                                   className="btn btn-outline-secondary btn-sm refresh-btn" 
-                                  onClick={loadPptHistory}
+                                  onClick={() => loadPptHistory(true)}
                                   disabled={isLoading}
                                   title="새로고침"
                                 >
@@ -1572,7 +1579,7 @@ function App() {
                                               }}
                                               title="삭제"
                                           >
-                                            <span className="delete-icon">✕</span>
+                                              <span className="delete-icon">✕</span>
                                           </button>
                                         </div>
                                       </div>

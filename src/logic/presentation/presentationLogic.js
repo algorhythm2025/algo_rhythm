@@ -573,7 +573,6 @@ export function usePresentationLogic() {
         return '';
     }
 
-    // PPT 기록 조회
     async function loadPptHistory(driveService, setPptHistory, setIsLoading, portfolioFolderId) {
         if (!driveService.current) return;
         
@@ -601,7 +600,9 @@ export function usePresentationLogic() {
             const pptFolder = await driveService.current.findFolder('PPT', portfolioFolder.id);
             
             if (!pptFolder) {
-                setPptHistory([]);
+                if (typeof setPptHistory === 'function') {
+                    setPptHistory([]);
+                }
                 return;
             }
             
@@ -614,7 +615,9 @@ export function usePresentationLogic() {
             
             const pptFiles = response.result.files || [];
             
-            setPptHistory(pptFiles);
+            if (typeof setPptHistory === 'function') {
+                setPptHistory(pptFiles);
+            }
             
         } catch (error) {
             console.error('PPT 기록 조회 오류:', error);
@@ -1851,6 +1854,9 @@ export function usePresentationLogic() {
             await loadPptHistory();
             
             updatePptProgress(100, 'PPT 생성 완료!');
+            
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
             alert('PPT가 생성되었습니다.');
             window.open(`https://docs.google.com/presentation/d/${presId}/edit`, '_blank');
             setActiveSection('pptMaker');
