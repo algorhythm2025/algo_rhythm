@@ -429,7 +429,8 @@ function App() {
     pptSortBy,
     setPptSortBy,
     pptSortOrder,
-    setPptSortOrder
+    setPptSortOrder,
+    userInfo
   } = useAppLogic();
 
   /* 스크롤 시 상단바 스타일 토글 */
@@ -1444,6 +1445,25 @@ function App() {
                   {/* 마이페이지 섹션 */}
                   {activeSection === 'myPage' && (
                       <div id="myPageSection" className="content-section">
+                        <div className="user-info-card mb-4">
+                          <div className="user-info-content">
+                            {userInfo.photoUrl ? (
+                              <img 
+                                src={userInfo.photoUrl} 
+                                alt={userInfo.name}
+                                className="user-profile-image"
+                              />
+                            ) : (
+                              <div className="user-profile-placeholder">
+                                <i className="fas fa-user"></i>
+                              </div>
+                            )}
+                            <div className="user-info-details">
+                              <h3 className="user-name">{userInfo.name || '사용자'}</h3>
+                              <p className="user-email">{userInfo.email || ''}</p>
+                            </div>
+                          </div>
+                        </div>
                         <div className="mac-grid">
                           <div className="mac-window">
                             <div className="d-flex justify-content-between align-items-center mb-3">

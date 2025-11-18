@@ -4302,6 +4302,87 @@ hr[style*="gradient"] {
         gap: 16px;
     }
     
+    #myPageSection .user-info-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 24px;
+    }
+
+    #myPageSection .user-info-content {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+    }
+
+    #myPageSection .user-profile-image {
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid var(--border-color);
+    }
+
+    #myPageSection .user-profile-placeholder {
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        background: var(--bg-button);
+        border: 2px solid var(--border-color);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-secondary);
+        font-size: 24px;
+    }
+
+    #myPageSection .user-info-details {
+        flex: 1;
+    }
+
+    #myPageSection .user-name {
+        margin: 0 0 4px 0;
+        font-size: 20px;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+
+    #myPageSection .user-email {
+        margin: 0;
+        font-size: 14px;
+        color: var(--text-secondary);
+    }
+
+    @media (max-width: 768px) {
+        #myPageSection .user-info-card {
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        #myPageSection .user-info-content {
+            gap: 16px;
+        }
+
+        #myPageSection .user-profile-image,
+        #myPageSection .user-profile-placeholder {
+            width: 48px;
+            height: 48px;
+        }
+
+        #myPageSection .user-profile-placeholder {
+            font-size: 20px;
+        }
+
+        #myPageSection .user-name {
+            font-size: 18px;
+        }
+
+        #myPageSection .user-email {
+            font-size: 12px;
+        }
+    }
+
     #myPageSection .mac-grid {
         grid-template-columns: 1fr 1fr;
         align-items: stretch;

@@ -133,6 +133,7 @@ function useAppLogic()
     const pptHistoryItemsPerPage = 8;
     const experienceItemsPerPage = 6;
     const pptMakerExperienceItemsPerPage = 6;
+    const [userInfo, setUserInfo] = useState({ name: '', email: '', photoUrl: null });
     const formRef = useRef();
   
     // 통합 인증 서비스 인스턴스
@@ -706,6 +707,21 @@ function useAppLogic()
       }
     }, [activeSection, isDriveInitialized, isSheetsInitialized]);
 
+    // 마이페이지 섹션이 활성화될 때 사용자 정보 로드
+    useEffect(() => {
+      if (activeSection === 'myPage' && isLoggedIn && authService.current) {
+        const loadUserInfo = async () => {
+          try {
+            const info = await authService.current.getGoogleAccountInfo();
+            setUserInfo(info);
+          } catch (error) {
+            console.error('사용자 정보 로드 실패:', error);
+          }
+        };
+        loadUserInfo();
+      }
+    }, [activeSection, isLoggedIn]);
+
     // 마이페이지 블록 높이 동기화
     useEffect(() => {
       if (activeSection === 'myPage') {
@@ -1004,6 +1020,7 @@ function useAppLogic()
       pptHistoryItemsPerPage,
       experienceItemsPerPage,
       pptMakerExperienceItemsPerPage,
+      userInfo,
       // 함수들
       showSection: (section) => uiLogic.showSection(section, setActiveSection),
       logout,
